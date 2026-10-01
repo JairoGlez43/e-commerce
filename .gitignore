@@ -1,0 +1,21 @@
+# Dependencies and build output (the framework's init tool will add its own lines here)
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Secrets — never commit
+.env
+.env*.local
+
+# Claude Code: personal files, never commit
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Temporary scaffold folder
+.scaffold-tmp/
+
+# OS / editor
+.DS_Store
+Thumbs.db
