@@ -1,0 +1,92 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
+import { Image, getImage } from 'astro:assets';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import { formatPrice } from '../../lib/price';
+import { site } from '../../lib/site';
+import { orderLink } from '../../lib/whatsapp';
+
+// One static page per product, out-of-stock ones included so shared links never break (spec 0006).
+export const getStaticPaths = (async () => {
+	const products = await getCollection('products');
+	return products.map((product) => ({
+		params: { id: product.id },
+		props: { product },
+	}));
+}) satisfies GetStaticPaths;
+
+interface Props {
+	product: CollectionEntry<'products'>;
+}
+
+const { product } = Astro.props;
+const { name, unit, price, inStock, description, photo } = product.data;
+const category = await getEntry(product.data.category);
+
+// WhatsApp link preview: the price leads the description (owner's choice), and the image is a
+// JPG because WebP previews are not guaranteed.
+const availability = inStock ? 'Disponible' : 'Agotado';
+const title = `${name} · ${site.name}`;
+const metaDescription = `${formatPrice(price)} · ${unit} · ${availability}. ${description}`;
+const previewImage = await getImage({ src: photo, width: 600, format: 'jpg' });
+
+// The same absolute page URL as og:url, so the shop sees which product the message is about.
+const pageUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
+const orderHref = orderLink(product, pageUrl);
+---
+
+<BaseLayout title={title} description={metaDescription} image={previewImage.src}>
+	<SiteHeader />
+	<main class="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
+		<nav aria-label="Ruta">
+			<ol class="flex flex-wrap items-center gap-2 text-sm text-muted">
+				<li><a href="/" class="inline-flex min-h-11 items-center hover:text-accent">Productos</a></li>
+				<li aria-hidden="true">›</li>
+				<li>
+					<a href={`/categoria/${category.id}`} class="inline-flex min-h-11 items-center hover:text-accent">
+						{category.data.name}
+					</a>
+				</li>
+			</ol>
+		</nav>
+		<article class="grid gap-6 md:grid-cols-2 md:items-start">
+			<Image
+				src={photo}
+				alt={name}
+				widths={[400, 800]}
+				sizes="(min-width: 768px) 480px, 100vw"
+				loading="eager"
+				class:list={[
+					'aspect-square w-full rounded-card border border-border object-cover',
+					{ 'opacity-60': !inStock },
+				]}
+			/>
+			<div class="flex flex-col gap-3">
+				<h1>{name}</h1>
+				<p class="text-muted">{unit}</p>
+				<p class="price">{formatPrice(price)}</p>
+				{
+					inStock ? (
+						<p class="inline-flex w-fit items-center gap-1.5 rounded-full bg-olive-soft px-2 py-0.5 text-xs font-medium text-olive">
+							<span class="size-1.5 rounded-full bg-olive" aria-hidden="true" />
+							Disponible
+						</p>
+					) : (
+						<p class="inline-flex w-fit items-center rounded-full border border-border px-2 py-0.5 text-xs font-medium text-unavailable">
+							Agotado
+						</p>
+					)
+				}
+				<a
+					href={orderHref}
+					class="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover md:w-fit"
+				>
+					{inStock ? 'Pedir por WhatsApp' : 'Preguntar por WhatsApp'}
+				</a>
+				<p>{description}</p>
+			</div>
+		</article>
+	</main>
+</BaseLayout>

@@ -1,0 +1,50 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import CategoryNav from '../../components/CategoryNav.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { getCatalog, type CatalogSection } from '../../lib/catalog';
+import { site } from '../../lib/site';
+
+// One static page per category (spec 0005). Empty categories get no page.
+export const getStaticPaths = (async () => {
+	const catalog = await getCatalog();
+	return catalog.map((section) => ({
+		params: { id: section.category.id },
+		props: { section, catalog },
+	}));
+}) satisfies GetStaticPaths;
+
+interface Props {
+	section: CatalogSection;
+	catalog: CatalogSection[];
+}
+
+const { section, catalog } = Astro.props;
+const { category, products } = section;
+
+// The first 4 cards in page order load their photo eagerly.
+const EAGER_CARDS = 4;
+const title = `${category.data.name} · ${site.name}`;
+const description = `${category.data.name}: precios y disponibilidad en ${site.name}.`;
+---
+
+<BaseLayout title={title} description={description}>
+	<SiteHeader />
+	<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-8">
+		<div class="flex flex-col gap-4">
+			<h1>{category.data.name}</h1>
+			<CategoryNav categories={catalog} currentId={category.id} />
+		</div>
+		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+			{
+				products.map((product, index) => (
+					<li>
+						<ProductCard product={product} headingLevel={2} eager={index < EAGER_CARDS} />
+					</li>
+				))
+			}
+		</ul>
+	</main>
+</BaseLayout>

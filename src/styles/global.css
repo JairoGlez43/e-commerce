@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* Design tokens (spec 0002). The only place raw values live; everything else uses token names. */
+@theme {
+  --color-*: initial;
+  --color-cream: #FBF6EE;        /* page background */
+  --color-surface: #FFFFFF;      /* cards, chips, inputs */
+  --color-ink: #2B211C;          /* main text */
+  --color-muted: #6A5B50;        /* secondary text, format line */
+  --color-border: #E6DACB;       /* card borders, dividers (decorative) */
+  --color-accent: #B03A24;       /* prices, primary button, selected chip, focus ring */
+  --color-accent-hover: #8E2E1C; /* primary button hover/active */
+  --color-olive: #4D6A26;        /* "available" text and dot */
+  --color-olive-soft: #EEF2E3;   /* "available" badge background */
+  --color-unavailable: #7A6D64;  /* "unavailable" text */
+  --color-awning: #F4E3D3;       /* light stripe of the awning */
+
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(43 33 28 / 0.06), 0 2px 8px rgb(43 33 28 / 0.06);
+}
+
+@theme inline {
+  --font-display: var(--font-fraunces);
+}
+
+@layer base {
+  body {
+    @apply bg-cream text-ink font-sans;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-semibold;
+  }
+
+  h1 {
+    @apply text-3xl;
+  }
+
+  h2 {
+    @apply text-2xl;
+  }
+
+  h3 {
+    @apply text-xl;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .price {
+    @apply font-display font-semibold text-xl text-accent;
+  }
+
+  /* Market-stall awning strip. Decorative: the element carries aria-hidden="true". */
+  .awning {
+    @apply h-2;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-accent) 0 16px,
+      var(--color-awning) 16px 32px
+    );
+  }
+}

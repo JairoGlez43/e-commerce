@@ -1,0 +1,57 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import { formatPrice } from '../lib/price';
+
+interface Props {
+	product: CollectionEntry<'products'>;
+	/** 3 under a category h2 (home), 2 directly under the h1 (category page). */
+	headingLevel: 2 | 3;
+	/** Above-the-fold cards load their photo eagerly (spec 0005: the first 4 in page order). */
+	eager: boolean;
+}
+
+const { product, headingLevel, eager } = Astro.props;
+const { name, unit, price, inStock, photo } = product.data;
+const href = `/producto/${product.id}`;
+---
+
+<article
+	class="relative flex h-full flex-col overflow-hidden rounded-card border border-border bg-surface shadow-card hover:border-accent"
+>
+	<Image
+		src={photo}
+		alt={name}
+		widths={[200, 400]}
+		sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
+		loading={eager ? 'eager' : 'lazy'}
+		class:list={['aspect-square w-full object-cover', { 'opacity-60': !inStock }]}
+	/>
+	<div class="flex flex-1 flex-col gap-1 p-3">
+		{
+			headingLevel === 2 ? (
+				<h2 class="font-sans text-base font-medium">
+					<a href={href} class="after:absolute after:inset-0">{name}</a>
+				</h2>
+			) : (
+				<h3 class="font-sans text-base font-medium">
+					<a href={href} class="after:absolute after:inset-0">{name}</a>
+				</h3>
+			)
+		}
+		<p class="text-sm text-muted">{unit}</p>
+		<p class="price">{formatPrice(price)}</p>
+		{
+			inStock ? (
+				<p class="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full bg-olive-soft px-2 py-0.5 text-xs font-medium text-olive">
+					<span class="size-1.5 rounded-full bg-olive" aria-hidden="true" />
+					Disponible
+				</p>
+			) : (
+				<p class="mt-auto inline-flex w-fit items-center rounded-full border border-border px-2 py-0.5 text-xs font-medium text-unavailable">
+					Agotado
+				</p>
+			)
+		}
+	</div>
+</article>

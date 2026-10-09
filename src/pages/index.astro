@@ -1,0 +1,52 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import CategoryNav from '../components/CategoryNav.astro';
+import ProductCard from '../components/ProductCard.astro';
+import { getCatalog } from '../lib/catalog';
+import { site } from '../lib/site';
+
+// Home catalog (spec 0005): every product, one section per category.
+const catalog = await getCatalog();
+
+// The first 4 cards in page order load their photo eagerly, across sections.
+const EAGER_CARDS = 4;
+const sections = catalog.map((section, sectionIndex) => {
+	const cardsBefore = catalog
+		.slice(0, sectionIndex)
+		.reduce((count, previous) => count + previous.products.length, 0);
+	return { ...section, cardsBefore };
+});
+---
+
+<BaseLayout title={site.name} description={site.description}>
+	<SiteHeader />
+	<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-8">
+		<div class="flex flex-col gap-4">
+			<h1>Productos</h1>
+			<CategoryNav categories={catalog} currentId={null} />
+		</div>
+		{
+			sections.length === 0 ? (
+				<p class="text-muted">Todavía no hay productos.</p>
+			) : (
+				sections.map(({ category, products, cardsBefore }) => (
+					<section class="flex flex-col gap-4" aria-labelledby={category.id}>
+						<h2 id={category.id}>{category.data.name}</h2>
+						<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+							{products.map((product, index) => (
+								<li>
+									<ProductCard
+										product={product}
+										headingLevel={3}
+										eager={cardsBefore + index < EAGER_CARDS}
+									/>
+								</li>
+							))}
+						</ul>
+					</section>
+				))
+			)
+		}
+	</main>
+</BaseLayout>

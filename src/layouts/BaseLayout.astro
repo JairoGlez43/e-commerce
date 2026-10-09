@@ -1,0 +1,42 @@
+---
+import { Font } from 'astro:assets';
+import '../styles/global.css';
+
+interface Props {
+	title: string;
+	description: string;
+	/** Path under public/ or absolute URL for the Open Graph image. */
+	image?: string;
+	/** Keep the page out of search engines (internal pages such as /estilo). */
+	noindex?: boolean;
+}
+
+const { title, description, image = '/og-default.png', noindex = false } = Astro.props;
+
+// Open Graph needs absolute URLs. `site` is set in feature 08; until then use the request origin.
+const base = Astro.site ?? Astro.url;
+const pageUrl = new URL(Astro.url.pathname, base).href;
+const imageUrl = new URL(image, base).href;
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<Font cssVariable="--font-fraunces" preload />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		{noindex && <meta name="robots" content="noindex" />}
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content={imageUrl} />
+		<meta property="og:url" content={pageUrl} />
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>

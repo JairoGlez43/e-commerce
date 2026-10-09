@@ -5,9 +5,21 @@ dist/
 build/
 coverage/
 
+# Astro generated types
+.astro/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dev-server.log
+dev-server.pid
+
 # Secrets — never commit
 .env
 .env*.local
+.env.production
 
 # Claude Code: personal files, never commit
 CLAUDE.local.md
@@ -19,3 +31,4 @@ CLAUDE.local.md
 # OS / editor
 .DS_Store
 Thumbs.db
+.idea/

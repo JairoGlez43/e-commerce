@@ -1,0 +1,5 @@
+# pnpm 10 skips dependency install scripts unless they are listed here.
+# esbuild (used by Astro) and sharp (Astro image optimization) need theirs to work.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp

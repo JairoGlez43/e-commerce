@@ -1,0 +1,8 @@
+[
+	{ "id": "granos-y-pastas", "name": "Granos y pastas", "order": 1 },
+	{ "id": "carnicos", "name": "Cárnicos", "order": 2 },
+	{ "id": "despensa", "name": "Despensa", "order": 3 },
+	{ "id": "lacteos-y-huevos", "name": "Lácteos y huevos", "order": 4 },
+	{ "id": "bebidas", "name": "Bebidas", "order": 5 },
+	{ "id": "aseo", "name": "Aseo", "order": 6 }
+]

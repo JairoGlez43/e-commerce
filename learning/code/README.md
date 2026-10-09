@@ -1,0 +1,55 @@
+# El código, archivo por archivo
+
+Una explicación línea a línea de cada archivo de código del proyecto, en el mismo orden de
+carpetas que el repo: la explicación de `src/lib/price.ts` está en
+[`src/lib/price.ts.md`](src/lib/price.ts.md).
+
+- Los términos nuevos se definen una sola vez en el [glosario](glosario.md) y cada explicación
+  enlaza ahí.
+- Se actualiza cada vez que `/develop` o `/debug` crea o cambia un archivo de código.
+- Las lecciones de conceptos (por qué Astro, cómo funciona algo) siguen en `learning/NN-*.md`,
+  escritas con `/learn <tema>`. Esto es otra cosa: **qué hace cada línea de nuestro código**.
+
+## Orden de lectura recomendado
+
+Sigue el camino de los datos: de la configuración a los datos, luego a la lógica, el estilo y
+por último las páginas que ve el cliente.
+
+| # | Archivo | Qué es | Explicación |
+|---|---|---|---|
+| 1 | `package.json` | Nombre del proyecto, comandos y librerías | [ver](package.json.md) |
+| 2 | `pnpm-workspace.yaml` | Permiso para que dos librerías se compilen al instalar | [ver](pnpm-workspace.yaml.md) |
+| 3 | `astro.config.mjs` | Configuración de Astro: Tailwind y la fuente de títulos | [ver](astro.config.mjs.md) |
+| 4 | `tsconfig.json` | Configuración de TypeScript | [ver](tsconfig.json.md) |
+| 4b | `.env.example` | Plantilla de las variables de entorno (el número de WhatsApp) | [ver](.env.example.md) |
+| 4c | `src/env.d.ts` | Los tipos de esas variables | [ver](src/env.d.ts.md) |
+| 5 | `src/data/categories.json` | Las 6 categorías | [ver](src/data/categories.json.md) |
+| 6 | `src/data/products.json` | Los 18 productos de ejemplo | [ver](src/data/products.json.md) |
+| 7 | `src/content.config.ts` | La forma obligatoria de productos y categorías | [ver](src/content.config.ts.md) |
+| 8 | `src/lib/price.ts` | Formatea un precio: `12500` → `12.500 CUP` | [ver](src/lib/price.ts.md) |
+| 9 | `src/lib/site.ts` | Nombre y descripción de la tienda | [ver](src/lib/site.ts.md) |
+| 10 | `src/lib/catalog.ts` | Agrupa productos por categoría y los ordena | [ver](src/lib/catalog.ts.md) |
+| 10b | `src/lib/whatsapp.ts` | El número de WhatsApp y el enlace con el mensaje | [ver](src/lib/whatsapp.ts.md) |
+| 11 | `src/styles/global.css` | Colores, fuentes y estilos base | [ver](src/styles/global.css.md) |
+| 12 | `src/layouts/BaseLayout.astro` | El esqueleto `<html>` de todas las páginas | [ver](src/layouts/BaseLayout.astro.md) |
+| 13 | `src/components/SiteHeader.astro` | La cabecera con el toldo | [ver](src/components/SiteHeader.astro.md) |
+| 14 | `src/components/CategoryNav.astro` | La fila de chips de categorías | [ver](src/components/CategoryNav.astro.md) |
+| 15 | `src/components/ProductCard.astro` | La tarjeta de un producto | [ver](src/components/ProductCard.astro.md) |
+| 16 | `src/pages/index.astro` | La portada `/` | [ver](src/pages/index.astro.md) |
+| 17 | `src/pages/categoria/[id].astro` | Las páginas `/categoria/<id>` | [ver](src/pages/categoria/[id].astro.md) |
+| 18 | `src/pages/producto/[id].astro` | Las páginas `/producto/<id>` y su vista previa en WhatsApp | [ver](src/pages/producto/%5Bid%5D.astro.md) |
+| 19 | `src/pages/estilo.astro` | La guía de estilo interna `/estilo` | [ver](src/pages/estilo.astro.md) |
+
+Archivos que no son código y no tienen explicación: `src/assets/` (fotos y la fuente),
+`public/` (favicon e imagen para WhatsApp), `pnpm-lock.yaml` (ver
+[lockfile](glosario.md#lockfile)), `dist/` y `.astro/` (generados por Astro).
+
+## Cómo está hecha cada explicación
+
+1. **Ficha:** qué es, qué spec lo decidió, quién lo usa y qué usa.
+2. **Para qué sirve:** el problema que resuelve, en 2-4 líneas.
+3. **El código, por partes:** el archivo copiado tal cual, en bloques; debajo de cada bloque,
+   qué hace cada línea.
+4. **Cómo se conecta:** de dónde le llegan los datos y a dónde van.
+5. **Prueba tú:** un cambio pequeño y seguro para ver el efecto (y cómo deshacerlo).
+6. **Términos:** enlaces al glosario.

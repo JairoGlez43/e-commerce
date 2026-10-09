@@ -1,0 +1,49 @@
+---
+import type { CatalogSection } from '../lib/catalog';
+
+interface Props {
+	categories: CatalogSection[];
+	/** Id of the category page being shown, or null on the home page ("Todos"). */
+	currentId: string | null;
+}
+
+const { categories, currentId } = Astro.props;
+
+const chips = [
+	{ id: null, name: 'Todos', href: '/' },
+	...categories.map(({ category }) => ({
+		id: category.id,
+		name: category.data.name,
+		href: `/categoria/${category.id}`,
+	})),
+];
+---
+
+<nav aria-label="Categorías">
+	<ul class="flex gap-2 overflow-x-auto pb-2">
+		{
+			chips.map((chip) =>
+				chip.id === currentId ? (
+					<li>
+						<a
+							href={chip.href}
+							aria-current="page"
+							class="inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-accent px-4 text-surface"
+						>
+							{chip.name}
+						</a>
+					</li>
+				) : (
+					<li>
+						<a
+							href={chip.href}
+							class="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 text-ink hover:border-accent"
+						>
+							{chip.name}
+						</a>
+					</li>
+				),
+			)
+		}
+	</ul>
+</nav>

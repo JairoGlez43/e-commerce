@@ -8,18 +8,27 @@
       "Bash(git log *)",
       "Bash(git fetch)",
       "Bash(git rev-list *)",
-      "Bash(npm run lint)",
-      "Bash(npm run typecheck)",
-      "Bash(npm run build)",
-      "Bash(npm test)",
-      "Bash(npm run test *)"
+      "Bash(pnpm run lint)",
+      "Bash(pnpm run typecheck)",
+      "Bash(pnpm run build)",
+      "Bash(pnpm run dev)",
+      "Bash(pnpm run preview)",
+      "Bash(pnpm run check:weight)",
+      "Bash(pnpm astro check)",
+      "Bash(pnpm test)",
+      "Bash(pnpm run test *)"
     ],
     "ask": [
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(git checkout *)",
-      "Bash(npm install *)",
-      "Bash(npx *)"
+      "Bash(pnpm add *)",
+      "Bash(pnpm install)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm dlx *)",
+      "Bash(pnpm create *)",
+      "Bash(pnpm approve-builds *)",
+      "Bash(pnpm astro add *)"
     ],
     "deny": [
       "Read(./.env)",
