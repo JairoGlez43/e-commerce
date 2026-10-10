@@ -15,6 +15,7 @@ título y su descripción, y pone su contenido dentro.
 ---
 import { Font } from 'astro:assets';
 import '../styles/global.css';
+import { site } from '../lib/site';
 ```
 
 - `---` abre el [frontmatter](../../glosario.md#frontmatter): el código que corre en el
@@ -26,6 +27,8 @@ import '../styles/global.css';
   trae ninguna variable, solo le dice a Astro "esta página usa este CSS". Astro se encarga de
   que el CSS llegue a cada página que use este layout. Por eso `global.css` se importa **solo
   aquí** (spec 0002): todas las páginas pasan por este archivo.
+- `import { site } from '../lib/site';` trae el objeto con la identidad de la tienda. Aquí solo
+  se usa su interruptor `site.indexable` (ver [`site.ts.md`](../lib/site.ts.md)).
 
 ```astro
 
@@ -68,21 +71,22 @@ const { title, description, image = '/og-default.png', noindex = false } = Astro
 
 ```astro
 
-// Open Graph needs absolute URLs. `site` is set in feature 08; until then use the request origin.
+// Open Graph needs absolute URLs. `site` comes from astro.config.mjs (spec 0008); the request
+// origin is only a fallback if it is ever removed.
 const base = Astro.site ?? Astro.url;
 const pageUrl = new URL(Astro.url.pathname, base).href;
 const imageUrl = new URL(image, base).href;
 ---
 ```
 
-- El comentario dice: "Open Graph necesita URLs absolutas. `site` se configura en la feature
-  08; hasta entonces, usa el origen de la petición". [Open Graph](../../glosario.md#open-graph)
-  son las etiquetas que lee WhatsApp, y exigen [URLs absolutas](../../glosario.md#url-absoluta).
+- El comentario dice: "Open Graph necesita URLs absolutas. `site` viene de `astro.config.mjs`
+  (spec 0008); el origen de la petición es solo un respaldo, por si algún día se quita".
+  [Open Graph](../../glosario.md#open-graph) son las etiquetas que lee WhatsApp, y exigen
+  [URLs absolutas](../../glosario.md#url-absoluta).
 - `const base = Astro.site ?? Astro.url;` elige el dominio base. Ver
   [Astro.url y Astro.site](../../glosario.md#astro-url-y-site):
   - `Astro.site` es el dominio público del sitio, sacado de la opción `site` de
-    `astro.config.mjs`. **Hoy no está puesta** (llegará con la feature 08, cuando se sepa la URL
-    de Vercel), así que vale `undefined`.
+    `astro.config.mjs`: `https://tienda-demo-cuba.vercel.app` (feature 08).
   - `Astro.url` es la dirección de la página que se está generando.
   - El [`??`](../../glosario.md#nullish) usa `Astro.site` si existe y, si no, `Astro.url`. Es
     el respaldo que anota la spec 0003.
@@ -90,12 +94,11 @@ const imageUrl = new URL(image, base).href;
   página con el [constructor URL](../../glosario.md#constructor-url):
   - `Astro.url.pathname` es solo la ruta, por ejemplo `/categoria/carnicos/`.
   - `new URL(ruta, base)` la pega al dominio de `base`.
-  - `.href` la convierte en texto: `http://localhost:4321/categoria/carnicos/`.
-  - **Ojo, hoy:** como `site` no está puesto, en el sitio construido `og:url` sale con el
-    origen local, `http://localhost:4321`. Funciona para probar, pero WhatsApp no podría abrir
-    ese enlace; se corrige solo cuando la feature 08 ponga `site`.
+  - `.href` la convierte en texto: `https://tienda-demo-cuba.vercel.app/categoria/carnicos/`.
+  - Antes de la feature 08, `site` no estaba puesto y aquí salía `http://localhost:4321/…`: las
+    vistas previas de WhatsApp apuntaban a tu PC. Por eso existe la spec 0008.
 - `const imageUrl = new URL(image, base).href;` lo mismo para la imagen:
-  `'/og-default.png'` → `http://localhost:4321/og-default.png`. Si `image` ya fuera una URL
+  `'/og-default.png'` → `https://tienda-demo-cuba.vercel.app/og-default.png`. Si `image` ya fuera una URL
   completa (`https://…`), `new URL` la deja tal cual e ignora la base; por eso el comentario
   JSDoc permite las dos formas.
 - `---` cierra el frontmatter. Lo de abajo es la plantilla HTML.
@@ -140,7 +143,7 @@ const imageUrl = new URL(image, base).href;
 ```astro
 		<title>{title}</title>
 		<meta name="description" content={description} />
-		{noindex && <meta name="robots" content="noindex" />}
+		{(noindex || !site.indexable) && <meta name="robots" content="noindex" />}
 ```
 
 - `<title>{title}</title>`: el texto de la pestaña y el título que muestran Google y WhatsApp.
@@ -148,11 +151,17 @@ const imageUrl = new URL(image, base).href;
   el valor de la prop.
 - `<meta name="description" content={description} />`: el resumen que muestran los buscadores.
   En un atributo, `content={description}` va **sin comillas**: las llaves ya insertan el valor.
-- `{noindex && <meta name="robots" content="noindex" />}`: una
-  [condición con `&&`](../../glosario.md#condicional-con-and). Si `noindex` es `true`, escribe la
-  etiqueta; si es `false`, no escribe nada. La etiqueta es un
+- `{(noindex || !site.indexable) && <meta name="robots" content="noindex" />}`: una
+  [condición con `&&`](../../glosario.md#condicional-con-and). Si lo de la izquierda es
+  verdadero, escribe la etiqueta; si no, nada. La etiqueta es un
   [meta robots](../../glosario.md#meta-robots): pide a Google y compañía que no listen esta
-  página. Solo `/estilo` pasa `noindex`, porque es una guía interna.
+  página. Lo de la izquierda tiene dos casos, unidos por `||` ("o"):
+  - `noindex`: la página lo pide ella misma. Solo `/estilo` lo hace, porque es una guía interna.
+  - `!site.indexable`: el sitio entero es una demo (`indexable: false` en `src/lib/site.ts`,
+    spec 0008). El `!` le da la vuelta: "no indexable" → escribe la etiqueta.
+  - Hoy el segundo caso es verdadero, así que **todas** las páginas llevan `noindex`. Si el
+    dueño compra el sitio y `indexable` pasa a `true`, la etiqueta desaparece de todas menos de
+    `/estilo` (comprobado el 2026-10-10).
 
 ```astro
 		<meta property="og:type" content="website" />
@@ -170,8 +179,8 @@ Con ellas, al pegar un enlace en WhatsApp sale una tarjeta con foto y título:
 - `og:title` = el mismo `title` de la pestaña.
 - `og:description` = la misma `description`.
 - `og:image` = `imageUrl`, la URL absoluta calculada en el frontmatter.
-- `og:url` = `pageUrl`, la URL absoluta de esta página (hoy, con `http://localhost:4321`; ver
-  arriba).
+- `og:url` = `pageUrl`, la URL absoluta de esta página, con el dominio de `site`
+  (`https://tienda-demo-cuba.vercel.app/…`).
 - `</head>` cierra la cabecera.
 
 ```astro
@@ -203,12 +212,13 @@ Con ellas, al pegar un enlace en WhatsApp sale una tarjeta con foto y título:
 
 ## Prueba tú
 
-**Parte 1, sin tocar nada.** Mira la URL de respaldo en el sitio construido:
+**Parte 1, sin tocar nada.** Mira la URL absoluta en el sitio construido:
 
 1. `pnpm build`.
 2. Abre `dist/categoria/carnicos/index.html` en VS Code y busca (Ctrl+F) `og:url`.
-3. **Qué verás:** `content="http://localhost:4321/categoria/carnicos/"`. Es el origen local,
-   porque `site` aún no está en `astro.config.mjs`.
+3. **Qué verás:** `content="https://tienda-demo-cuba.vercel.app/categoria/carnicos/"`. El
+   dominio sale de `site` en `astro.config.mjs`. Busca también `robots`: verás el `noindex`
+   que pone `site.indexable`.
 
 **Parte 2, un cambio que afecta a todas las páginas.**
 

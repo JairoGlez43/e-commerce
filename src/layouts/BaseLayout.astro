@@ -1,6 +1,7 @@
 ---
 import { Font } from 'astro:assets';
 import '../styles/global.css';
+import { site } from '../lib/site';
 
 interface Props {
 	title: string;
@@ -13,7 +14,8 @@ interface Props {
 
 const { title, description, image = '/og-default.png', noindex = false } = Astro.props;
 
-// Open Graph needs absolute URLs. `site` is set in feature 08; until then use the request origin.
+// Open Graph needs absolute URLs. `site` comes from astro.config.mjs (spec 0008); the request
+// origin is only a fallback if it is ever removed.
 const base = Astro.site ?? Astro.url;
 const pageUrl = new URL(Astro.url.pathname, base).href;
 const imageUrl = new URL(image, base).href;
@@ -29,7 +31,7 @@ const imageUrl = new URL(image, base).href;
 		<Font cssVariable="--font-fraunces" preload />
 		<title>{title}</title>
 		<meta name="description" content={description} />
-		{noindex && <meta name="robots" content="noindex" />}
+		{(noindex || !site.indexable) && <meta name="robots" content="noindex" />}
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />

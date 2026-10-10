@@ -53,6 +53,20 @@ export default defineConfig({
   de configuración.
 
 ```js
+  // Public URL of the demo (spec 0008). Absolute links (og:url, og:image, WhatsApp messages) use it.
+  site: 'https://tienda-demo-cuba.vercel.app',
+```
+
+- El comentario: "URL pública de la demo (spec 0008). Los enlaces absolutos (`og:url`, `og:image`,
+  mensajes de WhatsApp) la usan."
+- `site: 'https://tienda-demo-cuba.vercel.app',`: la dirección pública del sitio, el subdominio
+  que el dueño añadió en Vercel. Astro la pone a disposición del código como `Astro.site`
+  ([Astro.url y Astro.site](glosario.md#astro-url-y-site)). `BaseLayout` y la página de producto
+  la usan para construir [URLs absolutas](glosario.md#url-absoluta). Sin esta línea, durante el
+  build Astro solo conoce `http://localhost:4321`, y la vista previa de WhatsApp y el enlace del
+  mensaje de pedido apuntarían a tu PC.
+
+```js
   vite: {
     plugins: [tailwindcss()]
   },
@@ -163,11 +177,8 @@ export default defineConfig({
 - `}` cierra la descripción de Fraunces y `]` cierra la lista `fonts`.
 - `})` cierra el objeto de configuración y la llamada a `defineConfig`; `;` termina la línea.
 
-**Lo que no está:** la spec 0001 deja dos cosas en su valor por defecto o para más tarde. No
-hay `output`, porque el valor por defecto ya es un sitio estático. Y aún no hay `site` (la URL
-pública del sitio): se pondrá en la feature 08, al desplegar. Mientras tanto
-`src/layouts/BaseLayout.astro` usa la URL de la petición para las
-[URL absolutas](glosario.md#url-absoluta) de [Open Graph](glosario.md#open-graph).
+**Lo que no está:** no hay `output`, porque el valor por defecto de Astro ya es un sitio
+estático (spec 0001).
 
 ## Cómo se conecta
 

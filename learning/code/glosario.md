@@ -175,8 +175,8 @@ página usa este CSS", y Astro lo incluye en el HTML final.
 ### astro-url-y-site
 `Astro.url` es la URL de la página que se está generando, como objeto `URL` (`.pathname` = la
 ruta, por ejemplo `/categoria/aseo/`). `Astro.site` es el dominio público, sacado de la opción
-`site` de `astro.config.mjs`; vale `undefined` mientras esa opción no esté puesta (se pondrá en
-la feature 08).
+`site` de `astro.config.mjs` (en este proyecto, `https://tienda-demo-cuba.vercel.app`, spec
+0008); valdría `undefined` si esa opción se quitara.
 
 ### fonts-api
 La forma de Astro de servir [fuentes web](#fuente-web). Se declaran en `astro.config.mjs`

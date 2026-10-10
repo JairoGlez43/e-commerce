@@ -14,7 +14,7 @@
 | 05 | Catalog page                     | done              | default | docs/specs/0005-catalog-page.md |
 | 06 | Product detail page              | done              | default | docs/specs/0006-product-detail-page.md |
 | 07 | Order contact (WhatsApp)         | done              | default | docs/specs/0007-whatsapp-order.md |
-| 08 | Demo online                      | planned           | default | —    |
+| 08 | Demo online                      | in-progress       | default | docs/specs/0008-demo-online.md |
 
 Status values: `planned` · `needs-a-decision` · `in-progress` · `done`
 
@@ -126,14 +126,14 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 A cart is out of the demo unless the owner confirms delivery.
 
 ## 08 · Demo online
-**Status:** planned
-**Spec:** —
-**Code:** —
+**Status:** in-progress
+**Spec:** docs/specs/0008-demo-online.md
+**Code:** astro.config.mjs, src/lib/site.ts, src/layouts/BaseLayout.astro
 **Depth:** default
 **Done when:**
 - The demo is reachable at a public link that opens on a phone.
 - The online demo stays within the weight budget.
 **Tasks:**
-- [ ] Build it — /develop
+- [x] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** Hosting is chosen in the stack spec (feature 01).

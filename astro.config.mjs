@@ -5,6 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
+  // Public URL of the demo (spec 0008). Absolute links (og:url, og:image, WhatsApp messages) use it.
+  site: 'https://tienda-demo-cuba.vercel.app',
   vite: {
     plugins: [tailwindcss()]
   },

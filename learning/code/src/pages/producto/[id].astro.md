@@ -161,8 +161,9 @@ const orderHref = orderLink(product, pageUrl);
 - `const pageUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;`: la dirección
   completa de esta página, por ejemplo `https://…/producto/arroz-blanco/`
   ([constructor URL](../../../glosario.md#constructor-url)). Toma la ruta de la página
-  (`Astro.url.pathname`) y le pone delante el dominio público (`Astro.site`) o, mientras no
-  exista (hasta la feature 08), el de la página que se está generando, que es `localhost`
+  (`Astro.url.pathname`) y le pone delante el dominio público (`Astro.site`,
+  `https://tienda-demo-cuba.vercel.app`) o, si algún día faltara, el de la página que se está
+  generando, que en el build es `localhost`
   ([Astro.url y Astro.site](../../../glosario.md#astro-url-y-site),
   [`??`](../../../glosario.md#nullish)). Es el mismo cálculo que hace `BaseLayout` para `og:url`.
 - `const orderHref = orderLink(product, pageUrl);`: el enlace de WhatsApp con el mensaje ya

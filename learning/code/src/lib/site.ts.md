@@ -1,6 +1,6 @@
 # `src/lib/site.ts`
 
-> **Qué es:** el nombre y la descripción de la tienda, en un solo objeto `site` · **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (dónde viven) y [spec 0003](../../../../docs/specs/0003-site-identity.md) (los valores, provisionales) · **Lo usan:** `src/components/SiteHeader.astro`, `src/pages/index.astro`, `src/pages/categoria/[id].astro` · **Usa:** nada
+> **Qué es:** el nombre y la descripción de la tienda, y si los buscadores pueden indexarla, en un solo objeto `site` · **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (dónde viven), [spec 0003](../../../../docs/specs/0003-site-identity.md) (los valores, provisionales) y [spec 0008](../../../../docs/specs/0008-demo-online.md) (`indexable`) · **Lo usan:** `src/components/SiteHeader.astro`, `src/layouts/BaseLayout.astro`, `src/pages/index.astro`, `src/pages/categoria/[id].astro`, `src/pages/producto/[id].astro` · **Usa:** nada
 
 ## Para qué sirve
 
@@ -29,8 +29,8 @@ export const site = {
 
 - `export` deja que otros archivos lo importen con `import { site } from '../lib/site'` (ver
   [import-export](../../glosario.md#import-export)).
-- `const site = { ... }`: un objeto JavaScript normal con dos campos. Se agrupan en un objeto
-  para importarlos juntos y leerlos como `site.name` y `site.description`.
+- `const site = { ... }`: un objeto JavaScript normal con tres campos. Se agrupan en un objeto
+  para importarlos juntos y leerlos como `site.name`, `site.description` y `site.indexable`.
 
 ```ts
 	name: 'Tienda de alimentos (demo)',
@@ -42,7 +42,6 @@ export const site = {
 ```ts
 	description:
 		'Productos en existencia y precios, siempre al día. Catálogo de demostración de una tienda local de alimentos.',
-};
 ```
 
 - `description:`: la descripción de la portada. El texto va en la línea siguiente solo porque
@@ -50,6 +49,20 @@ export const site = {
 - Ese texto acaba en la etiqueta `<meta name="description">` de la portada y en la vista
   previa al compartir el enlace (ver [open-graph](../../glosario.md#open-graph)), a través de
   `BaseLayout`. Resume lo que la web aporta frente a WhatsApp: existencias y precios al día.
+
+```ts
+	// While this is a demo, every page asks search engines not to index it (spec 0008).
+	// Set to true when the shop owner buys the site and wants it on Google.
+	indexable: false,
+};
+```
+
+- El comentario: "Mientras sea una demo, cada página pide a los buscadores que no la indexen
+  (spec 0008). Ponlo a `true` cuando el dueño compre el sitio y lo quiera en Google."
+- `indexable: false,`: el interruptor. `BaseLayout` lo lee y, mientras sea `false`, escribe en
+  todas las páginas la etiqueta [meta robots](../../glosario.md#meta-robots) con `noindex`. Así
+  la demo, con productos inventados y tu número de WhatsApp, no sale en Google; quien tenga el
+  enlace la ve igual, y las vistas previas de WhatsApp no cambian.
 - `};`: cierra el objeto.
 
 ## Cómo se conecta
@@ -64,6 +77,8 @@ export const site = {
   - `src/pages/categoria/[id].astro`: lo usa dentro de dos
     [template literals](../../glosario.md#template-literal) para el título
     (`Aseo · Tienda de alimentos (demo)`) y la descripción de cada página de categoría.
+  - `src/layouts/BaseLayout.astro`: lee `site.indexable` para decidir si escribe `noindex`.
+  - `src/pages/producto/[id].astro`: usa `site.name` en el título de cada producto.
 - La imagen de la vista previa no está aquí: es `public/og-default.png` (spec 0003).
 
 ## Prueba tú
@@ -82,5 +97,6 @@ Cambia el nombre de la tienda y mira en cuántos sitios cambia a la vez.
 
 - [import-export](../../glosario.md#import-export)
 - [open-graph](../../glosario.md#open-graph)
+- [meta-robots](../../glosario.md#meta-robots)
 - [layout](../../glosario.md#layout)
 - [template-literal](../../glosario.md#template-literal)
