@@ -55,14 +55,15 @@ llaman a Astro para trabajar en local, construir el sitio o revisar los tipos.
     "build": "astro build",
     "preview": "astro preview",
     "typecheck": "astro check",
+    "check:weight": "node scripts/check-weight.mjs",
     "astro": "astro"
   },
 ```
 
 - `"scripts"`: los comandos del proyecto, como en Express (`"start": "node server.js"`). Se
   lanzan con `pnpm <nombre>`: `pnpm dev`, `pnpm build`…
-- Todos llaman a `astro`, la [CLI](glosario.md#cli) de Astro: un programa de terminal que se
-  instala junto con la librería `astro`, dentro de `node_modules/.bin/`.
+- Casi todos llaman a `astro`, la [CLI](glosario.md#cli) de Astro: un programa de terminal que
+  se instala junto con la librería `astro`, dentro de `node_modules/.bin/`.
 - `"dev": "astro dev"`: arranca el [servidor de desarrollo](glosario.md#servidor-de-desarrollo)
   en `http://localhost:4321`.
 - `"build": "astro build"`: hace el [build](glosario.md#build) y deja el sitio en
@@ -70,6 +71,12 @@ llaman a Astro para trabajar en local, construir el sitio o revisar los tipos.
 - `"preview": "astro preview"`: sirve lo que hay en `dist/`, tal como lo verá un cliente.
 - `"typecheck": "astro check"`: el [typecheck](glosario.md#typecheck). Revisa los tipos de los
   `.ts` y de los `.astro`. El nombre `typecheck` es del proyecto; Astro lo llama `check`.
+- `"check:weight": "node scripts/check-weight.mjs"`: el único que no usa Astro. Ejecuta con
+  Node nuestro propio script, que mide cada página de `dist/` contra el
+  [presupuesto de peso](glosario.md#presupuesto-de-peso) y falla si alguna se pasa (spec 0001,
+  AC7). Se lanza **después** de `pnpm build`: `pnpm check:weight`
+  ([explicación](scripts/check-weight.mjs.md)). Los dos puntos del nombre son solo una
+  costumbre para agrupar comandos parecidos.
 - `"astro": "astro"`: un atajo para usar cualquier otro comando de la CLI. Lo que escribas
   detrás pasa tal cual: `pnpm astro --version` ejecuta `astro --version`.
 - `},` cierra `scripts`.

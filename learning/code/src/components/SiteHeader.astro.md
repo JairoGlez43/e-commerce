@@ -75,8 +75,8 @@ import { site } from '../lib/site';
 - `<a href="/">`: un enlace a la portada. Es costumbre en la web que el nombre de la tienda
   lleve al inicio.
 - `{site.name}` es una [expresión en plantilla](../../glosario.md#expresion-en-plantilla):
-  escribe el nombre, hoy `Tienda de alimentos (demo)` (valor provisional de la
-  [spec 0003](../../../../docs/specs/0003-site-identity.md)).
+  escribe el nombre, hoy `Tienda de alimentos (demo)` (genérico a propósito, ver la
+  [spec 0009](../../../../docs/specs/0009-site-identity.md)).
 - No es un `h1`: cada página ya tiene su propio `h1` ("Productos" en la portada, el nombre de
   la categoría en `/categoria/<id>`), y debe haber uno solo (ver
   [jerarquía de títulos](../../glosario.md#jerarquia-de-titulos)).

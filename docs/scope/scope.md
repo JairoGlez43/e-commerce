@@ -14,7 +14,7 @@
 | 05 | Catalog page                     | done              | default | docs/specs/0005-catalog-page.md |
 | 06 | Product detail page              | done              | default | docs/specs/0006-product-detail-page.md |
 | 07 | Order contact (WhatsApp)         | done              | default | docs/specs/0007-whatsapp-order.md |
-| 08 | Demo online                      | in-progress       | default | docs/specs/0008-demo-online.md |
+| 08 | Demo online                      | done              | default | docs/specs/0008-demo-online.md |
 
 Status values: `planned` · `needs-a-decision` · `in-progress` · `done`
 
@@ -25,8 +25,8 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 
 ## 01 · Stack and architecture
 **Status:** in-progress
-**Spec:** docs/specs/0001-stack.md, docs/specs/0003-site-identity.md (Assumed)
-**Code:** src/layouts/BaseLayout.astro, src/styles/global.css, src/content.config.ts, src/data/products.json, src/assets/products/, astro.config.mjs, public/og-default.png
+**Spec:** docs/specs/0001-stack.md, docs/specs/0009-site-identity.md
+**Code:** src/layouts/BaseLayout.astro, src/styles/global.css, src/content.config.ts, src/data/products.json, src/assets/products/, astro.config.mjs, public/og-default.png, src/lib/site.ts, scripts/check-weight.mjs
 **Depth:** default
 **Done when:**
 - A stack spec records the framework, data approach, hosting and a weight budget for pages.
@@ -34,7 +34,7 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 - The choice allows wiring real, owner-editable data later without a rewrite.
 **Tasks:**
 - [ ] Decide it — /architect
-- [ ] Build it — /develop
+- [x] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** —
 
@@ -61,7 +61,7 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 - Colors, typography and spacing are defined once and reused by every page.
 - The design base adds almost no page weight (no heavy fonts or libraries).
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [x] Build it — /develop
 - [x] Verify it — /check verify
 **Notes:** Researching reference sites needs going online; ask before doing it.
@@ -76,7 +76,7 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 - Each product has a name, photo, price, availability and details.
 - Product photos are small enough to load fast on a slow connection.
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [x] Build it — /develop
 - [x] Verify it — /check verify
 **Notes:** The product shape decided here is what real data must match later.
@@ -119,14 +119,14 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 - From a product, a visitor can contact the shop to order it in one tap.
 - The message the shop receives already names the product.
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [x] Build it — /develop
 - [x] Verify it — /check verify
 **Notes:** Depends on the open questions in `docs/brief.md` (delivery, how orders are placed).
 A cart is out of the demo unless the owner confirms delivery.
 
 ## 08 · Demo online
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0008-demo-online.md
 **Code:** astro.config.mjs, src/lib/site.ts, src/layouts/BaseLayout.astro
 **Depth:** default
@@ -135,5 +135,5 @@ A cart is out of the demo unless the owner confirms delivery.
 - The online demo stays within the weight budget.
 **Tasks:**
 - [x] Build it — /develop
-- [ ] Verify it — /check verify
+- [x] Verify it — /check verify
 **Notes:** Hosting is chosen in the stack spec (feature 01).

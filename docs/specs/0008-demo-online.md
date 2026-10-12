@@ -1,6 +1,6 @@
 # 0008 · Demo online
 
-**Status:** In Progress
+**Status:** Accepted
 **Date:** 2026-10-10
 **Scope:** `docs/scope/scope.md` → feature 08
 **Supersedes:** —
@@ -84,8 +84,8 @@ results.
   `localhost` in `dist/` and all absolute URLs use the live origin.
 - [x] **T2** (AC2) Add `indexable: false` to `src/lib/site.ts` and the robots condition to
   `BaseLayout.astro`; confirm the tag on all pages.
-- [ ] **T3** (AC3) Owner commits and pushes to `main`; wait for the Vercel deploy.
-- [ ] **T4** (AC3, AC4) With the owner's permission to go online, fetch the live pages and check
+- [x] **T3** (AC3) Owner commits and pushes to `main`; wait for the Vercel deploy.
+- [x] **T4** (AC3, AC4) With the owner's permission to go online, fetch the live pages and check
   status, URLs, preview image and transferred sizes.
 - [x] **T5** Update the walkthroughs in `learning/code/` (`astro.config.mjs`, `site.ts`,
   `BaseLayout.astro`) and their glossary terms.

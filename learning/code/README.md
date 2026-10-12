@@ -21,6 +21,7 @@ por último las páginas que ve el cliente.
 | 2 | `pnpm-workspace.yaml` | Permiso para que dos librerías se compilen al instalar | [ver](pnpm-workspace.yaml.md) |
 | 3 | `astro.config.mjs` | Configuración de Astro: Tailwind y la fuente de títulos | [ver](astro.config.mjs.md) |
 | 4 | `tsconfig.json` | Configuración de TypeScript | [ver](tsconfig.json.md) |
+| 1b | `scripts/check-weight.mjs` | El script `pnpm check:weight`: mide cada página contra el presupuesto de peso | [ver](scripts/check-weight.mjs.md) |
 | 4b | `.env.example` | Plantilla de las variables de entorno (el número de WhatsApp) | [ver](.env.example.md) |
 | 4c | `src/env.d.ts` | Los tipos de esas variables | [ver](src/env.d.ts.md) |
 | 5 | `src/data/categories.json` | Las 6 categorías | [ver](src/data/categories.json.md) |

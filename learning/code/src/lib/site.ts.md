@@ -1,6 +1,6 @@
 # `src/lib/site.ts`
 
-> **Qué es:** el nombre y la descripción de la tienda, y si los buscadores pueden indexarla, en un solo objeto `site` · **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (dónde viven), [spec 0003](../../../../docs/specs/0003-site-identity.md) (los valores, provisionales) y [spec 0008](../../../../docs/specs/0008-demo-online.md) (`indexable`) · **Lo usan:** `src/components/SiteHeader.astro`, `src/layouts/BaseLayout.astro`, `src/pages/index.astro`, `src/pages/categoria/[id].astro`, `src/pages/producto/[id].astro` · **Usa:** nada
+> **Qué es:** el nombre y la descripción de la tienda, y si los buscadores pueden indexarla, en un solo objeto `site` · **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (dónde viven), [spec 0009](../../../../docs/specs/0009-site-identity.md) (los valores, genéricos a propósito) y [spec 0008](../../../../docs/specs/0008-demo-online.md) (`indexable`) · **Lo usan:** `src/components/SiteHeader.astro`, `src/layouts/BaseLayout.astro`, `src/pages/index.astro`, `src/pages/categoria/[id].astro`, `src/pages/producto/[id].astro` · **Usa:** nada
 
 ## Para qué sirve
 
@@ -13,15 +13,17 @@ en ningún otro.
 
 ```ts
 // Shop identity, the one place to change it (spec 0005).
-// Placeholder values, see docs/specs/0003-site-identity.md (Assumed).
+// Generic on purpose: the demo is shown to one business after another (spec 0009).
 ```
 
 - Línea 1: "Identidad de la tienda, el único sitio donde cambiarla (spec 0005)." Avisa de que
   el nombre no debe escribirse a mano en otros archivos.
-- Línea 2: "Valores provisionales, ver la spec 0003 (Assumed)." *Assumed* ("supuesta")
-  significa que estos textos se inventaron para poder construir la demo, pero el dueño todavía
-  no los ha aprobado. Según la [spec 0003](../../../../docs/specs/0003-site-identity.md), hay
-  que confirmarlos con `/architect` antes de dar la funcionalidad por terminada.
+- Línea 2: "Genérica a propósito: la demo se enseña a un negocio tras otro (spec 0009)." La
+  web es una propuesta: si un negocio no la acepta, se le enseña a otro, así que no lleva el
+  nombre de ninguno. Cuando uno acepte, este archivo es lo primero que se personaliza (la
+  [spec 0009](../../../../docs/specs/0009-site-identity.md) tiene la lista completa). Antes
+  este comentario apuntaba a la spec 0003, que era *Assumed* (supuesta, sin aprobar) y la 0009
+  la sustituyó.
 
 ```ts
 export const site = {
@@ -79,7 +81,7 @@ export const site = {
     (`Aseo · Tienda de alimentos (demo)`) y la descripción de cada página de categoría.
   - `src/layouts/BaseLayout.astro`: lee `site.indexable` para decidir si escribe `noindex`.
   - `src/pages/producto/[id].astro`: usa `site.name` en el título de cada producto.
-- La imagen de la vista previa no está aquí: es `public/og-default.png` (spec 0003).
+- La imagen de la vista previa no está aquí: es `public/og-default.png` (spec 0009).
 
 ## Prueba tú
 

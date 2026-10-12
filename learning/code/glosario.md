@@ -272,6 +272,24 @@ el build falla. Es lo mismo que en Express cuando lanzas un error en una ruta.
 texto para poder meterlo dentro de una URL sin romperla. Los espacios, `?`, `&`, acentos y saltos
 de línea (`%0A`) pasan a códigos `%XX`.
 
+### process-argv
+`process.argv` es la lista de palabras con las que se lanzó un programa de Node. Con
+`node script.mjs dist-copia`, la posición 0 es la ruta de `node`, la 1 la del script y la 2
+`'dist-copia'`, el primer argumento tuyo.
+
+### buffer
+Un `Buffer` es el contenido de un archivo (o de un texto) como bytes, tal cual. `fs.readFileSync`
+sin codificación devuelve uno, y `Buffer.from('texto')` convierte un texto. Funciones como la
+compresión de `zlib` trabajan con bytes, no con texto.
+
+### set
+`new Set(lista)` crea una colección que **no admite repetidos**. `[...new Set(['a', 'a', 'b'])]`
+da `['a', 'b']`: es la forma corta de quitar duplicados de una lista.
+
+### console-table
+`console.table(lista)` imprime una lista de objetos como una tabla con bordes en la terminal:
+una fila por objeto y una columna por clave.
+
 ### encadenamiento-opcional
 `a?.b` lee `b` solo si `a` existe; si `a` es `null` o `undefined`, da `undefined` en vez de
 lanzar un error. Ejemplo: `categories[0]?.id` con una lista vacía.

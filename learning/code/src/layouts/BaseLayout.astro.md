@@ -1,6 +1,6 @@
 # `src/layouts/BaseLayout.astro`
 
-> **Qué es:** el [layout](../../glosario.md#layout) común, el esqueleto `<html>` de todas las páginas · **Lo decidió:** [spec 0001](../../../../docs/specs/0001-stack.md) (AC8: `lang`, título, descripción y Open Graph), [spec 0002](../../../../docs/specs/0002-design-base.md) (`<Font>` y el CSS global) y [spec 0003](../../../../docs/specs/0003-site-identity.md) (imagen por defecto y URL de respaldo) · **Lo usan:** [`src/pages/index.astro`](../pages/index.astro.md), [`src/pages/categoria/[id].astro`](../pages/categoria/[id].astro.md), [`src/pages/estilo.astro`](../pages/estilo.astro.md) · **Usa:** [`src/styles/global.css`](../styles/global.css.md), `<Font>` de `astro:assets`, `public/og-default.png` y los favicons de `public/`
+> **Qué es:** el [layout](../../glosario.md#layout) común, el esqueleto `<html>` de todas las páginas · **Lo decidió:** [spec 0001](../../../../docs/specs/0001-stack.md) (AC8: `lang`, título, descripción y Open Graph), [spec 0002](../../../../docs/specs/0002-design-base.md) (`<Font>` y el CSS global) y [spec 0009](../../../../docs/specs/0009-site-identity.md) (imagen por defecto) y [spec 0008](../../../../docs/specs/0008-demo-online.md) (`site` y `noindex`) · **Lo usan:** [`src/pages/index.astro`](../pages/index.astro.md), [`src/pages/categoria/[id].astro`](../pages/categoria/[id].astro.md), [`src/pages/estilo.astro`](../pages/estilo.astro.md) · **Usa:** [`src/styles/global.css`](../styles/global.css.md), `<Font>` de `astro:assets`, `public/og-default.png` y los favicons de `public/`
 
 ## Para qué sirve
 
@@ -66,7 +66,7 @@ const { title, description, image = '/og-default.png', noindex = false } = Astro
   [desestructuración](../../glosario.md#desestructuracion).
 - `image = '/og-default.png'` y `noindex = false` son
   [valores por defecto](../../glosario.md#valor-por-defecto): si la página no pasa `image`, vale
-  `'/og-default.png'` (la imagen de `public/`, spec 0003); si no pasa `noindex`, vale `false`.
+  `'/og-default.png'` (la imagen de `public/`, spec 0009); si no pasa `noindex`, vale `false`.
   Así, una página normal solo tiene que pasar `title` y `description`.
 
 ```astro
@@ -89,7 +89,7 @@ const imageUrl = new URL(image, base).href;
     `astro.config.mjs`: `https://tienda-demo-cuba.vercel.app` (feature 08).
   - `Astro.url` es la dirección de la página que se está generando.
   - El [`??`](../../glosario.md#nullish) usa `Astro.site` si existe y, si no, `Astro.url`. Es
-    el respaldo que anota la spec 0003.
+    el respaldo que anotaba la spec 0003 (hoy sustituida por la 0009).
 - `const pageUrl = new URL(Astro.url.pathname, base).href;` construye la URL completa de esta
   página con el [constructor URL](../../glosario.md#constructor-url):
   - `Astro.url.pathname` es solo la ruta, por ejemplo `/categoria/carnicos/`.

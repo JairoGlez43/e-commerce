@@ -1,5 +1,5 @@
 // Shop identity, the one place to change it (spec 0005).
-// Placeholder values, see docs/specs/0003-site-identity.md (Assumed).
+// Generic on purpose: the demo is shown to one business after another (spec 0009).
 export const site = {
 	name: 'Tienda de alimentos (demo)',
 	description:

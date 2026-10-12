@@ -143,7 +143,7 @@ pnpm equivalents with owner approval before `/develop scaffold`.
 - [x] **T5** (AC2, AC6, AC7) Add Tailwind via the Astro integration, import
   `src/styles/global.css` in `BaseLayout.astro`, keep the system font stack; confirm no
   `<script>`, no third-party URLs in `dist/`, and generated CSS within budget.
-- [ ] **T6** (AC7) Write `scripts/check-weight.mjs` and the `check:weight` script.
+- [x] **T6** (AC7) Write `scripts/check-weight.mjs` and the `check:weight` script.
 
 ## Out of scope
 - The product field list (feature 04), design tokens and visual reference (feature 03),

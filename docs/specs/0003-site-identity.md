@@ -1,6 +1,6 @@
 # 0003 · Site identity placeholders
 
-**Status:** Assumed
+**Status:** Superseded by 0009
 **Date:** 2026-10-04
 **Scope:** `docs/scope/scope.md` → feature 01 (spec 0001, task T2)
 

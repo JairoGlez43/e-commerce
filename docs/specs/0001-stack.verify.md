@@ -19,8 +19,14 @@ Built so far: T1, T2, T3, T4, T5. Steps for ACs that depend on open tasks are ma
 - **AC6** — Open the built page (`pnpm preview`) with the browser's Network tab. Expect: every
   request goes to the same origin; no fonts, CDNs or analytics from other domains. In
   `dist/`, the only external URL in CSS is Tailwind's license comment.
-- **AC7** — Pending T6 (`pnpm run check:weight`). Interim: `dist/index.html` + its CSS are
-  about 2.5 KB gzipped (budget 50 KB).
+- **AC7** — After `WHATSAPP_NUMBER=5355555555 pnpm build`, run `pnpm check:weight`: a table with one
+  row per page (HTML+CSS and JS gzipped, font, largest image vs its limit, first view) and
+  `All 26 pages within budget.`, exit 0. Measured 2026-10-12: max HTML+CSS 6.7 KB (`/`), JS 0,
+  font 17.7 KB, largest thumbnail 22.8 KB, largest detail photo 58.5 KB, largest first view
+  60.5 KB. To see it fail, copy `dist/` elsewhere, add ~100 KB of text to one page and run
+  `node scripts/check-weight.mjs <copy>`: that row says `FAIL: HTML+CSS … > 50 KB` and the exit
+  code is 1 (checked 2026-10-12, also for 12 KB of inline JS). With no `dist/` it exits 1 and
+  says to build first.
 - **AC8** — View source of `/`. Expect: `<html lang="es">`, a `<title>`, a
   `<meta name="description">`, and `og:title`, `og:description`, `og:image`, `og:url` with
   absolute URLs. Open `/og-default.png`: a 1200×630 image. Until `site` is set (feature 08)
