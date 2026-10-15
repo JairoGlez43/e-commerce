@@ -247,7 +247,7 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
 				loading="eager"
 				class:list={[
 					'aspect-square w-full rounded-card border border-border object-cover',
-					{ 'opacity-60': !inStock },
+					{ 'opacity-50': !inStock },
 				]}
 			/>
 ```
@@ -274,7 +274,7 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
     `aspect-square` (cuadrada), `w-full` (todo el ancho de su celda), `rounded-card` (esquinas
     redondeadas con el token del proyecto), `border border-border` (borde de 1 px en el color
     `border`) y `object-cover` (la foto rellena el cuadrado recortando lo que sobre). Y, si el
-    producto está agotado (`!inStock`), `opacity-60`: la foto se ve atenuada, igual que en el
+    producto está agotado (`!inStock`), `opacity-50`: la foto se ve atenuada, igual que en el
     catálogo.
 
 ### 8. Los datos del producto

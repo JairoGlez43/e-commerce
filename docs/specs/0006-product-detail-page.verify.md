@@ -9,7 +9,8 @@ Browser checks use `pnpm build && pnpm preview` (http://localhost:4321, or the n
 - **AC2 (content):** open `/producto/arroz-blanco`: header, square photo, `h1` "Arroz blanco",
   "1 lb", "280 CUP", green "Disponible", and the full description. Open
   `/producto/salchichas`: "Agotado" badge and the photo looks faded. Inspect the photo: `alt`
-  equals the product name.
+  equals the product name, and its class includes `opacity-50` (computed `opacity: 0.5`), the
+  same as the Salchichas card on `/`.
 - **AC3 (breadcrumb):** above the `h1` reads "Productos › Granos y pastas" (on arroz-blanco).
   "Productos" goes to `/`, "Granos y pastas" to `/categoria/granos-y-pastas`. Inspect each link:
   ≥ 44 px tall. The "›" is hidden from screen readers (`aria-hidden`).

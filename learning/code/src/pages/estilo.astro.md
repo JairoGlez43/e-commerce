@@ -414,7 +414,7 @@ const products = (await getCollection('products'))
 									alt={product.data.name}
 									widths={[200, 400]}
 									sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
-									class:list={['aspect-square w-full object-cover', { 'opacity-60': !product.data.inStock }]}
+									class:list={['aspect-square w-full object-cover', { 'opacity-50': !product.data.inStock }]}
 								/>
 ```
 
@@ -433,7 +433,7 @@ const products = (await getCollection('products'))
   - No lleva `loading`: se queda con el valor por defecto de Astro, que es `lazy` (según la
     spec 0005).
   - `class:list={[...]}`: foto cuadrada, a todo el ancho, recortada para llenar, y a
-    `opacity: 0.6` si el producto está agotado.
+    `opacity: 0.5` si el producto está agotado.
 
 ```astro
 								<div class="flex flex-1 flex-col gap-1 p-3">

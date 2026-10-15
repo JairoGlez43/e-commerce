@@ -59,7 +59,7 @@ _Added by /develop as they ship: name · path · exact classes · variants._
 - **Product card** · `src/pages/estilo.astro` ·
   `<article class="flex h-full flex-col overflow-hidden rounded-card border border-border bg-surface shadow-card">`
   → photo `<Image … widths={[200, 400]} class="aspect-square w-full object-cover">` (add
-  `opacity-60` when out of stock; alt = product name) → `<div class="flex flex-1 flex-col gap-1 p-3">`
+  `opacity-50` when out of stock; alt = product name) → `<div class="flex flex-1 flex-col gap-1 p-3">`
   with name (`h3`, see Typography), format line, `price`, badge.
 - **Availability badge** · `src/pages/estilo.astro` · variants:
   - available: `<p class="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full bg-olive-soft px-2 py-0.5 text-xs font-medium text-olive">`
@@ -86,7 +86,7 @@ _Added by /develop as they ship: name · path · exact classes · variants._
   `<li aria-hidden="true">›</li>`. No variants.
 - **Product detail layout** · `src/pages/producto/[id].astro` · `<article class="grid gap-6 md:grid-cols-2 md:items-start">`
   → photo `<Image … widths={[400, 800]} sizes="(min-width: 768px) 480px, 100vw" loading="eager"
-  class="aspect-square w-full rounded-card border border-border object-cover">` (`opacity-60` when
+  class="aspect-square w-full rounded-card border border-border object-cover">` (`opacity-50` when
   out of stock) → `<div class="flex flex-col gap-3">` with `h1` (base style), unit
   `<p class="text-muted">`, `price`, the Availability badge **without** `mt-auto`, description `<p>`.
 
@@ -95,7 +95,7 @@ _Added by /develop as they ship: name · path · exact classes · variants._
   Text "Pedir por WhatsApp" (in stock) or "Preguntar por WhatsApp" (out of stock). No logo; same tab.
 
 ## States
-- Out of stock: "Agotado" badge plus photo at `opacity-60`; the word carries the meaning, never
+- Out of stock: "Agotado" badge plus photo at `opacity-50`; the word carries the meaning, never
   the color alone.
 - Empty, loading and error states for pages are designed by the feature that owns the page
   (05–07), with these tokens. The site is static, so there is no loading state by default.

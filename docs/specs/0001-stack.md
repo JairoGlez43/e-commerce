@@ -1,6 +1,6 @@
 # 0001 · Stack and architecture
 
-**Status:** In Progress
+**Status:** Accepted
 **Date:** 2026-10-02
 **Scope:** `docs/scope/scope.md` → feature 01
 **Supersedes:** —

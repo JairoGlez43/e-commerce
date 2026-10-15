@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-10-07
+**Revised:** 2026-10-13: out-of-stock photo opacity 60 → 50 (AC2, T5)
 **Scope:** `docs/scope/scope.md` → feature 06
 **Supersedes:** —
 
@@ -31,7 +32,7 @@ page content, the way back to the catalog and what the preview shows.
   out-of-stock ones included; `/producto/no-existe` returns 404.
 - **AC2:** The page shows, under the site header: the square photo (alt = product name), an
   `h1` with the name, the `unit`, the price formatted only by `formatPrice()`, the
-  availability badge ("Disponible" / "Agotado", photo at `opacity-60` when out of stock), and
+  availability badge ("Disponible" / "Agotado", photo at `opacity-50` when out of stock), and
   the full `description`.
 - **AC3:** Above the `h1`, a breadcrumb `<nav aria-label="Ruta">` shows "Productos" linking to
   `/` and the product's category name linking to `/categoria/<category id>`; both links are
@@ -84,7 +85,7 @@ SiteHeader
 ```
 - **Photo:** `<Image src={photo} alt={name} widths={[400, 800]}
   sizes="(min-width: 768px) 480px, 100vw" loading="eager"
-  class:list={['aspect-square w-full rounded-card border border-border object-cover', { 'opacity-60': !inStock }]} />`.
+  class:list={['aspect-square w-full rounded-card border border-border object-cover', { 'opacity-50': !inStock }]} />`.
   At 360 px on a 2× screen the browser picks the 800 px file (≤ 80 KB, spec 0004 AC6).
 - `text-muted` is used for the breadcrumb and unit; links keep the default focus ring.
 
@@ -112,6 +113,9 @@ SiteHeader
 - [x] **T4** (AC1, AC4, AC7, AC8) Run `pnpm typecheck` and `pnpm build`; inspect `dist/producto/`
   (18 pages, OG tags, JPG size, `<script>`, gzipped size); update `design.md` and the code
   walkthroughs in `learning/code/`.
+- [x] **T5** (AC2) Out-of-stock photo at `opacity-50` in `src/pages/producto/[id].astro` and in
+  `design.md` (detail photo line); update the matching walkthrough in `learning/code/`. Same
+  value as the catalog card (spec 0005 T8). No other class changes.
 
 ## Out of scope
 - The WhatsApp order button and message (feature 07).
@@ -126,6 +130,8 @@ SiteHeader
 - `docs/specs/0004-sample-product-data.md` (fields, `reference()` shape, photo sizes)
 - `docs/specs/0005-catalog-page.md`, `design.md` (header, badge, tokens, touch targets)
 - Owner answer, 2026-10-07: the link preview shows the price.
+- Owner answer, 2026-10-13: out-of-stock photos at `opacity-50` on every page, matching the
+  catalog card (spec 0005, revised the same day).
 - `getImage()` and WhatsApp preview format support: from memory, not verified;
   `/develop` checks `getImage()` with `researcher` (T3).
 
@@ -144,6 +150,9 @@ SiteHeader
   vs the WebP already generated (rejected: preview support uncertain).
 - Out-of-stock products keep their page (chosen) vs no page (rejected: a link shared while in
   stock would 404 later).
+- Out-of-stock photo opacity (revised 2026-10-13): `opacity-50`, same as the catalog card
+  (chosen, owner) vs keeping `opacity-60` here (rejected: the same state would look different
+  on the card and on the page).
 
 **Assumptions and risks:**
 - WhatsApp caches a preview per URL; a price change may not refresh previews already sent.

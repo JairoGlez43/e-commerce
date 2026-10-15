@@ -126,7 +126,7 @@ const href = `/producto/${product.id}`;
 		widths={[200, 400]}
 		sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
 		loading={eager ? 'eager' : 'lazy'}
-		class:list={['aspect-square w-full object-cover', { 'opacity-60': !inStock }]}
+		class:list={['aspect-square w-full object-cover', { 'opacity-50': !inStock }]}
 	/>
 ```
 
@@ -147,13 +147,13 @@ const href = `/producto/${product.id}`;
   si no, `loading="lazy"` (esperar al scroll). Las páginas pasan `eager` a las **4 primeras
   tarjetas en el orden de la página** y el resto carga en diferido. La spec 0001 limita las
   imágenes de la primera vista a 150 KB; en `/` las 4 fotos *eager* suman unos 55 KB.
-- `class:list={['aspect-square w-full object-cover', { 'opacity-60': !inStock }]}`: arma el
+- `class:list={['aspect-square w-full object-cover', { 'opacity-50': !inStock }]}`: arma el
   atributo `class` con [`class:list`](../../glosario.md#class-list):
   - `aspect-square` → `aspect-ratio: 1 / 1`: la foto siempre es cuadrada.
   - `w-full` → `width: 100%`: ocupa todo el ancho de la tarjeta.
   - `object-cover` → `object-fit: cover`: si la foto no es cuadrada, se recorta para llenar el
     cuadrado en vez de deformarse.
-  - `{ 'opacity-60': !inStock }` → añade `opacity: 0.6` (foto descolorida) **solo** si el
+  - `{ 'opacity-50': !inStock }` → añade `opacity: 0.5` (foto descolorida) **solo** si el
     producto no tiene existencias (`!inStock` = "no hay stock").
 - `/>`: cierra el componente (no tiene contenido dentro).
 

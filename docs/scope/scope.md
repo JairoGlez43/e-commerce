@@ -7,12 +7,12 @@
 ## At a glance
 | #  | Feature                          | Status            | Depth   | Spec |
 |----|----------------------------------|-------------------|---------|------|
-| 01 | Stack and architecture           | in-progress       | default | docs/specs/0001-stack.md |
+| 01 | Stack and architecture           | done              | default | docs/specs/0001-stack.md |
 | 02 | Project scaffold                 | done              | default | docs/specs/0001-stack.md |
 | 03 | Visual reference and design base | done              | default | docs/specs/0002-design-base.md |
 | 04 | Sample product data              | done              | default | docs/specs/0004-sample-product-data.md |
-| 05 | Catalog page                     | done              | default | docs/specs/0005-catalog-page.md |
-| 06 | Product detail page              | done              | default | docs/specs/0006-product-detail-page.md |
+| 05 | Catalog page                     | in-progress       | default | docs/specs/0005-catalog-page.md |
+| 06 | Product detail page              | in-progress       | default | docs/specs/0006-product-detail-page.md |
 | 07 | Order contact (WhatsApp)         | done              | default | docs/specs/0007-whatsapp-order.md |
 | 08 | Demo online                      | done              | default | docs/specs/0008-demo-online.md |
 
@@ -24,7 +24,7 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 ---
 
 ## 01 · Stack and architecture
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0001-stack.md, docs/specs/0009-site-identity.md
 **Code:** src/layouts/BaseLayout.astro, src/styles/global.css, src/content.config.ts, src/data/products.json, src/assets/products/, astro.config.mjs, public/og-default.png, src/lib/site.ts, scripts/check-weight.mjs
 **Depth:** default
@@ -35,7 +35,7 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 **Tasks:**
 - [ ] Decide it — /architect
 - [x] Build it — /develop
-- [ ] Verify it — /check verify
+- [x] Verify it — /check verify
 **Notes:** —
 
 ## 02 · Project scaffold
@@ -82,7 +82,7 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 **Notes:** The product shape decided here is what real data must match later.
 
 ## 05 · Catalog page
-**Status:** done
+**Status:** in-progress
 **Spec:** docs/specs/0005-catalog-page.md
 **Code:** src/pages/index.astro, src/pages/categoria/[id].astro, src/components/ProductCard.astro, src/components/CategoryNav.astro, src/components/SiteHeader.astro, src/lib/catalog.ts, src/lib/site.ts
 **Depth:** default
@@ -97,7 +97,7 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 **Notes:** —
 
 ## 06 · Product detail page
-**Status:** done
+**Status:** in-progress
 **Spec:** docs/specs/0006-product-detail-page.md
 **Code:** src/pages/producto/[id].astro
 **Depth:** default

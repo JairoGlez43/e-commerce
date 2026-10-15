@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-10-06
+**Revised:** 2026-10-13: out-of-stock photo opacity 60 → 50 (AC2, T8)
 **Scope:** `docs/scope/scope.md` → feature 05
 **Supersedes:** —
 
@@ -30,7 +31,7 @@ spec 0001 on slow connections.
   out-of-stock ones; each group is sorted by name A–Z (Spanish collation).
 - **AC2:** Every card shows the square photo (alt = product name), the name, the `unit`, the
   price formatted only by `formatPrice()`, and an availability badge. Out-of-stock cards show
-  "Agotado" and the photo at `opacity-60`. With the sample data, `/` shows 18 cards, 2 of
+  "Agotado" and the photo at `opacity-50`. With the sample data, `/` shows 18 cards, 2 of
   them "Agotado".
 - **AC3:** Each card is one link to `/producto/<id>` whose accessible name is the product
   name, and a click or tap anywhere on the card follows it. (The target page is built by
@@ -142,6 +143,10 @@ Components list with their paths and the differences above.
 - [x] **T6** (AC4, AC5) Create `src/pages/categoria/[id].astro`.
 - [x] **T7** (AC5, AC8, AC9) Run `pnpm typecheck` and `pnpm build`; inspect `dist/` for the 6
   category pages, `<script>` tags, `loading` attributes and gzipped sizes; update `design.md`.
+- [x] **T8** (AC2) Out-of-stock photo at `opacity-50` everywhere the card appears:
+  `src/components/ProductCard.astro` (already changed, uncommitted), the card copy in
+  `src/pages/estilo.astro`, and `design.md` (card class line and the "Out of stock" rule);
+  update the matching walkthroughs in `learning/code/`. No other class changes.
 
 ## Out of scope
 - The product detail page `/producto/<id>` (feature 06) and the WhatsApp order button (07).
@@ -157,6 +162,8 @@ Components list with their paths and the differences above.
 - `docs/specs/0003-site-identity.md` (placeholder name and description)
 - `docs/specs/0004-sample-product-data.md`, `src/content.config.ts` (fields, `reference()` shape)
 - Owner answers, 2026-10-06: show out-of-stock products marked; one static page per category.
+- Owner answer, 2026-10-13: out-of-stock photos at `opacity-50` on every page (follows
+  `docs/reviews/2026-10-13-uncommitted-0001-0005.md`, finding 1).
 - `getStaticPaths` and dynamic tags: from memory, not checked against Astro 7 docs this time;
   `/develop` checks them with `researcher` if unsure.
 
@@ -171,6 +178,10 @@ Components list with their paths and the differences above.
 - Out of stock: shown and marked, last in their category (chosen) vs hidden (runner-up:
   shorter list, but a product shared in WhatsApp would vanish from the catalog and customers
   lose sight of what the shop normally carries).
+- Out-of-stock photo opacity (revised 2026-10-13): `opacity-50` everywhere (chosen, owner) vs
+  keeping `opacity-60` everywhere and reverting the card (runner-up: no rework, but not the
+  owner's pick). Only the photo fades; name, price and the
+  "Agotado" badge keep full contrast, and the word still carries the meaning (`design.md`).
 - Home grouped by category (chosen) vs one flat grid (runner-up: simpler, but 18+ mixed
   products are harder to scan, and the grouping is free given the category data).
 - Whole-card link via a stretched link on the name (chosen) vs wrapping the whole card in

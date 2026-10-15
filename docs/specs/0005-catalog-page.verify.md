@@ -11,6 +11,8 @@ Browser checks use `pnpm build && pnpm preview` (http://localhost:4321) unless n
   "Caja 10 lb"), price like `3400 CUP` (`es-ES` groups only 5+ digits: `12.500 CUP`), and a
   badge. Exactly 2 say "Agotado" (Salchichas, Leche
   en polvo) and their photos look faded. Inspect any photo: `alt` equals the product name.
+  Inspect an "Agotado" photo: its class includes `opacity-50` (computed `opacity: 0.5`); an
+  in-stock photo has no `opacity-*` class. Same on `/estilo`'s product card.
 - **AC3 (card link):** hover a card's photo, price and badge: the pointer is a hand everywhere.
   Click a card → the URL becomes `/producto/<id>` (404 until feature 06 ships). With a screen
   reader or DevTools → Accessibility, the link's name is just the product name.

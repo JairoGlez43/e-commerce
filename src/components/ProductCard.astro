@@ -25,7 +25,7 @@ const href = `/producto/${product.id}`;
 		widths={[200, 400]}
 		sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
 		loading={eager ? 'eager' : 'lazy'}
-		class:list={['aspect-square w-full object-cover', { 'opacity-60': !inStock }]}
+		class:list={['aspect-square w-full object-cover', { 'opacity-50': !inStock }]}
 	/>
 	<div class="flex flex-1 flex-col gap-1 p-3">
 		{
