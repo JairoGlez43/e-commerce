@@ -99,10 +99,10 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 |---|---|---|
 | `src/pages/` | Routes: `index.astro` (catalog), `categoria/[id].astro`, `producto/[id].astro`, `estilo.astro` (internal style guide, `noindex`) | Hold data, sorting rules or shared markup that belongs in `lib/` or `components/` |
 | `src/layouts/` | `BaseLayout.astro`: `<html lang="es">`, meta and Open Graph tags, robots, global CSS, font | Be bypassed: every page renders inside it |
-| `src/components/` | Reusable `.astro` pieces (`SiteHeader`, `CategoryNav`, `ProductCard`, `ShopInfo`, `Faq`, `SiteFooter`), listed in `design.md` | Fetch data themselves (pages pass props) |
+| `src/components/` | Reusable `.astro` pieces (`SiteHeader`, `CategoryNav`, `ProductCard`, `ShopInfo`, `Faq`, `SiteFooter`, `WhatsAppIcon`), listed in `design.md` | Fetch data themselves (pages pass props) |
 | `src/lib/` | Plain TS helpers, each the single home of one rule: `catalog.ts` (grouping, sort), `price.ts` (CUP format), `site.ts` (shop identity, `indexable`, shop info), `whatsapp.ts` (number, order and contact links), `date.ts` (day format in Havana time) | Be duplicated inline in a page |
 | `src/data/` | `products.json`, `categories.json` (sample data, shape fixed by spec 0004) | Be imported by pages (only `content.config.ts` reads them) |
-| `src/assets/` | Product photos (`products/<id>.jpg` + `CREDITS.md`) and the font file, processed at build | Hold files that must be served as-is (those go in `public/`) |
+| `src/assets/` | Product photos (`products/<id>.jpg` + `CREDITS.md`), the font file, and the official WhatsApp glyphs (`icons/` + `SOURCE.md`, never edited), processed at build | Hold files that must be served as-is (those go in `public/`) |
 | `src/styles/` | `global.css`: Tailwind entry, `@theme` tokens, base styles, `.price` and `.awning` | Gain raw values used elsewhere: it is the only place they live |
 | `public/` | Files served as-is (favicons, `og-default.png`) | Hold product images (those go through astro:assets per spec 0001) |
 | `docs/` | Brief, scope, specs (+ `.verify.md` check steps), reviews | Be edited outside the owning skill (see Ownership) |
@@ -133,6 +133,9 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 - Shop information (location, hours, payments, pickup, delivery, how-to-buy steps, FAQ) lives
   only in `src/lib/site.ts`; components render it and hold no shop copy (spec 0010). Dates only
   through `formatDay()` in `src/lib/date.ts` (`America/Havana`, since Vercel builds in UTC).
+- Brand icon: the official WhatsApp glyph only through `WhatsAppIcon.astro`, as an `<img>` next to
+  the words, never inline, never recolored or edited (Meta's brand rules, spec 0011). Focusable
+  elements on an `ink` background add `focus-visible:outline-cream`.
 - Design system: `design.md` (art direction, token names, component classes to copy); live
   preview at `/estilo`.
 - Env vars: `WHATSAPP_NUMBER`, build-time only (read in `src/lib/whatsapp.ts` via
@@ -171,6 +174,11 @@ _Added by /sync from /debug findings: symptom → cause → rule._
   (`Emulation.setDeviceMetricsOverride`) or inside a 360 px `<iframe>` (spec 0010 verify).
 - `pnpm preview` exits with "Another astro preview server is already running" → Astro allows one
   preview and prints the running one's URL → use that URL; never `--force`, it kills the owner's.
+- Two inlined brand SVGs recolor each other → Astro's SVG import copies the file's `<style>` and
+  `id` into the page, and the official files share `.cls-1` / `id="Layer_1"` → render brand SVGs
+  as `<img src={file.src}>`, never as a component (spec 0011).
+- `curl http://127.0.0.1:<port>` gets no answer from `pnpm preview` → it listens on `localhost`
+  only → use the exact URL it prints.
 
 ## Git
 integration: off   <!-- on = /develop branches and commits as milestones land -->

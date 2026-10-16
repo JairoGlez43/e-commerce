@@ -1,7 +1,8 @@
 # `src/pages/categoria/[id].astro`
 
 > **Qué es:** la plantilla de las páginas `/categoria/<id>`, una por categoría ·
-> **Lo decidió:** [spec 0005](../../../../../docs/specs/0005-catalog-page.md) ·
+> **Lo decidió:** [spec 0005](../../../../../docs/specs/0005-catalog-page.md) (el relleno de
+> abajo, `pb-12`, [spec 0011](../../../../../docs/specs/0011-visual-polish.md)) ·
 > **Lo usan:** nadie lo importa; Astro genera `dist/categoria/<id>/index.html` por cada
 > categoría ([ruta dinámica](../../../glosario.md#ruta-por-archivo)) ·
 > **Usa:** `BaseLayout`, `SiteHeader`, `CategoryNav`, `ProductCard`, `SiteFooter`, `getCatalog()` y
@@ -130,7 +131,7 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
 ```astro
 <BaseLayout title={title} description={description}>
 	<SiteHeader />
-	<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-8">
+	<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 pt-8 pb-12">
 		<div class="flex flex-col gap-4">
 			<h1>{category.data.name}</h1>
 			<CategoryNav categories={catalog} currentId={category.id} />
@@ -140,11 +141,16 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
 - `<BaseLayout title={title} description={description}>`: el [layout](../../../glosario.md#layout)
   con el título y la descripción de esta categoría.
 - `<SiteHeader />`: la cabecera, igual que en la portada.
-- `<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-8">`: el mismo contenedor que la
-  portada: centrado (`mx-auto` → márgenes laterales `auto`), máximo 1024 px de ancho
-  (`max-w-5xl`), en columna (`flex flex-col`), 48 px entre bloques (`gap-12`), 16 px de margen
-  lateral (`px-4`) y 32 px arriba y abajo (`py-8`). Explicado clase a clase en
-  [`index.astro.md`](../index.astro.md#4-layout-cabecera-y-contenedor).
+- `<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 pt-8 pb-12">`: el mismo contenedor
+  que el catálogo de la portada: centrado (`mx-auto` → márgenes laterales `auto`), máximo
+  1024 px de ancho (`max-w-5xl`), en columna (`flex flex-col`), 48 px entre bloques (`gap-12`) y
+  16 px de margen lateral (`px-4`). Explicado clase a clase en
+  [`index.astro.md`](../index.astro.md#4-layout-cabecera-y-contenedor). Aquí las clases van en el
+  propio `<main>` porque esta página no tiene banda de información a todo el ancho.
+  - `pt-8` → `padding-top: 32px`, y `pb-12` → `padding-bottom: 48px`. Hasta la spec 0011 era
+    `py-8` (32 px arriba y abajo) y el pie de página traía su propio margen de 48 px arriba. El
+    pie perdió ese margen para pegarse a la banda de la portada (spec 0011), así que esta página
+    pone ahora el aire debajo de los productos con `pb-12`, antes del pie oscuro.
 - `<div class="flex flex-col gap-4">`: título y chips juntos, en columna, con 16 px entre ellos.
 - `<h1>{category.data.name}</h1>`: el título de la página es el nombre de la categoría
   (`Cárnicos`). Su estilo viene de la capa base de `global.css`.
@@ -186,8 +192,8 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
     de categoría más pesada suma unos 60 KB de fotos inmediatas, dentro del límite de 150 KB
     ([presupuesto de peso](../../../glosario.md#presupuesto-de-peso)).
 - `</ul>`, `</main>`: cierran la rejilla y el contenido.
-- `<SiteFooter />`: el pie de página con el nombre, el municipio, el horario y el enlace a
-  WhatsApp, el mismo que en la portada ([explicación](../../components/SiteFooter.astro.md)). Va
+- `<SiteFooter />`: el pie de página oscuro con el nombre, el municipio, el horario y el enlace
+  a WhatsApp, el mismo que en la portada ([explicación](../../components/SiteFooter.astro.md)). Va
   fuera del `<main>`, como la cabecera, porque es común a todas las páginas.
 - `</BaseLayout>`: cierra el layout.
 

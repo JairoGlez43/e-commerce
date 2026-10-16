@@ -1,6 +1,6 @@
 # `src/components/SiteHeader.astro`
 
-> **Qué es:** la cabecera del sitio: el toldo de rayas, el nombre de la tienda como enlace a la portada y el enlace "Escríbenos" a WhatsApp · **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (Design → Components → SiteHeader, AC7) sobre el patrón Header de [spec 0002](../../../../docs/specs/0002-design-base.md) y [`design.md`](../../../../design.md); el enlace "Escríbenos", [spec 0010](../../../../docs/specs/0010-shop-information.md) (AC3) · **Lo usan:** [`src/pages/index.astro`](../pages/index.astro.md), [`src/pages/categoria/[id].astro`](../pages/categoria/%5Bid%5D.astro.md) y [`src/pages/producto/[id].astro`](../pages/producto/%5Bid%5D.astro.md) · **Usa:** [`src/lib/site.ts`](../lib/site.ts.md) (el nombre), `contactLink()` de [`src/lib/whatsapp.ts`](../lib/whatsapp.ts.md) y las clases de [`src/styles/global.css`](../styles/global.css.md) (`awning` y los tokens)
+> **Qué es:** la cabecera del sitio: el toldo de rayas, el nombre de la tienda como enlace a la portada y el enlace "Escríbenos" a WhatsApp, con el icono de WhatsApp · **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (Design → Components → SiteHeader, AC7) sobre el patrón Header de [spec 0002](../../../../docs/specs/0002-design-base.md) y [`design.md`](../../../../design.md); el enlace "Escríbenos", [spec 0010](../../../../docs/specs/0010-shop-information.md) (AC3); su icono, [spec 0011](../../../../docs/specs/0011-visual-polish.md) (AC2) · **Lo usan:** [`src/pages/index.astro`](../pages/index.astro.md), [`src/pages/categoria/[id].astro`](../pages/categoria/%5Bid%5D.astro.md) y [`src/pages/producto/[id].astro`](../pages/producto/%5Bid%5D.astro.md) · **Usa:** [`src/lib/site.ts`](../lib/site.ts.md) (el nombre), `contactLink()` de [`src/lib/whatsapp.ts`](../lib/whatsapp.ts.md), [`WhatsAppIcon.astro`](WhatsAppIcon.astro.md) (el icono) y las clases de [`src/styles/global.css`](../styles/global.css.md) (`awning` y los tokens)
 
 ## Para qué sirve
 
@@ -16,6 +16,7 @@ un producto. No recibe [props](../../glosario.md#props): el nombre lo lee de
 ---
 import { site } from '../lib/site';
 import { contactLink } from '../lib/whatsapp';
+import WhatsAppIcon from './WhatsAppIcon.astro';
 ---
 ```
 
@@ -26,6 +27,9 @@ import { contactLink } from '../lib/whatsapp';
   `site` de lo que exporta ese archivo. La ruta no lleva `.ts`: se puede omitir.
 - `import { contactLink } from '../lib/whatsapp';` trae la función que arma el enlace de
   WhatsApp con un mensaje general ([explicación](../lib/whatsapp.ts.md)).
+- `import WhatsAppIcon from './WhatsAppIcon.astro';` trae el componente del icono oficial de
+  WhatsApp ([explicación](WhatsAppIcon.astro.md)). `./` significa "en esta misma carpeta",
+  `src/components/`. Un componente se importa sin llaves: cada `.astro` exporta uno solo.
 - No hay `interface Props` ni `Astro.props`: este componente no recibe nada. Si mañana cambia
   el nombre de la tienda, se cambia en `site.ts` y la cabecera de todas las páginas cambia
   sola.
@@ -123,8 +127,9 @@ import { contactLink } from '../lib/whatsapp';
 ```astro
 		<a
 			href={contactLink()}
-			class="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent"
+			class="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent"
 		>
+			<WhatsAppIcon />
 			Escríbenos
 		</a>
 ```
@@ -132,13 +137,14 @@ import { contactLink } from '../lib/whatsapp';
 - `<a href={contactLink()}>`: el enlace "Escríbenos". `contactLink()` corre en el build y
   devuelve `https://wa.me/<número>?text=` más el mensaje `Hola, tengo una pregunta sobre la
   tienda.` ya codificado para la URL ([click-to-chat](../../glosario.md#click-to-chat)). Al
-  tocarlo se abre WhatsApp con ese mensaje escrito. Va en la misma pestaña, sin `target`, y
-  sin logo de WhatsApp (por las mismas razones que el botón de pedido, spec 0007).
+  tocarlo se abre WhatsApp con ese mensaje escrito. Va en la misma pestaña, sin `target`.
 - Las clases son las del **chip de categoría** sin seleccionar (ver
-  [`CategoryNav.astro.md`](CategoryNav.astro.md)) más `font-medium`, así que parece un botón
-  pequeño en forma de píldora:
-  - `inline-flex min-h-11 items-center`: al menos 44 px de alto, texto centrado en vertical
-    ([área táctil](../../glosario.md#area-tactil)), por la misma razón que el nombre.
+  [`CategoryNav.astro.md`](CategoryNav.astro.md)) más `font-medium` y `gap-2`, así que parece un
+  botón pequeño en forma de píldora:
+  - `inline-flex min-h-11 items-center`: al menos 44 px de alto, con el icono y el texto
+    centrados en vertical ([área táctil](../../glosario.md#area-tactil)), por la misma razón que
+    el nombre.
+  - `gap-2`: 8 px entre el icono y el texto (añadido por la spec 0011, junto con el icono).
   - `whitespace-nowrap` = `white-space: nowrap`: "Escríbenos" nunca se parte en dos líneas;
     si no cabe, baja entero gracias al `flex-wrap` del contenedor.
   - `rounded-full`: extremos totalmente redondos (píldora).
@@ -148,7 +154,13 @@ import { contactLink } from '../lib/whatsapp';
   - `font-medium`: peso 500, un poco más marcado que el texto normal.
   - `hover:border-accent`: al pasar el ratón, el borde se vuelve rojo
     ([variante](../../glosario.md#variante)).
+- `<WhatsAppIcon />`: el icono oficial de WhatsApp, verde, de 20 px, delante del texto
+  ([explicación](WhatsAppIcon.astro.md)). Sin props, así que sale la variante verde. Hasta la
+  spec 0011 el enlace no llevaba logo; ahora lo lleva, pero siempre **junto** a la palabra,
+  nunca en su lugar, como piden las normas de marca de WhatsApp (según la spec 0011).
 - `Escríbenos`: el texto del enlace, y también su [nombre accesible](../../glosario.md#nombre-accesible).
+  El icono no cambia ese nombre: lleva `alt=""` ([imagen decorativa](../../glosario.md#imagen-decorativa)),
+  así que el lector de pantalla sigue diciendo solo "Escríbenos".
 
 ```astro
 	</div>
@@ -161,7 +173,8 @@ import { contactLink } from '../lib/whatsapp';
 
 - **Entra:** `site.name` de [`src/lib/site.ts`](../lib/site.ts.md); el enlace, de
   `contactLink()` en [`src/lib/whatsapp.ts`](../lib/whatsapp.ts.md), que lee el número de
-  WhatsApp del entorno (si falta, el build se para); las clases salen de los tokens de
+  WhatsApp del entorno (si falta, el build se para); el icono, de
+  [`WhatsAppIcon.astro`](WhatsAppIcon.astro.md); las clases salen de los tokens de
   [`src/styles/global.css`](../styles/global.css.md).
 - **Sale:** se usa como `<SiteHeader />` (sin props), la primera cosa dentro de `<BaseLayout>`,
   en [`src/pages/index.astro`](../pages/index.astro.md),
@@ -203,3 +216,4 @@ Mira cómo `flex-wrap` baja "Escríbenos" en un móvil, sin tocar ningún archiv
 - [click-to-chat](../../glosario.md#click-to-chat)
 - [variante](../../glosario.md#variante)
 - [nombre-accesible](../../glosario.md#nombre-accesible)
+- [imagen-decorativa](../../glosario.md#imagen-decorativa) *(nuevo)*

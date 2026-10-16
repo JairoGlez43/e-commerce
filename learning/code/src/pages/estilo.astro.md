@@ -2,19 +2,20 @@
 
 > **Qué es:** la guía de estilo interna, la página `/estilo` ·
 > **Lo decidió:** [spec 0002](../../../../docs/specs/0002-design-base.md) (AC5); las muestras de
-> la información de la tienda, [spec 0010](../../../../docs/specs/0010-shop-information.md) (AC8) ·
+> la información de la tienda, [spec 0010](../../../../docs/specs/0010-shop-information.md) (AC8);
+> el icono de WhatsApp y la banda de información, [spec 0011](../../../../docs/specs/0011-visual-polish.md) (AC7) ·
 > **Lo usan:** nadie lo importa; es una página propia por
 > [ruta por archivo](../../glosario.md#ruta-por-archivo). Las features 05–07 copian de aquí
 > las clases exactas, y `design.md` la nombra como "vista en vivo" ·
 > **Usa:** `astro:content` (`getCollection`), `astro:assets` (`<Image>`), `BaseLayout`,
-> `ShopInfo`, `Faq`, `SiteFooter`, `src/lib/price.ts`
+> `ShopInfo`, `Faq`, `SiteFooter`, `WhatsAppIcon`, `src/lib/price.ts`
 
 ## Para qué sirve
 
 Es un muestrario: enseña en una sola página todos los colores, la tipografía y los componentes
-del sitio (cabecera, chips, botón, enlace de contacto, tarjeta en sus dos estados) y, al final,
-los componentes reales de información de la tienda: "Cómo comprar", las preguntas frecuentes y
-el pie de página. Sirve para revisar el diseño de
+del sitio (cabecera, chips, botón, enlace de contacto con su icono, tarjeta en sus dos estados)
+y, al final, los componentes reales de información de la tienda dentro de la misma banda que en
+la portada: "Cómo comprar", las preguntas frecuentes y el pie de página. Sirve para revisar el diseño de
 un vistazo y para copiar las clases exactas al construir una página nueva. No es para clientes:
 lleva [`noindex`](../../glosario.md#noindex) para que los buscadores no la muestren.
 
@@ -35,6 +36,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ShopInfo from '../components/ShopInfo.astro';
 import Faq from '../components/Faq.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import WhatsAppIcon from '../components/WhatsAppIcon.astro';
 import { formatPrice } from '../lib/price';
 ```
 
@@ -52,6 +54,9 @@ import { formatPrice } from '../lib/price';
   [`Faq`](../components/Faq.astro.md), [`SiteFooter`](../components/SiteFooter.astro.md)). A
   diferencia del resto de la página, que copia las clases a mano, estos se muestran tal cual
   (bloque 14).
+- `import WhatsAppIcon ...`: el icono oficial de WhatsApp, también el componente real
+  ([explicación](../components/WhatsAppIcon.astro.md)). Se usa en la muestra del enlace de
+  contacto (bloque 12).
 - `import { formatPrice } from '../lib/price';`: formatea precios
   ([explicación](../lib/price.ts.md)).
 
@@ -407,8 +412,9 @@ const products = (await getCollection('products'))
 			<div>
 				<a
 					href="#contacto"
-					class="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent"
+					class="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent"
 				>
+					<WhatsAppIcon />
 					Escríbenos
 				</a>
 			</div>
@@ -420,10 +426,14 @@ const products = (await getCollection('products'))
   nombre de la tienda (spec 0010)".
 - `<div>`: envoltorio, por la misma razón que en el bloque 11: así el enlace solo ocupa lo que
   mide su texto.
-- `<a href="#contacto" class="...">Escríbenos</a>`: una copia del enlace "Escríbenos" de
+- `<a href="#contacto" class="...">`: una copia del enlace "Escríbenos" de
   [`SiteHeader`](../components/SiteHeader.astro.md), con las mismas clases: las del chip de
-  categoría sin seleccionar más `font-medium` (píldora blanca con borde beige, al menos 44 px de
-  alto, el borde se vuelve rojo al pasar el ratón). Explicadas clase a clase en
+  categoría sin seleccionar más `font-medium` y `gap-2` (píldora blanca con borde beige, al menos
+  44 px de alto, 8 px entre icono y texto, el borde se vuelve rojo al pasar el ratón).
+- `<WhatsAppIcon />`: el icono real, verde, delante del texto (spec 0011,
+  [explicación](../components/WhatsAppIcon.astro.md)). Como en la cabecera, lleva `alt=""`
+  ([imagen decorativa](../../glosario.md#imagen-decorativa)), así que el enlace se sigue llamando
+  solo "Escríbenos". Explicadas clase a clase en
   [`SiteHeader.astro.md`](../components/SiteHeader.astro.md).
 - `href="#contacto"`: como los chips de muestra, apunta a esta misma sección. La muestra no
   abre WhatsApp: el enlace real usa `contactLink()`.
@@ -517,27 +527,44 @@ const products = (await getCollection('products'))
   bloque de texto, la tarjeta, el elemento de lista, el `map`, la expresión, la rejilla y la
   sección.
 
-### 14. Los componentes reales de información de la tienda
+### 14. La banda de información con los componentes reales
 
 ```astro
 
-		<!-- The real components with the shop's data, as they appear below the products on / (spec 0010). -->
-		<ShopInfo />
-		<Faq />
 	</main>
+	{/* The real components with the shop's data, inside the info band, as below the products on / (specs 0010, 0011). */}
+	<div class="awning" aria-hidden="true"></div>
+	<div class="bg-awning">
+		<div class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-12">
+			<ShopInfo />
+			<Faq />
+		</div>
+	</div>
 	<SiteFooter />
 </BaseLayout>
 ```
 
-- `<!-- ... -->`: un comentario HTML; no se ve en la página. Dice: "Los componentes reales con
-  los datos de la tienda, tal como aparecen debajo de los productos en `/` (spec 0010)".
+- `</main>`: cierra el contenido de la guía. Desde la spec 0011, `<ShopInfo />` y `<Faq />` ya
+  no van dentro del `<main>`, sino debajo, en la misma banda que en la portada.
+- `{/* … */}`: un [comentario en la plantilla](../../glosario.md#comentario-en-plantilla); no
+  llega al HTML. Dice: "Los componentes reales con los datos de la tienda, dentro de la banda de
+  información, como debajo de los productos en `/` (specs 0010, 0011)". Antes era un comentario
+  HTML `<!-- … -->` dentro del `<main>`.
+- `<div class="awning" aria-hidden="true"></div>`, `<div class="bg-awning">` y
+  `<div class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-12">`: la franja del toldo, la
+  banda de color `awning` de borde a borde y, dentro, el contenedor de página. Es el mismo
+  marcado que la portada, explicado línea a línea en
+  [`index.astro.md`](index.astro.md#9-la-banda-de-información-de-la-tienda)
+  ([banda a todo el ancho](../../glosario.md#banda-a-todo-el-ancho)). Aquí va fuera del
+  `<main>` porque el `<main>` de esta página sí lleva las clases del contenedor (bloque 7), y
+  dentro no podría llegar a los bordes.
 - `<ShopInfo />` y `<Faq />`: "Cómo comprar", los recuadros de recogida y horario, y las
   preguntas frecuentes, con los textos de verdad de `src/lib/site.ts`. No son copias: si cambia
   el componente, esta muestra cambia con él.
-- `</main>`: cierra el contenido.
-- `<SiteFooter />`: el pie de página real, fuera del `<main>` como en las páginas de clientes.
-  Su enlace "Escríbenos por WhatsApp" sí es el de verdad: lo arma `contactLink()` con el número
-  de `WHATSAPP_NUMBER`.
+- `</div>`, `</div>`: cierran el contenedor y la banda.
+- `<SiteFooter />`: el pie de página real, oscuro, fuera del `<main>` como en las páginas de
+  clientes. Su enlace "Escríbenos por WhatsApp" sí es el de verdad: lo arma `contactLink()` con
+  el número de `WHATSAPP_NUMBER`.
 - `</BaseLayout>`: cierra el layout.
 
 ## Cómo se conecta
@@ -549,7 +576,8 @@ const products = (await getCollection('products'))
 - **Layout:** [`BaseLayout`](../layouts/BaseLayout.astro.md), con `noindex`.
 - **Componentes reales que muestra:** [`ShopInfo`](../components/ShopInfo.astro.md),
   [`Faq`](../components/Faq.astro.md) y [`SiteFooter`](../components/SiteFooter.astro.md), con
-  los datos de `src/lib/site.ts`.
+  los datos de `src/lib/site.ts`, y [`WhatsAppIcon`](../components/WhatsAppIcon.astro.md) en la
+  muestra del enlace de contacto.
 - **Quién copia de aquí:** `design.md` apunta a esta página como vista en vivo, y los
   componentes reales partieron de sus clases:
   [`SiteHeader`](../components/SiteHeader.astro.md) (la cabecera sin buscador, más el enlace
@@ -576,5 +604,5 @@ Cambia qué chip de muestra sale seleccionado.
 - [getcollection](../../glosario.md#getcollection) · [slug](../../glosario.md#slug) · [image-component](../../glosario.md#image-component) · [srcset](../../glosario.md#srcset)
 - [async-await](../../glosario.md#async-await) · [ordenar-con-sort](../../glosario.md#ordenar-con-sort) · [encadenamiento-opcional](../../glosario.md#encadenamiento-opcional) (nuevo) · [expresion-en-plantilla](../../glosario.md#expresion-en-plantilla) · [class-list](../../glosario.md#class-list)
 - [tailwind](../../glosario.md#tailwind) · [token](../../glosario.md#token) · [variante](../../glosario.md#variante) · [escala-de-texto](../../glosario.md#escala-de-texto) (nuevo) · [stretched-link](../../glosario.md#stretched-link)
-- [details-summary](../../glosario.md#details-summary) · [click-to-chat](../../glosario.md#click-to-chat)
+- [details-summary](../../glosario.md#details-summary) · [click-to-chat](../../glosario.md#click-to-chat) · [comentario-en-plantilla](../../glosario.md#comentario-en-plantilla) (nuevo) · [banda-a-todo-el-ancho](../../glosario.md#banda-a-todo-el-ancho) (nuevo) · [imagen-decorativa](../../glosario.md#imagen-decorativa) (nuevo)
 - [aria-label](../../glosario.md#aria-label) · [aria-current](../../glosario.md#aria-current) · [aria-hidden](../../glosario.md#aria-hidden) · [sr-only](../../glosario.md#sr-only) · [area-tactil](../../glosario.md#area-tactil)

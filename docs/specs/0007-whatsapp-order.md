@@ -4,6 +4,7 @@
 **Date:** 2026-10-07
 **Scope:** `docs/scope/scope.md` → feature 07
 **Supersedes:** —
+**Amended by:** 0011 (WhatsApp icon on the order button replaces "No WhatsApp logo")
 
 ## Context
 Customers already order through WhatsApp; the site has to put them in that chat in one tap,

@@ -5,6 +5,7 @@ import { Image, getImage } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
 import SiteFooter from '../../components/SiteFooter.astro';
+import WhatsAppIcon from '../../components/WhatsAppIcon.astro';
 import { formatPrice } from '../../lib/price';
 import { site } from '../../lib/site';
 import { orderLink } from '../../lib/whatsapp';
@@ -40,7 +41,7 @@ const orderHref = orderLink(product, pageUrl);
 
 <BaseLayout title={title} description={metaDescription} image={previewImage.src}>
 	<SiteHeader />
-	<main class="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
+	<main class="mx-auto flex max-w-5xl flex-col gap-6 px-4 pt-8 pb-12">
 		<nav aria-label="Ruta">
 			<ol class="flex flex-wrap items-center gap-2 text-sm text-muted">
 				<li><a href="/" class="inline-flex min-h-11 items-center hover:text-accent">Productos</a></li>
@@ -82,8 +83,9 @@ const orderHref = orderLink(product, pageUrl);
 				}
 				<a
 					href={orderHref}
-					class="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover md:w-fit"
+					class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover md:w-fit"
 				>
+					<WhatsAppIcon variant="white" />
 					{inStock ? 'Pedir por WhatsApp' : 'Preguntar por WhatsApp'}
 				</a>
 				<p>{description}</p>

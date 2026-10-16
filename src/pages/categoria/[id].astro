@@ -33,7 +33,7 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
 
 <BaseLayout title={title} description={description}>
 	<SiteHeader />
-	<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-8">
+	<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 pt-8 pb-12">
 		<div class="flex flex-col gap-4">
 			<h1>{category.data.name}</h1>
 			<CategoryNav categories={catalog} currentId={category.id} />

@@ -1,11 +1,14 @@
 ---
 import { site } from '../lib/site';
 import { contactLink } from '../lib/whatsapp';
+import WhatsAppIcon from './WhatsAppIcon.astro';
 
 // Footer on every customer page (spec 0010). About the shop only: no developer credit.
+// Dark since spec 0011: ink background, cream text; the default accent focus ring is too faint
+// on ink (2.60:1), so the link uses a cream one.
 ---
 
-<footer class="mt-12 border-t border-border bg-surface">
+<footer class="bg-ink text-cream">
 	<div class="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-8 text-sm">
 		<p class="font-display text-xl font-semibold">{site.name}</p>
 		<p>{site.location}</p>
@@ -20,8 +23,9 @@ import { contactLink } from '../lib/whatsapp';
 		</ul>
 		<a
 			href={contactLink()}
-			class="inline-flex min-h-11 w-fit items-center font-medium text-accent hover:text-accent-hover"
+			class="inline-flex min-h-11 w-fit items-center gap-2 font-medium text-cream underline underline-offset-4 hover:text-awning focus-visible:outline-cream"
 		>
+			<WhatsAppIcon />
 			Escríbenos por WhatsApp
 		</a>
 	</div>

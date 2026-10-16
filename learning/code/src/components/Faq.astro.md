@@ -102,8 +102,8 @@ import { site } from '../lib/site';
 - **Entra:** `site.faq` de [`src/lib/site.ts`](../lib/site.ts.md): 5 objetos
   `{ question, answer }`. No recibe props.
 - **Sale:** se usa como `<Faq />`, lo último dentro del `<main>` de
-  [`src/pages/index.astro`](../pages/index.astro.md), justo después de
-  [`<ShopInfo />`](ShopInfo.astro.md). [`/estilo`](../pages/estilo.astro.md) lo muestra tal
+  [`src/pages/index.astro`](../pages/index.astro.md), en la banda de información (spec 0011),
+  justo después de [`<ShopInfo />`](ShopInfo.astro.md). [`/estilo`](../pages/estilo.astro.md) lo muestra tal
   cual.
 - La primera respuesta dice "Arriba ves la fecha de la última actualización": se refiere a la
   línea "Actualizado el …" de la portada, que calcula [`src/lib/date.ts`](../lib/date.ts.md).

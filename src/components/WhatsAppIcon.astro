@@ -1,0 +1,18 @@
+---
+import whatsAppGreen from '../assets/icons/Digital_Glyph_Green_RGB_2026.svg';
+import whatsAppWhite from '../assets/icons/Digital_Glyph_White_RGB_2026.svg';
+
+// Official WhatsApp glyph, unmodified (spec 0011; source in src/assets/icons/SOURCE.md).
+// An <img>, never inline: the official files carry their own <style> and id, which would clash
+// between the green and white variants on one page. Decorative: the link text names the link.
+
+interface Props {
+	/** White on the terracotta order button; green everywhere else. */
+	variant?: 'green' | 'white';
+}
+
+const { variant = 'green' } = Astro.props;
+const file = variant === 'white' ? whatsAppWhite : whatsAppGreen;
+---
+
+<img src={file.src} width="20" height="20" alt="" class="size-5 shrink-0" />

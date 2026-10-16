@@ -218,7 +218,8 @@ bien incluso con poca vista o con el sol en la pantalla del móvil.
 - El comentario dice: "Franja de toldo de puesto de mercado. Decorativa: el elemento lleva
   `aria-hidden="true"`". Es un recordatorio para quien la use: el `<div>` del toldo debe ocultarse
   al lector de pantalla (ver [aria-hidden](../../glosario.md#aria-hidden)), porque no transmite
-  información. [`SiteHeader.astro`](../components/SiteHeader.astro.md) lo cumple.
+  información. [`SiteHeader.astro`](../components/SiteHeader.astro.md) lo cumple, y también la
+  franja que abre la banda de información de [`index.astro`](../pages/index.astro.md) (spec 0011).
 - `.awning {`: la clase del toldo. Es el "toque propio" que representa el puesto de mercado
   de la tienda (spec 0002).
 - `@apply h-2;`: `height: 0.5rem` = 8 px de alto (ver

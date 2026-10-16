@@ -73,8 +73,14 @@ _Added by /develop as they ship: name · path · exact classes · variants._
   both do not fit (360 px), the link wraps under the name.
 - **Contact link** · `src/components/SiteHeader.astro`, shown in `src/pages/estilo.astro` · the
   Category chip default plus `font-medium`:
-  `<a href={contactLink()} class="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent">Escríbenos</a>`.
-  Same tab, no logo (spec 0007).
+  `<a href={contactLink()} class="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent">`
+  → `<WhatsAppIcon />` (green) → "Escríbenos". Same tab (spec 0007); icon since spec 0011.
+- **WhatsAppIcon** · `src/components/WhatsAppIcon.astro` · prop `variant` (`'green'` default,
+  `'white'` on the terracotta order button) · the official glyph as
+  `<img src={file.src} width="20" height="20" alt="" class="size-5 shrink-0">`. Files in
+  `src/assets/icons/` (see `SOURCE.md`): never edit, recolor or inline them (their own `<style>`
+  and `id` clash when two variants share a page). Always next to words, never instead of them;
+  the parent link gets `gap-2`.
 - **ShopInfo** · `src/components/ShopInfo.astro` · no props (reads `site`) ·
   `<section class="flex flex-col gap-4">` → `h2` "Cómo comprar" → `<ol class="flex flex-col gap-2">`,
   each step `<li class="flex items-center gap-3">` with a number circle
@@ -89,11 +95,19 @@ _Added by /develop as they ship: name · path · exact classes · variants._
   `<summary class="min-h-11 cursor-pointer px-4 py-3 font-medium">` + answer `<p class="px-4 pb-4">`.
   Never put `flex` on the `<summary>`: it hides the browser's disclosure triangle.
 - **SiteFooter** · `src/components/SiteFooter.astro` · no props · after `<main>` on every customer
-  page: `<footer class="mt-12 border-t border-border bg-surface">` →
+  page, dark since spec 0011: `<footer class="bg-ink text-cream">` →
   `<div class="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-8 text-sm">` with the shop name
   `<p class="font-display text-xl font-semibold">`, location, hours `<ul>`, and the link
-  `<a class="inline-flex min-h-11 w-fit items-center font-medium text-accent hover:text-accent-hover">Escríbenos por WhatsApp</a>`.
-  Shop content only: no developer credit.
+  `<a class="inline-flex min-h-11 w-fit items-center gap-2 font-medium text-cream underline underline-offset-4 hover:text-awning focus-visible:outline-cream">`
+  → `<WhatsAppIcon />` → "Escríbenos por WhatsApp". No top margin: pages end their `<main>` with
+  `pb-12`, and the home info band touches it. On `ink`, every focusable element needs
+  `focus-visible:outline-cream` (the default `accent` ring is 2.60:1 there). Shop content only: no
+  developer credit.
+- **Info band** · `src/pages/index.astro`, shown in `src/pages/estilo.astro` · full width, after
+  the page's centered container, inside `<main>`: `<div class="awning" aria-hidden="true">` →
+  `<div class="bg-awning">` → `<div class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-12">`
+  holding ShopInfo and Faq (their white blocks sit on the band). Only the shop information goes on
+  it; product categories stay on `cream`.
 - **CategoryNav** · `src/components/CategoryNav.astro` · props `categories` (from `getCatalog()`),
   `currentId` (`null` = "Todos") · `<nav aria-label="Categorías">` + the Category chip list; a
   "Todos" chip (`/`) first, then one chip per category (`/categoria/<id>`). The current chip uses
@@ -115,8 +129,19 @@ _Added by /develop as they ship: name · path · exact classes · variants._
   `<p class="text-muted">`, `price`, the Availability badge **without** `mt-auto`, description `<p>`.
 
 - **WhatsApp order button** · `src/pages/producto/[id].astro` · the Primary button as a link, full
-  width on mobile: `<a href={orderHref} class="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover md:w-fit">`.
-  Text "Pedir por WhatsApp" (in stock) or "Preguntar por WhatsApp" (out of stock). No logo; same tab.
+  width on mobile: `<a href={orderHref} class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover md:w-fit">`
+  → `<WhatsAppIcon variant="white" />` → "Pedir por WhatsApp" (in stock) or "Preguntar por
+  WhatsApp" (out of stock). Same tab.
+
+## Contrast added by spec 0011
+The base table is in `docs/specs/0002-design-base.md`. New pairs (WCAG ratios, 2026-10-16):
+| Text | Background | Ratio |
+|---|---|---|
+| ink / muted / accent | awning | 12.55 / 5.20 / 4.82 |
+| cream | ink | 14.60 |
+| awning (footer link hover) | ink | 12.55 |
+| accent (focus ring) | ink | 2.60: **fails**, use `outline-cream` on `ink` |
+Graphics: WhatsApp green glyph on `ink` 7.92, white glyph on `accent` 6.04.
 
 ## States
 - Out of stock: "Agotado" badge plus photo at `opacity-50`; the word carries the meaning, never

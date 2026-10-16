@@ -108,7 +108,8 @@ import { site } from '../lib/site';
   - `rounded-card`: las esquinas redondeadas del [token](../../glosario.md#token) `card`, las
     mismas que la tarjeta de producto.
   - `border border-border`: borde de 1 px en el beige `border`.
-  - `bg-surface`: fondo blanco sobre el crema de la página.
+  - `bg-surface`: fondo blanco. En la portada va sobre la banda de color `awning` (spec 0011),
+    así que destaca como una tarjeta blanca.
   - `p-4`: 16 px de relleno por dentro.
   - No lleva sombra (`shadow-card`), a diferencia de la tarjeta de producto: no se puede tocar,
     y así no parece un botón (`design.md`).
@@ -154,8 +155,8 @@ import { site } from '../lib/site';
 - **Entra:** los campos `howToBuy`, `pickup`, `delivery`, `hours` y `location` de
   [`src/lib/site.ts`](../lib/site.ts.md). No recibe props.
 - **Sale:** se usa como `<ShopInfo />` al final del `<main>` de
-  [`src/pages/index.astro`](../pages/index.astro.md), después de la última categoría y antes de
-  [`<Faq />`](Faq.astro.md). [`/estilo`](../pages/estilo.astro.md) lo muestra tal cual, con los
+  [`src/pages/index.astro`](../pages/index.astro.md), dentro de la banda de información a todo
+  el ancho (spec 0011), después de la última categoría y antes de [`<Faq />`](Faq.astro.md). [`/estilo`](../pages/estilo.astro.md) lo muestra tal cual, con los
   mismos datos.
 - El horario y la ubicación salen también en el pie de página,
   [`SiteFooter`](SiteFooter.astro.md), leídos del mismo `site.hours` y `site.location`:

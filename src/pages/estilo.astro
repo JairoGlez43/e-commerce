@@ -5,6 +5,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ShopInfo from '../components/ShopInfo.astro';
 import Faq from '../components/Faq.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import WhatsAppIcon from '../components/WhatsAppIcon.astro';
 import { formatPrice } from '../lib/price';
 
 // Living style guide (spec 0002): every token and pattern features 05–07 build with.
@@ -143,8 +144,9 @@ const products = (await getCollection('products'))
 			<div>
 				<a
 					href="#contacto"
-					class="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent"
+					class="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent"
 				>
+					<WhatsAppIcon />
 					Escríbenos
 				</a>
 			</div>
@@ -189,9 +191,14 @@ const products = (await getCollection('products'))
 			</ul>
 		</section>
 
-		<!-- The real components with the shop's data, as they appear below the products on / (spec 0010). -->
-		<ShopInfo />
-		<Faq />
 	</main>
+	{/* The real components with the shop's data, inside the info band, as below the products on / (specs 0010, 0011). */}
+	<div class="awning" aria-hidden="true"></div>
+	<div class="bg-awning">
+		<div class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-12">
+			<ShopInfo />
+			<Faq />
+		</div>
+	</div>
 	<SiteFooter />
 </BaseLayout>

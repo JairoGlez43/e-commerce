@@ -34,18 +34,21 @@ por último las páginas que ve el cliente.
 | 10c | `src/lib/date.ts` | Formatea una fecha con la hora de Cuba: `16 de octubre` | [ver](src/lib/date.ts.md) |
 | 11 | `src/styles/global.css` | Colores, fuentes y estilos base | [ver](src/styles/global.css.md) |
 | 12 | `src/layouts/BaseLayout.astro` | El esqueleto `<html>` de todas las páginas | [ver](src/layouts/BaseLayout.astro.md) |
-| 13 | `src/components/SiteHeader.astro` | La cabecera con el toldo y el enlace "Escríbenos" | [ver](src/components/SiteHeader.astro.md) |
+| 13 | `src/components/SiteHeader.astro` | La cabecera con el toldo y el enlace "Escríbenos" con el icono de WhatsApp | [ver](src/components/SiteHeader.astro.md) |
 | 14 | `src/components/CategoryNav.astro` | La fila de chips de categorías | [ver](src/components/CategoryNav.astro.md) |
 | 15 | `src/components/ProductCard.astro` | La tarjeta de un producto | [ver](src/components/ProductCard.astro.md) |
 | 15b | `src/components/ShopInfo.astro` | "Cómo comprar", recogida y horario, debajo de los productos | [ver](src/components/ShopInfo.astro.md) |
 | 15c | `src/components/Faq.astro` | Las preguntas frecuentes, plegables sin JavaScript | [ver](src/components/Faq.astro.md) |
-| 15d | `src/components/SiteFooter.astro` | El pie de página de todas las páginas de clientes | [ver](src/components/SiteFooter.astro.md) |
+| 15d | `src/components/SiteFooter.astro` | El pie de página oscuro de todas las páginas de clientes | [ver](src/components/SiteFooter.astro.md) |
+| 15e | `src/components/WhatsAppIcon.astro` | El icono oficial de WhatsApp (verde o blanco) de los enlaces a WhatsApp | [ver](src/components/WhatsAppIcon.astro.md) |
 | 16 | `src/pages/index.astro` | La portada `/` | [ver](src/pages/index.astro.md) |
 | 17 | `src/pages/categoria/[id].astro` | Las páginas `/categoria/<id>` | [ver](src/pages/categoria/%5Bid%5D.astro.md) |
 | 18 | `src/pages/producto/[id].astro` | Las páginas `/producto/<id>` y su vista previa en WhatsApp | [ver](src/pages/producto/%5Bid%5D.astro.md) |
 | 19 | `src/pages/estilo.astro` | La guía de estilo interna `/estilo` | [ver](src/pages/estilo.astro.md) |
 
-Archivos que no son código y no tienen explicación: `src/assets/` (fotos y la fuente),
+Archivos que no son código y no tienen explicación: `src/assets/` (fotos, la fuente y, en
+`src/assets/icons/`, los dos iconos oficiales de WhatsApp con su `SOURCE.md`: de dónde salen y
+por qué no se editan; ver [`WhatsAppIcon.astro.md`](src/components/WhatsAppIcon.astro.md)),
 `public/` (favicon e imagen para WhatsApp), `pnpm-lock.yaml` (ver
 [lockfile](glosario.md#lockfile)), `dist/` y `.astro/` (generados por Astro).
 

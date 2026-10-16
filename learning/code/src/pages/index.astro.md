@@ -2,7 +2,8 @@
 
 > **Qué es:** la portada `/`, el catálogo completo ·
 > **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (y la información
-> de la tienda, [spec 0010](../../../../docs/specs/0010-shop-information.md)) ·
+> de la tienda, [spec 0010](../../../../docs/specs/0010-shop-information.md); la banda de
+> información a todo el ancho, [spec 0011](../../../../docs/specs/0011-visual-polish.md), AC3) ·
 > **Lo usan:** nadie lo importa; Astro lo convierte en `dist/index.html` por
 > [ruta por archivo](../../glosario.md#ruta-por-archivo) ·
 > **Usa:** `BaseLayout`, `SiteHeader`, `CategoryNav`, `ProductCard`, `ShopInfo`, `Faq`,
@@ -14,8 +15,9 @@
 Es la página que abre el cliente desde el enlace de WhatsApp. Muestra **todos** los productos,
 en una sección por categoría (en el orden de las categorías), con la fila de chips de
 categorías arriba. Encima de los chips dice cuándo se actualizó el catálogo y qué formas de
-pago acepta la tienda; debajo de los productos, cómo comprar, recogida, horario y las preguntas
-frecuentes; y al final, el pie de página. Además decide qué fotos se descargan ya y cuáles
+pago acepta la tienda; debajo de los productos, en una banda de otro color que ocupa todo el
+ancho de la pantalla, cómo comprar, recogida, horario y las preguntas frecuentes; y al final, el
+pie de página oscuro. Además decide qué fotos se descargan ya y cuáles
 esperan al scroll, para cumplir el [presupuesto de peso](../../glosario.md#presupuesto-de-peso).
 
 ## El código, por partes
@@ -140,7 +142,8 @@ const updated = formatDay(new Date());
 ```astro
 <BaseLayout title={site.name} description={site.description}>
 	<SiteHeader />
-	<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-8">
+	<main>
+		<div class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-8">
 ```
 
 - `<BaseLayout title={site.name} description={site.description}>`: envuelve la página con el
@@ -148,30 +151,38 @@ const updated = formatDay(new Date());
   descripción (también la usa WhatsApp, por [Open Graph](../../glosario.md#open-graph)). Todo
   lo que va dentro acaba en el [slot](../../glosario.md#slot) del layout.
 - `<SiteHeader />`: la cabecera. No recibe props.
-- `<main class="...">`: el contenido principal. Clases ([Tailwind](../../glosario.md#tailwind)):
+- `<main>`: el contenido principal. **No lleva clases**: solo marca para el lector de pantalla
+  dónde empieza lo propio de esta página. Dentro tiene dos partes: el catálogo (este `<div>`) y
+  la banda de información (bloque 9).
+- `<div class="...">`: el **contenedor del catálogo**. Hasta la spec 0011 estas clases las
+  llevaba el propio `<main>`. Se pasaron a un `<div>` porque el contenedor limita el ancho a
+  1024 px, y la banda de información, que también va dentro del `<main>`, tiene que llegar de
+  un borde de la pantalla al otro
+  ([banda a todo el ancho](../../glosario.md#banda-a-todo-el-ancho)). Clases
+  ([Tailwind](../../glosario.md#tailwind)):
   - `mx-auto` → `margin-left: auto; margin-right: auto`: centra el bloque.
   - `max-w-5xl` → `max-width: 64rem` (1024 px): en pantallas grandes no se estira más
     ([unidades](../../glosario.md#unidades-tailwind)).
   - `flex flex-col` → `display: flex; flex-direction: column`: los hijos en columna.
-  - `gap-12` → `gap: 48px` entre bloques (título, cada sección, "Cómo comprar", preguntas).
+  - `gap-12` → `gap: 48px` entre bloques (el título y cada sección de categoría).
   - `px-4` → `padding` de 16 px a izquierda y derecha (el margen en móvil).
   - `py-8` → `padding` de 32 px arriba y abajo.
 
 ### 5. Título, fecha, pagos y chips
 
 ```astro
-		<div class="flex flex-col gap-4">
-			<h1>Productos</h1>
-			<div class="flex flex-col gap-1">
-				<p class="text-sm text-muted">Actualizado el {updated}</p>
-				<p class="text-sm">Aceptamos: {site.payments.join(' · ')}</p>
+			<div class="flex flex-col gap-4">
+				<h1>Productos</h1>
+				<div class="flex flex-col gap-1">
+					<p class="text-sm text-muted">Actualizado el {updated}</p>
+					<p class="text-sm">Aceptamos: {site.payments.join(' · ')}</p>
+				</div>
+				<CategoryNav categories={catalog} currentId={null} />
 			</div>
-			<CategoryNav categories={catalog} currentId={null} />
-		</div>
 ```
 
 - `<div class="flex flex-col gap-4">`: agrupa título, las dos líneas y los chips en columna con
-  `gap: 16px`. Así quedan juntos, sin el hueco grande (`gap-12`) del `<main>`.
+  `gap: 16px`. Así quedan juntos, sin el hueco grande (`gap-12`) del contenedor.
 - `<h1>Productos</h1>`: el único `h1` de la página. No lleva clases: su estilo (Fraunces,
   seminegrita, tamaño grande) viene de la capa base de `src/styles/global.css`
   ([@layer](../../glosario.md#layer-y-apply)).
@@ -191,11 +202,11 @@ const updated = formatDay(new Date());
 ### 6. Estado vacío o secciones
 
 ```astro
-		{
-			sections.length === 0 ? (
-				<p class="text-muted">Todavía no hay productos.</p>
-			) : (
-				sections.map(({ category, products, cardsBefore }) => (
+			{
+				sections.length === 0 ? (
+					<p class="text-muted">Todavía no hay productos.</p>
+				) : (
+					sections.map(({ category, products, cardsBefore }) => (
 ```
 
 - `{ sections.length === 0 ? ( ... ) : ( ... ) }`: una
@@ -211,9 +222,9 @@ const updated = formatDay(new Date());
 ### 7. Una sección por categoría
 
 ```astro
-					<section class="flex flex-col gap-4" aria-labelledby={category.id}>
-						<h2 id={category.id}>{category.data.name}</h2>
-						<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+						<section class="flex flex-col gap-4" aria-labelledby={category.id}>
+							<h2 id={category.id}>{category.data.name}</h2>
+							<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
 ```
 
 - `<section class="flex flex-col gap-4" aria-labelledby={category.id}>`: la sección de una
@@ -238,20 +249,21 @@ const updated = formatDay(new Date());
 ### 8. Una tarjeta por producto
 
 ```astro
-							{products.map((product, index) => (
-								<li>
-									<ProductCard
-										product={product}
-										headingLevel={3}
-										eager={cardsBefore + index < EAGER_CARDS}
-									/>
-								</li>
-							))}
-						</ul>
-					</section>
-				))
-			)
-		}
+								{products.map((product, index) => (
+									<li>
+										<ProductCard
+											product={product}
+											headingLevel={3}
+											eager={cardsBefore + index < EAGER_CARDS}
+										/>
+									</li>
+								))}
+							</ul>
+						</section>
+					))
+				)
+			}
+		</div>
 ```
 
 - `{products.map((product, index) => (`: una tarjeta por producto de la sección. `index` es la
@@ -267,28 +279,64 @@ const updated = formatDay(new Date());
 - `</li>`, `))}`, `</ul>`, `</section>`, `))`, `)`, `}`: cierran, en orden, el elemento de
   lista, el `map` de productos, la rejilla, la sección, el `map` de secciones, la rama del `? :`
   y la expresión.
+- `</div>`: cierra el contenedor del catálogo (bloque 4). Lo que sigue ya no está limitado a
+  1024 px.
 
-### 9. Información de la tienda y pie de página
+### 9. La banda de información de la tienda
 
 ```astro
-		<ShopInfo />
-		<Faq />
+		{/* Info band (spec 0011): the awning stripe, then the shop information edge to edge. */}
+		<div class="awning" aria-hidden="true"></div>
+		<div class="bg-awning">
+			<div class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-12">
+				<ShopInfo />
+				<Faq />
+			</div>
+		</div>
+```
+
+- `{/* … */}`: un [comentario en la plantilla](../../glosario.md#comentario-en-plantilla); no
+  llega al HTML. Dice: "Banda de información (spec 0011): la franja del toldo, y luego la
+  información de la tienda de borde a borde".
+- `<div class="awning" aria-hidden="true"></div>`: la misma franja de rayas del toldo que lleva
+  la [cabecera](../components/SiteHeader.astro.md) arriba del todo (la clase `awning` de
+  [`global.css`](../styles/global.css.md): 8 px de alto, rayas de 16 px). Aquí marca el paso
+  del catálogo a la información de la tienda.
+  [`aria-hidden="true"`](../../glosario.md#aria-hidden) la oculta al lector de pantalla: es solo
+  decoración. Como no está dentro del contenedor, ocupa todo el ancho de la pantalla.
+- `<div class="bg-awning">`: la banda. `bg-awning` = `background-color: var(--color-awning)`,
+  el tono claro del toldo ([token](../../glosario.md#token)), en vez del crema del resto de la
+  página. Tampoco tiene límite de ancho, así que el color llega de borde a borde
+  ([banda a todo el ancho](../../glosario.md#banda-a-todo-el-ancho)). Sobre este fondo, el texto
+  normal (`ink`), el gris (`muted`) y el rojo (`accent`) se siguen leyendo bien: 12,55, 5,20 y
+  4,82 a 1 ([contraste](../../glosario.md#contraste-wcag), AC5 de la spec 0011).
+- `<div class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-12">`: **dentro** de la banda,
+  otra vez el contenedor de página, para que el texto quede alineado con el catálogo de arriba.
+  Son las mismas clases que el del bloque 4 salvo `py-12`: 48 px arriba y abajo en vez de 32,
+  para que la banda respire.
+- `<ShopInfo />`: "Cómo comprar" con sus 3 pasos, y los recuadros "Recogida y entrega" y
+  "Horario y ubicación" ([explicación](../components/ShopInfo.astro.md)). Va después de la
+  última categoría (AC4 de la spec 0010): primero lo que el cliente vino a ver, los productos.
+  Sus recuadros siguen siendo blancos (`bg-surface`): blancos sobre la banda.
+- `<Faq />`: las preguntas frecuentes, que se abren al tocarlas
+  ([explicación](../components/Faq.astro.md)).
+- Ninguno de los dos recibe props: leen sus textos de `src/lib/site.ts`. Los separa el
+  `gap-12` (48 px) de su contenedor.
+- `</div>`, `</div>`: cierran el contenedor de dentro y la banda.
+
+### 10. Cierre y pie de página
+
+```astro
 	</main>
 	<SiteFooter />
 </BaseLayout>
 ```
 
-- `<ShopInfo />`: "Cómo comprar" con sus 3 pasos, y los recuadros "Recogida y entrega" y
-  "Horario y ubicación" ([explicación](../components/ShopInfo.astro.md)). Va después de la
-  última categoría (AC4 de la spec 0010): primero lo que el cliente vino a ver, los productos.
-- `<Faq />`: las preguntas frecuentes, que se abren al tocarlas
-  ([explicación](../components/Faq.astro.md)).
-- Ninguno de los dos recibe props: leen sus textos de `src/lib/site.ts`. Como están dentro del
-  `<main>`, quedan a 48 px de lo anterior (`gap-12`) y alineados con el resto.
 - `</main>`: cierra el contenido principal.
-- `<SiteFooter />`: el pie de página ([explicación](../components/SiteFooter.astro.md)). Va
-  **fuera** del `<main>` porque no es contenido de esta página, sino algo común a todas, como
-  la cabecera.
+- `<SiteFooter />`: el pie de página oscuro ([explicación](../components/SiteFooter.astro.md)).
+  Va **fuera** del `<main>` porque no es contenido de esta página, sino algo común a todas, como
+  la cabecera. Queda pegado a la banda, sin hueco crema en medio: el pie ya no lleva margen
+  arriba (spec 0011, AC4).
 - `</BaseLayout>`: cierra el layout.
 
 ## Cómo se conecta
@@ -303,6 +351,9 @@ const updated = formatDay(new Date());
   [`ProductCard`](../components/ProductCard.astro.md),
   [`ShopInfo`](../components/ShopInfo.astro.md), [`Faq`](../components/Faq.astro.md) y
   [`SiteFooter`](../components/SiteFooter.astro.md).
+- **Estilo de la banda:** la clase `awning` (la franja de rayas) y el token `awning` (el fondo),
+  los dos de [`src/styles/global.css`](../styles/global.css.md). La misma banda sale en
+  [`/estilo`](estilo.astro.md), como muestra.
 - **Resultado:** `dist/index.html`, la URL `/`. Sus tarjetas enlazan a `/producto/<id>`
   ([`src/pages/producto/[id].astro`](producto/%5Bid%5D.astro.md)) y sus chips a `/categoria/<id>`, que genera
   [`src/pages/categoria/[id].astro`](categoria/%5Bid%5D.astro.md).
@@ -327,3 +378,4 @@ Mira cómo `EAGER_CARDS` decide qué fotos se descargan ya.
 - [tailwind](../../glosario.md#tailwind) · [unidades-tailwind](../../glosario.md#unidades-tailwind) · [variante](../../glosario.md#variante) · [layer-y-apply](../../glosario.md#layer-y-apply)
 - [aria-label](../../glosario.md#aria-label) · [jerarquia-de-titulos](../../glosario.md#jerarquia-de-titulos) · [slug](../../glosario.md#slug)
 - [lazy-loading](../../glosario.md#lazy-loading) · [presupuesto-de-peso](../../glosario.md#presupuesto-de-peso) · [open-graph](../../glosario.md#open-graph)
+- [comentario-en-plantilla](../../glosario.md#comentario-en-plantilla) (nuevo) · [banda-a-todo-el-ancho](../../glosario.md#banda-a-todo-el-ancho) (nuevo) · [aria-hidden](../../glosario.md#aria-hidden) · [token](../../glosario.md#token) · [contraste-wcag](../../glosario.md#contraste-wcag)

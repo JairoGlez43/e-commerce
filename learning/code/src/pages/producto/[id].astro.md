@@ -2,11 +2,13 @@
 
 > **Qué es:** la plantilla de las páginas `/producto/<id>`, una por producto ·
 > **Lo decidió:** [spec 0006](../../../../../docs/specs/0006-product-detail-page.md) (y la
-> ruta, en la [spec 0001](../../../../../docs/specs/0001-stack.md)) ·
+> ruta, en la [spec 0001](../../../../../docs/specs/0001-stack.md); el botón de WhatsApp, en la
+> [spec 0007](../../../../../docs/specs/0007-whatsapp-order.md), y su icono y el relleno de abajo,
+> en la [spec 0011](../../../../../docs/specs/0011-visual-polish.md)) ·
 > **Lo usan:** nadie lo importa; Astro genera `dist/producto/<id>/index.html` por cada producto
 > ([ruta dinámica](../../../glosario.md#ruta-por-archivo)). Las tarjetas del catálogo enlazan
 > aquí ([`ProductCard.astro`](../../components/ProductCard.astro.md)) ·
-> **Usa:** `BaseLayout`, `SiteHeader`, `SiteFooter`, `formatPrice()` (`src/lib/price.ts`), `site`
+> **Usa:** `BaseLayout`, `SiteHeader`, `SiteFooter`, `WhatsAppIcon`, `formatPrice()` (`src/lib/price.ts`), `site`
 > (`src/lib/site.ts`), `orderLink()` (`src/lib/whatsapp.ts`), las colecciones `products` y
 > `categories`
 
@@ -31,6 +33,7 @@ import { Image, getImage } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
 import SiteFooter from '../../components/SiteFooter.astro';
+import WhatsAppIcon from '../../components/WhatsAppIcon.astro';
 import { formatPrice } from '../../lib/price';
 import { site } from '../../lib/site';
 import { orderLink } from '../../lib/whatsapp';
@@ -60,6 +63,8 @@ import { orderLink } from '../../lib/whatsapp';
   los mismos que usa el catálogo ([`BaseLayout.astro.md`](../../layouts/BaseLayout.astro.md),
   [`SiteHeader.astro.md`](../../components/SiteHeader.astro.md),
   [`SiteFooter.astro.md`](../../components/SiteFooter.astro.md)).
+- `WhatsAppIcon`: el icono oficial de WhatsApp, que va dentro del botón de pedido
+  ([`WhatsAppIcon.astro.md`](../../components/WhatsAppIcon.astro.md)). Se usa en el bloque 9.
 - `formatPrice` y `site`: el formato `280 CUP` ([`price.ts.md`](../../lib/price.ts.md)) y el
   nombre de la tienda ([`site.ts.md`](../../lib/site.ts.md)).
 - `orderLink`: arma el enlace del botón de WhatsApp (feature 07,
@@ -180,7 +185,7 @@ const orderHref = orderLink(product, pageUrl);
 ```astro
 <BaseLayout title={title} description={metaDescription} image={previewImage.src}>
 	<SiteHeader />
-	<main class="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
+	<main class="mx-auto flex max-w-5xl flex-col gap-6 px-4 pt-8 pb-12">
 ```
 
 - `<BaseLayout title=… description=… image=…>`: el [layout](../../../glosario.md#layout) pone
@@ -197,7 +202,11 @@ const orderHref = orderLink(product, pageUrl);
   - `gap-6`: 24 px entre la ruta de navegación y el artículo (en el catálogo es `gap-12`; aquí hay
     menos bloques y se ven mejor más juntos).
   - `max-w-5xl`: como mucho 1024 px de ancho.
-  - `px-4 py-8`: 16 px de relleno a los lados, 32 px arriba y abajo.
+  - `px-4`: 16 px de relleno a los lados.
+  - `pt-8 pb-12`: 32 px de relleno arriba y 48 px abajo. Hasta la spec 0011 era `py-8` (32 px
+    arriba y abajo) y el pie de página traía 48 px de margen propio. El pie lo perdió para
+    pegarse a la banda de información de la portada, así que esta página pone ahora ese aire
+    con `pb-12`, antes del pie oscuro.
 
 ### 6. La ruta de navegación (*breadcrumb*)
 
@@ -316,8 +325,9 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
 				}
 				<a
 					href={orderHref}
-					class="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover md:w-fit"
+					class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover md:w-fit"
 				>
+					<WhatsAppIcon variant="white" />
 					{inStock ? 'Pedir por WhatsApp' : 'Preguntar por WhatsApp'}
 				</a>
 				<p>{description}</p>
@@ -345,7 +355,9 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
   botón, no un `<button>`, porque lo que hace es llevarte a otra dirección (`wa.me`), y eso es
   justo lo que hace un enlace. Va en la misma pestaña (sin `target`), así que el botón "atrás"
   del móvil vuelve al producto. Clases (el "Primary button" de `design.md`):
-  - `inline-flex items-center justify-center`: el texto centrado en horizontal y en vertical.
+  - `inline-flex items-center justify-center`: el icono y el texto, centrados en horizontal y
+    en vertical.
+  - `gap-2`: 8 px entre el icono y el texto (spec 0011).
   - `min-h-11`: al menos 44 px de alto ([área táctil](../../../glosario.md#area-tactil)).
   - `w-full md:w-fit`: ocupa todo el ancho en el móvil (fácil de tocar con el pulgar) y, desde
     768 px, solo lo que mide su texto.
@@ -353,12 +365,18 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
   - `bg-accent text-surface font-medium`: fondo rojo, texto blanco, peso 500.
   - `hover:bg-accent-hover active:bg-accent-hover`: un rojo más oscuro al pasar el ratón o
     mientras se pulsa.
+- `<WhatsAppIcon variant="white" />`: el icono oficial de WhatsApp en su versión **blanca**
+  ([explicación](../../components/WhatsAppIcon.astro.md)). Sobre el fondo rojo del botón, el
+  verde de WhatsApp apenas se distinguiría; el blanco se ve como el texto. Lleva `alt=""`, así
+  que el lector de pantalla sigue leyendo solo el texto del botón
+  ([imagen decorativa](../../../glosario.md#imagen-decorativa)). La spec 0007 decía "sin logo";
+  la spec 0011 cambió esa línea: el logo va, pero siempre junto a la palabra "WhatsApp".
 - `{inStock ? 'Pedir por WhatsApp' : 'Preguntar por WhatsApp'}`: el texto cambia según la
   disponibilidad (el dueño eligió que los agotados también tengan botón, para preguntar).
   El mensaje que se escribe en WhatsApp también cambia; eso lo decide `orderLink()`.
 - `<p>{description}</p>`: la descripción completa, en texto normal.
 - `</div>`, `</article>`, `</main>`: cierran la columna de datos, el artículo y el contenido.
-- `<SiteFooter />`: el pie de página, igual que en el catálogo
+- `<SiteFooter />`: el pie de página oscuro, igual que en el catálogo
   ([`SiteFooter.astro.md`](../../components/SiteFooter.astro.md)). Va fuera del `<main>`.
 - `</BaseLayout>`: cierra el layout.
 
@@ -408,7 +426,8 @@ Cambia el orden de la descripción de la vista previa y míralo en el HTML gener
   [constructor-url](../../../glosario.md#constructor-url) ·
   [astro-url-y-site](../../../glosario.md#astro-url-y-site) · [nullish](../../../glosario.md#nullish)
 - [variable-de-entorno](../../../glosario.md#variable-de-entorno) ·
-  [click-to-chat](../../../glosario.md#click-to-chat)
+  [click-to-chat](../../../glosario.md#click-to-chat) ·
+  [imagen-decorativa](../../../glosario.md#imagen-decorativa) (nuevo)
 - [async-await](../../../glosario.md#async-await) ·
   [desestructuracion](../../../glosario.md#desestructuracion) ·
   [template-literal](../../../glosario.md#template-literal) ·

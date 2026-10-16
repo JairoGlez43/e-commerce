@@ -4,6 +4,7 @@
 **Date:** 2026-10-16
 **Scope:** `docs/scope/scope.md` → feature 16
 **Supersedes:** —
+**Amended by:** 0011 (WhatsApp icon on the header and footer links; Faq summary classes)
 
 ## Context
 The demo is shown to shop owners who judge it by look and feel, not by weight or speed. Today
@@ -139,8 +140,8 @@ readers). Then `<div class="grid gap-4 sm:grid-cols-2">` with two blocks, each
 
 **Faq (AC5):** `<section aria-labelledby="preguntas" class="flex flex-col gap-4">`, `h2#preguntas`
 "Preguntas frecuentes", then one `<details class="rounded-card border border-border bg-surface">`
-per item. `<summary class="flex min-h-11 cursor-pointer items-center px-4 font-medium">`,
-answer `<p class="px-4 pb-4">`. Browser default disclosure marker; no JS, no `name`
+per item. `<summary class="min-h-11 cursor-pointer px-4 py-3 font-medium">`,
+answer `<p class="px-4 pb-4">`. Browser default disclosure marker (never `flex` on `<summary>`: it hides the marker; corrected 2026-10-16 by spec 0011); no JS, no `name`
 attribute grouping (each opens on its own).
 
 **Footer (AC6):** `<footer class="mt-12 border-t border-border bg-surface">` →

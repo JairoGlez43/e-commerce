@@ -164,6 +164,11 @@ prefijo `astro:`.
 objetos: `class:list={['a', { b: condicion }]}` da `class="a b"` si `condicion` es verdadera,
 o `class="a"` si es falsa.
 
+### comentario-en-plantilla
+En la plantilla de un `.astro` (debajo del segundo `---`), `{/* texto */}` es un comentario: una
+[expresión](#expresion-en-plantilla) que solo contiene un comentario de JavaScript, así que no
+escribe nada. No llega al HTML final: el cliente no lo descarga.
+
 ### condicional-con-and
 En una plantilla, `{condicion && <etiqueta />}` escribe la etiqueta si la condición es
 verdadera, y nada si es falsa.
@@ -450,6 +455,22 @@ bien.
 scroll. Ahorra datos. `loading="eager"` la descarga ya; se usa para las primeras fotos, las
 que se ven sin hacer scroll.
 
+### svg
+Un formato de imagen escrito como texto, con etiquetas parecidas a HTML (`<svg>`, `<path>`):
+describe formas y colores en vez de guardar puntos de color uno a uno, así que se ve nítido a
+cualquier tamaño y suele pesar poco. Se puede usar de dos formas: como archivo en un
+`<img src="icono.svg">`, y el navegador lo pinta aparte, como una foto; o pegando su código
+dentro del HTML (*SVG en línea*), y entonces lo que lleva dentro, como un `<style>` o un `id`,
+pasa a formar parte de la página.
+
+### importar-imagen
+`import icono from '../assets/icons/x.svg'` en el [frontmatter](#frontmatter) no trae el dibujo:
+trae un objeto con sus datos (`src`, `width`, `height`, `format`). `src` es la dirección donde
+quedará el archivo publicado: en el build, [Vite](#vite) lo copia a la carpeta `_astro/` de
+[`dist/`](#dist) con un *hash* en el nombre (unas letras que cambian si cambia el archivo, para que el navegador no
+use una copia vieja). Con un [SVG](#svg), Astro deja usar además ese objeto como componente que
+pega el SVG en línea; este proyecto solo usa su `.src`.
+
 ---
 
 ## Tailwind y CSS
@@ -535,6 +556,20 @@ Los números de Tailwind son múltiplos de 0,25 rem (4 px): `p-4` = 16 px, `min-
 horizontal). Suele ir con `justify-between` (`justify-content: space-between`: el primero a la
 izquierda, el último a la derecha) y con `gap-*`, que también separa las líneas entre sí.
 
+<a id="full-bleed"></a>
+### banda-a-todo-el-ancho
+Un bloque que va **fuera** del contenedor de página (`mx-auto max-w-5xl`: centrado y como mucho
+1024 px), así que su fondo llega de un borde de la pantalla al otro. Dentro lleva otra vez ese
+contenedor, para que su texto quede alineado con el resto de la página. En inglés se llama
+*full-bleed*. Aquí: la banda de información de la portada y el pie de página oscuro.
+
+### outline
+`outline` es una línea que el navegador dibuja alrededor de un elemento, por fuera de su caja:
+no ocupa sitio ni mueve nada. El contorno de [foco](#focus-visible) es un `outline`; en este
+proyecto, 2 px en `accent` (`global.css`). La clase `outline-cream` de Tailwind cambia solo su
+color (`outline-color: var(--color-cream)`), y con la [variante](#variante) `focus-visible:`
+(`focus-visible:outline-cream`) solo mientras se ve ese contorno.
+
 ---
 
 ## HTML y accesibilidad
@@ -552,6 +587,12 @@ Da un nombre a un elemento para el lector de pantalla:
 ### nombre-accesible
 El texto con el que el lector de pantalla anuncia un elemento: en un enlace, normalmente su
 texto; en una imagen, su `alt`. Se puede cambiar con [`aria-label`](#aria-label).
+
+<a id="alt-vacio"></a>
+### imagen-decorativa
+Una imagen que no añade información, como un icono junto a una palabra que ya dice lo mismo.
+Se marca con `alt=""` (texto alternativo vacío, no ausente): el lector de pantalla la salta, y
+el [nombre accesible](#nombre-accesible) del enlace que la contiene sigue siendo solo su texto.
 
 <a id="noindex"></a>
 ### meta-robots

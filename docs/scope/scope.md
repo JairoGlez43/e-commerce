@@ -11,11 +11,12 @@
 | 02 | Project scaffold                 | done              | default | docs/specs/0001-stack.md |
 | 03 | Visual reference and design base | done              | default | docs/specs/0002-design-base.md |
 | 04 | Sample product data              | done              | default | docs/specs/0004-sample-product-data.md |
-| 05 | Catalog page                     | in-progress       | default | docs/specs/0005-catalog-page.md |
-| 06 | Product detail page              | in-progress       | default | docs/specs/0006-product-detail-page.md |
+| 05 | Catalog page                     | done              | default | docs/specs/0005-catalog-page.md |
+| 06 | Product detail page              | done              | default | docs/specs/0006-product-detail-page.md |
 | 07 | Order contact (WhatsApp)         | done              | default | docs/specs/0007-whatsapp-order.md |
 | 08 | Demo online                      | done              | default | docs/specs/0008-demo-online.md |
 | 16 | Shop information                 | done              | default | docs/specs/0010-shop-information.md |
+| 17 | Visual polish                    | done              | default | docs/specs/0011-visual-polish.md |
 | 09 | Admin backend and publishing     | needs-a-decision  | default | —    |
 | 10 | Catalog data online              | needs-a-decision  | default | —    |
 | 11 | Owner login                      | needs-a-decision  | default | —    |
@@ -26,8 +27,8 @@
 
 Status values: `planned` · `needs-a-decision` · `in-progress` · `done`
 
-Feature 16 was added after 09–15 but is built first: the demo shown to prospective clients
-must be complete before the admin panel starts.
+Features 16 and 17 were added after 09–15 but are built first: the demo shown to prospective
+clients must be complete before the admin panel starts.
 
 Features 09–15 are the admin panel: the shop owner manages the whole catalog from a phone,
 without the developer. It is sold as the "Autónomo" package, priced above the "Gestionado"
@@ -96,7 +97,7 @@ Later (not planned yet): cart or delivery flow if the shop offers delivery.
 **Notes:** The product shape decided here is what real data must match later.
 
 ## 05 · Catalog page
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0005-catalog-page.md
 **Code:** src/pages/index.astro, src/pages/categoria/[id].astro, src/components/ProductCard.astro, src/components/CategoryNav.astro, src/components/SiteHeader.astro, src/lib/catalog.ts, src/lib/site.ts
 **Depth:** default
@@ -111,7 +112,7 @@ Later (not planned yet): cart or delivery flow if the shop offers delivery.
 **Notes:** —
 
 ## 06 · Product detail page
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0006-product-detail-page.md
 **Code:** src/pages/producto/[id].astro
 **Depth:** default
@@ -183,6 +184,31 @@ https://www.nngroup.com/articles/trustworthy-design/ ·
 https://www.baymard.com/blog/footer-links-ecommerce · https://baymard.com/blog/dtc-search ·
 Cuban reference store: https://mercadito-demo.biznecubano.com (payment methods near the
 top, delivery by municipio, hours, "¿Cómo comprar?", FAQ).
+
+## 17 · Visual polish
+**Status:** done
+**Spec:** docs/specs/0011-visual-polish.md
+**Code:** src/components/WhatsAppIcon.astro, src/assets/icons/, src/components/SiteHeader.astro, src/components/SiteFooter.astro, src/pages/index.astro, src/pages/categoria/[id].astro, src/pages/producto/[id].astro, src/pages/estilo.astro
+**Depth:** default
+**Done when:**
+- Every link that opens WhatsApp (header "Escríbenos", the product page's "Pedir" / "Preguntar"
+  button, the footer link) shows the WhatsApp icon next to its text.
+- On the home page, the information zone (how to buy, pickup and hours, FAQ) sits on its own
+  background, edge to edge, so it reads apart from the catalog.
+- The footer's look is decided (dark or light) and the same on every page.
+- All text stays readable on the new backgrounds, and every page stays within the weight budget
+  of spec 0001 with no JavaScript.
+**Tasks:**
+- [x] Decide it — /architect
+- [x] Build it — /develop
+- [x] Verify it — /check verify
+**Notes:** Goal: owners judge the demo by look and feel; WhatsApp buttons need more presence and
+the info zone blends into the catalog today. Reverses a recorded decision: specs 0007 and 0010
+say "no WhatsApp logo" (trademark), and spec 0002 left icons out of the design system, so
+/architect must check WhatsApp's brand rules for using its icon on click-to-chat links (ask
+before going online). New background/text pairs must pass the spec 0002 contrast table.
+Suggestion from the 2026-10-16 session, not a decision: keep the product categories on the
+cream page (alternating 6 category bands would look busy); an inline SVG icon adds about 1 KB.
 
 ## 09 · Admin backend and publishing
 **Status:** needs-a-decision
