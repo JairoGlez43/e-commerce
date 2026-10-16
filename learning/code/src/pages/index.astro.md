@@ -1,18 +1,22 @@
 # `src/pages/index.astro`
 
 > **Qué es:** la portada `/`, el catálogo completo ·
-> **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) ·
+> **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (y la información
+> de la tienda, [spec 0010](../../../../docs/specs/0010-shop-information.md)) ·
 > **Lo usan:** nadie lo importa; Astro lo convierte en `dist/index.html` por
 > [ruta por archivo](../../glosario.md#ruta-por-archivo) ·
-> **Usa:** `BaseLayout`, `SiteHeader`, `CategoryNav`, `ProductCard`, `getCatalog()`
-> (`src/lib/catalog.ts`), `site` (`src/lib/site.ts`)
+> **Usa:** `BaseLayout`, `SiteHeader`, `CategoryNav`, `ProductCard`, `ShopInfo`, `Faq`,
+> `SiteFooter`, `getCatalog()` (`src/lib/catalog.ts`), `formatDay()` (`src/lib/date.ts`),
+> `site` (`src/lib/site.ts`)
 
 ## Para qué sirve
 
 Es la página que abre el cliente desde el enlace de WhatsApp. Muestra **todos** los productos,
 en una sección por categoría (en el orden de las categorías), con la fila de chips de
-categorías arriba. Además decide qué fotos se descargan ya y cuáles esperan al scroll, para
-cumplir el [presupuesto de peso](../../glosario.md#presupuesto-de-peso).
+categorías arriba. Encima de los chips dice cuándo se actualizó el catálogo y qué formas de
+pago acepta la tienda; debajo de los productos, cómo comprar, recogida, horario y las preguntas
+frecuentes; y al final, el pie de página. Además decide qué fotos se descargan ya y cuáles
+esperan al scroll, para cumplir el [presupuesto de peso](../../glosario.md#presupuesto-de-peso).
 
 ## El código, por partes
 
@@ -24,7 +28,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import CategoryNav from '../components/CategoryNav.astro';
 import ProductCard from '../components/ProductCard.astro';
+import ShopInfo from '../components/ShopInfo.astro';
+import Faq from '../components/Faq.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 import { getCatalog } from '../lib/catalog';
+import { formatDay } from '../lib/date';
 import { site } from '../lib/site';
 ```
 
@@ -38,11 +46,17 @@ import { site } from '../lib/site';
   ([explicación](../components/CategoryNav.astro.md)).
 - `import ProductCard ...`: la tarjeta de producto
   ([explicación](../components/ProductCard.astro.md)).
+- `import ShopInfo ...`: "Cómo comprar", recogida y horario
+  ([explicación](../components/ShopInfo.astro.md)).
+- `import Faq ...`: las preguntas frecuentes ([explicación](../components/Faq.astro.md)).
+- `import SiteFooter ...`: el pie de página ([explicación](../components/SiteFooter.astro.md)).
 - `import { getCatalog } from '../lib/catalog';`: la función que devuelve las categorías con
   sus productos, ya ordenados. Es el único sitio donde viven las reglas de orden
   ([explicación](../lib/catalog.ts.md)).
-- `import { site } from '../lib/site';`: el nombre y la descripción de la tienda
-  ([explicación](../lib/site.ts.md)).
+- `import { formatDay } from '../lib/date';`: convierte una fecha en `16 de octubre`, con la
+  hora de Cuba ([explicación](../lib/date.ts.md)).
+- `import { site } from '../lib/site';`: el nombre, la descripción y las formas de pago de la
+  tienda ([explicación](../lib/site.ts.md)).
 
 ### 2. Leer el catálogo
 
@@ -69,7 +83,6 @@ const sections = catalog.map((section, sectionIndex) => {
 		.reduce((count, previous) => count + previous.products.length, 0);
 	return { ...section, cardsBefore };
 });
----
 ```
 
 - El comentario dice: "Las 4 primeras tarjetas en el orden de la página cargan su foto de
@@ -87,7 +100,6 @@ const sections = catalog.map((section, sectionIndex) => {
   llevando un acumulado (`count`), que empieza en `0` (el último argumento).
 - `return { ...section, cardsBefore };`: devuelve la misma sección con un campo más,
   `cardsBefore` ("tarjetas antes"), usando [spread](../../glosario.md#spread).
-- `---`: cierra el frontmatter.
 
 **Ejemplo con los datos reales** (cada sección tiene 3 productos):
 
@@ -102,6 +114,26 @@ de su sección. La sección 2 (Cárnicos) empieza después de 3 tarjetas. Su pri
 Muslos de pollo, tiene posición `3 + 0 = 3`, menor que 4 → **eager**. La segunda, Picadillo de
 res, tiene `3 + 1 = 4`, que ya no es menor que 4 → **lazy**. Todo Despensa empieza en 6 →
 lazy. Total: 3 fotos eager en Granos y pastas + 1 en Cárnicos = 4.
+
+### 3b. La fecha de la última actualización
+
+```astro
+
+// The page is built once, so "now" is the build date: the last time the catalog changed (spec 0010).
+const updated = formatDay(new Date());
+---
+```
+
+- El comentario dice: "La página se construye una vez, así que «ahora» es la fecha del build:
+  la última vez que cambió el catálogo (spec 0010)".
+- `new Date()`: la fecha y hora de este momento. Como el frontmatter corre en el
+  [build](../../glosario.md#build) y no en el navegador, "este momento" es cuando se construyó
+  el sitio, no cuando el cliente abre la página.
+- `formatDay(...)`: la convierte en texto con la hora de Cuba
+  ([zona horaria](../../glosario.md#zona-horaria), [`date.ts.md`](../lib/date.ts.md)).
+- `const updated = ...`: guarda el texto, por ejemplo `15 de octubre`, para usarlo en el
+  bloque 5.
+- `---`: cierra el frontmatter.
 
 ### 4. Layout, cabecera y contenedor
 
@@ -121,24 +153,37 @@ lazy. Total: 3 fotos eager en Granos y pastas + 1 en Cárnicos = 4.
   - `max-w-5xl` → `max-width: 64rem` (1024 px): en pantallas grandes no se estira más
     ([unidades](../../glosario.md#unidades-tailwind)).
   - `flex flex-col` → `display: flex; flex-direction: column`: los hijos en columna.
-  - `gap-12` → `gap: 48px` entre bloques (título, cada sección).
+  - `gap-12` → `gap: 48px` entre bloques (título, cada sección, "Cómo comprar", preguntas).
   - `px-4` → `padding` de 16 px a izquierda y derecha (el margen en móvil).
   - `py-8` → `padding` de 32 px arriba y abajo.
 
-### 5. Título y chips
+### 5. Título, fecha, pagos y chips
 
 ```astro
 		<div class="flex flex-col gap-4">
 			<h1>Productos</h1>
+			<div class="flex flex-col gap-1">
+				<p class="text-sm text-muted">Actualizado el {updated}</p>
+				<p class="text-sm">Aceptamos: {site.payments.join(' · ')}</p>
+			</div>
 			<CategoryNav categories={catalog} currentId={null} />
 		</div>
 ```
 
-- `<div class="flex flex-col gap-4">`: agrupa título y chips en columna con `gap: 16px`. Así
-  quedan juntos, sin el hueco grande (`gap-12`) del `<main>`.
+- `<div class="flex flex-col gap-4">`: agrupa título, las dos líneas y los chips en columna con
+  `gap: 16px`. Así quedan juntos, sin el hueco grande (`gap-12`) del `<main>`.
 - `<h1>Productos</h1>`: el único `h1` de la página. No lleva clases: su estilo (Fraunces,
   seminegrita, tamaño grande) viene de la capa base de `src/styles/global.css`
   ([@layer](../../glosario.md#layer-y-apply)).
+- `<div class="flex flex-col gap-1">`: las dos líneas de información (AC2 de la spec 0010), en
+  columna y muy juntas: solo 4 px entre ellas.
+- `<p class="text-sm text-muted">Actualizado el {updated}</p>`: la fecha del bloque 3b, en
+  14 px y gris (`text-muted`), porque es un dato secundario. Se ve, por ejemplo,
+  `Actualizado el 15 de octubre`.
+- `<p class="text-sm">Aceptamos: {site.payments.join(' · ')}</p>`: las formas de pago en una
+  línea, en 14 px y en el color normal del texto. `join(' · ')` une la lista de `site.payments`
+  con un punto medio entre cada dos ([join](../../glosario.md#array-join)):
+  `Aceptamos: Efectivo (CUP) · Transfermóvil · EnZona · USD en efectivo`.
 - `<CategoryNav categories={catalog} currentId={null} />`: los chips. Recibe el mismo
   `catalog`, así solo hay chip para las categorías con productos. `currentId={null}` significa
   "estamos en la portada": el chip "Todos" sale seleccionado.
@@ -207,8 +252,6 @@ lazy. Total: 3 fotos eager en Granos y pastas + 1 en Cárnicos = 4.
 				))
 			)
 		}
-	</main>
-</BaseLayout>
 ```
 
 - `{products.map((product, index) => (`: una tarjeta por producto de la sección. `index` es la
@@ -224,17 +267,42 @@ lazy. Total: 3 fotos eager en Granos y pastas + 1 en Cárnicos = 4.
 - `</li>`, `))}`, `</ul>`, `</section>`, `))`, `)`, `}`: cierran, en orden, el elemento de
   lista, el `map` de productos, la rejilla, la sección, el `map` de secciones, la rama del `? :`
   y la expresión.
-- `</main>` y `</BaseLayout>`: cierran el contenido y el layout.
+
+### 9. Información de la tienda y pie de página
+
+```astro
+		<ShopInfo />
+		<Faq />
+	</main>
+	<SiteFooter />
+</BaseLayout>
+```
+
+- `<ShopInfo />`: "Cómo comprar" con sus 3 pasos, y los recuadros "Recogida y entrega" y
+  "Horario y ubicación" ([explicación](../components/ShopInfo.astro.md)). Va después de la
+  última categoría (AC4 de la spec 0010): primero lo que el cliente vino a ver, los productos.
+- `<Faq />`: las preguntas frecuentes, que se abren al tocarlas
+  ([explicación](../components/Faq.astro.md)).
+- Ninguno de los dos recibe props: leen sus textos de `src/lib/site.ts`. Como están dentro del
+  `<main>`, quedan a 48 px de lo anterior (`gap-12`) y alineados con el resto.
+- `</main>`: cierra el contenido principal.
+- `<SiteFooter />`: el pie de página ([explicación](../components/SiteFooter.astro.md)). Va
+  **fuera** del `<main>` porque no es contenido de esta página, sino algo común a todas, como
+  la cabecera.
+- `</BaseLayout>`: cierra el layout.
 
 ## Cómo se conecta
 
 - **Datos:** `src/data/categories.json` y `src/data/products.json` → colecciones de
   `src/content.config.ts` → `getCatalog()` en `src/lib/catalog.ts` → esta página.
-- **Textos:** `site.name` y `site.description` de `src/lib/site.ts`.
+- **Textos:** `site.name`, `site.description` y `site.payments` de `src/lib/site.ts`; la fecha,
+  de `formatDay()` en [`src/lib/date.ts`](../lib/date.ts.md).
 - **Componentes que pinta:** [`BaseLayout`](../layouts/BaseLayout.astro.md),
   [`SiteHeader`](../components/SiteHeader.astro.md),
-  [`CategoryNav`](../components/CategoryNav.astro.md) y
-  [`ProductCard`](../components/ProductCard.astro.md).
+  [`CategoryNav`](../components/CategoryNav.astro.md),
+  [`ProductCard`](../components/ProductCard.astro.md),
+  [`ShopInfo`](../components/ShopInfo.astro.md), [`Faq`](../components/Faq.astro.md) y
+  [`SiteFooter`](../components/SiteFooter.astro.md).
 - **Resultado:** `dist/index.html`, la URL `/`. Sus tarjetas enlazan a `/producto/<id>`
   ([`src/pages/producto/[id].astro`](producto/%5Bid%5D.astro.md)) y sus chips a `/categoria/<id>`, que genera
   [`src/pages/categoria/[id].astro`](categoria/%5Bid%5D.astro.md).
@@ -249,13 +317,13 @@ Mira cómo `EAGER_CARDS` decide qué fotos se descargan ya.
    guarda.
 3. Recarga el código fuente: ahora hay 2 `loading="eager"` (Arroz blanco y Espaguetis) y el
    resto dice `loading="lazy"`.
-4. Deshaz: vuelve a poner `4`. `src/` aún no está en git, así que deshazlo a mano o con
-   `Ctrl+Z`.
+4. Deshaz: vuelve a poner `4` (a mano o con `Ctrl+Z`) y guarda.
 
 ## Términos
 
 - [ruta-por-archivo](../../glosario.md#ruta-por-archivo) · [frontmatter](../../glosario.md#frontmatter) · [build](../../glosario.md#build) · [layout](../../glosario.md#layout) · [slot](../../glosario.md#slot) · [props](../../glosario.md#props)
-- [async-await](../../glosario.md#async-await) · [reduce](../../glosario.md#reduce) (nuevo) · [spread](../../glosario.md#spread) · [desestructuracion](../../glosario.md#desestructuracion) · [expresion-en-plantilla](../../glosario.md#expresion-en-plantilla)
+- [zona-horaria](../../glosario.md#zona-horaria) (nuevo) · [array-join](../../glosario.md#array-join) (nuevo) · [array-map](../../glosario.md#array-map) (nuevo)
+- [async-await](../../glosario.md#async-await) · [reduce](../../glosario.md#reduce) · [spread](../../glosario.md#spread) · [desestructuracion](../../glosario.md#desestructuracion) · [expresion-en-plantilla](../../glosario.md#expresion-en-plantilla)
 - [tailwind](../../glosario.md#tailwind) · [unidades-tailwind](../../glosario.md#unidades-tailwind) · [variante](../../glosario.md#variante) · [layer-y-apply](../../glosario.md#layer-y-apply)
 - [aria-label](../../glosario.md#aria-label) · [jerarquia-de-titulos](../../glosario.md#jerarquia-de-titulos) · [slug](../../glosario.md#slug)
 - [lazy-loading](../../glosario.md#lazy-loading) · [presupuesto-de-peso](../../glosario.md#presupuesto-de-peso) · [open-graph](../../glosario.md#open-graph)

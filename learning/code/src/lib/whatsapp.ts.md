@@ -1,8 +1,11 @@
 # `src/lib/whatsapp.ts`
 
-> **Qué es:** las dos funciones del botón de WhatsApp: leer el número y armar el enlace con el
-> mensaje · **Lo decidió:** [spec 0007](../../../../docs/specs/0007-whatsapp-order.md) ·
-> **Lo usan:** [`src/pages/producto/[id].astro`](../pages/producto/%5Bid%5D.astro.md) ·
+> **Qué es:** las funciones de WhatsApp: leer el número, armar el enlace de pedido de un
+> producto y el enlace de contacto general · **Lo decidió:** [spec 0007](../../../../docs/specs/0007-whatsapp-order.md)
+> (y `contactLink()`, [spec 0010](../../../../docs/specs/0010-shop-information.md)) ·
+> **Lo usan:** [`src/pages/producto/[id].astro`](../pages/producto/%5Bid%5D.astro.md)
+> (`orderLink()`), [`SiteHeader.astro`](../components/SiteHeader.astro.md) y
+> [`SiteFooter.astro`](../components/SiteFooter.astro.md) (`contactLink()`) ·
 > **Usa:** la variable de entorno `WHATSAPP_NUMBER`, [`formatPrice()`](price.ts.md) y el tipo de
 > producto de `astro:content`
 
@@ -10,8 +13,10 @@
 
 Hoy los clientes piden por WhatsApp. Este archivo convierte un producto en un enlace que, al
 tocarlo, abre WhatsApp con un chat a la tienda y el mensaje ya escrito ("Hola, quiero pedir:
-Arroz blanco (1 lb) – 280 CUP." + el enlace del producto). Es el único archivo que sabe algo de
-WhatsApp: si mañana cambia el formato del mensaje o del enlace, se toca solo aquí.
+Arroz blanco (1 lb) – 280 CUP." + el enlace del producto). También arma el enlace
+"Escríbenos" de la cabecera y del pie de página, con un mensaje general que no habla de ningún
+producto. Es el único archivo que sabe algo de WhatsApp: si mañana cambia el formato del mensaje
+o del enlace, se toca solo aquí.
 
 El número **no está escrito en el código**: llega desde una
 [variable de entorno](../../glosario.md#variable-de-entorno), para que no quede publicado en
@@ -114,14 +119,40 @@ export function orderLink(product: CollectionEntry<'products'>, pageUrl: string)
     salto de línea a `%0A`, la `¿` a `%C2%BF`… Sin esto, el primer espacio o `?` del mensaje
     rompería la URL.
 
+### 5. El enlace de contacto general
+
+```ts
+
+// General contact link for the header and footer, not about one product (spec 0010).
+export function contactLink(): string {
+	const message = 'Hola, tengo una pregunta sobre la tienda.';
+	return `https://wa.me/${getWhatsAppNumber()}?text=${encodeURIComponent(message)}`;
+}
+```
+
+- El comentario: "Enlace de contacto general para la cabecera y el pie, no sobre un producto
+  (spec 0010)."
+- `export function contactLink(): string`: no recibe nada (los paréntesis están vacíos) y
+  devuelve el enlace como texto.
+- `const message = 'Hola, tengo una pregunta sobre la tienda.';`: el mensaje, siempre el mismo.
+  Va entre comillas simples porque no lleva ningún valor dentro.
+- `return …`: la misma forma que en `orderLink()`: el número validado (si falta, el build se
+  para igual) y el mensaje pasado por `encodeURIComponent`. Da
+  `https://wa.me/<número>?text=Hola%2C%20tengo%20una%20pregunta%20sobre%20la%20tienda.`: la
+  coma pasa a `%2C` y cada espacio a `%20`; el punto final no cambia.
+- La cabecera y el pie la llaman cada uno por su cuenta, así que el enlace sale dos veces en
+  cada página de clientes. Como sale de la misma función, los dos son siempre idénticos.
+
 ## Cómo se conecta
 
 - **Entra:** `WHATSAPP_NUMBER` desde el entorno (archivo [`.env`](../../.env.example.md), que
   creas tú, o el comando del build); el producto y la URL de la página, desde
   [`src/pages/producto/[id].astro`](../pages/producto/%5Bid%5D.astro.md).
-- **Sale:** un texto como
+- **Sale:** de `orderLink()`, un texto como
   `https://wa.me/5355555555?text=Hola%2C%20quiero%20pedir%3A%20Arroz%20blanco%20(1%20lb)%20%E2%80%93%20280%20CUP.%0Ahttp%3A%2F%2F…`,
-  que la página pone en el `href` del botón.
+  que la página de producto pone en el `href` del botón. De `contactLink()`, el `href` de
+  "Escríbenos" en [`SiteHeader`](../components/SiteHeader.astro.md) y de "Escríbenos por
+  WhatsApp" en [`SiteFooter`](../components/SiteFooter.astro.md).
 - **Tipos:** TypeScript sabe que existe `import.meta.env.WHATSAPP_NUMBER` gracias a
   [`src/env.d.ts`](../env.d.ts.md).
 
@@ -130,8 +161,7 @@ export function orderLink(product: CollectionEntry<'products'>, pageUrl: string)
 Mira el error que protege el build, sin tocar código:
 
 1. En la terminal de VS Code (Git Bash), ejecuta `WHATSAPP_NUMBER=123 pnpm build`.
-2. **Qué deberías ver:** el build se para al generar la primera página de producto, con el
-   mensaje `WHATSAPP_NUMBER must be set to 8–15 digits (international format, no +). See
+2. **Qué deberías ver:** el build se para con el mensaje `WHATSAPP_NUMBER must be set to 8–15 digits (international format, no +). See
    .env.example.` (`123` tiene solo 3 dígitos).
 3. Ahora `WHATSAPP_NUMBER=5355555555 pnpm build`: termina bien. Abre
    `dist/producto/arroz-blanco/index.html` y busca `wa.me`: verás el enlace con el número falso.

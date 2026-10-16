@@ -23,3 +23,9 @@ export function orderLink(product: CollectionEntry<'products'>, pageUrl: string)
 		: `Hola, ¿cuándo vuelve a haber ${name} (${unit})?\n${pageUrl}`;
 	return `https://wa.me/${getWhatsAppNumber()}?text=${encodeURIComponent(message)}`;
 }
+
+// General contact link for the header and footer, not about one product (spec 0010).
+export function contactLink(): string {
+	const message = 'Hola, tengo una pregunta sobre la tienda.';
+	return `https://wa.me/${getWhatsAppNumber()}?text=${encodeURIComponent(message)}`;
+}

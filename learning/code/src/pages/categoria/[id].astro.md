@@ -4,8 +4,8 @@
 > **Lo decidió:** [spec 0005](../../../../../docs/specs/0005-catalog-page.md) ·
 > **Lo usan:** nadie lo importa; Astro genera `dist/categoria/<id>/index.html` por cada
 > categoría ([ruta dinámica](../../../glosario.md#ruta-por-archivo)) ·
-> **Usa:** `BaseLayout`, `SiteHeader`, `CategoryNav`, `ProductCard`, `getCatalog()` y el tipo
-> `CatalogSection` (`src/lib/catalog.ts`), `site` (`src/lib/site.ts`)
+> **Usa:** `BaseLayout`, `SiteHeader`, `CategoryNav`, `ProductCard`, `SiteFooter`, `getCatalog()` y
+> el tipo `CatalogSection` (`src/lib/catalog.ts`), `site` (`src/lib/site.ts`)
 
 ## Para qué sirve
 
@@ -25,6 +25,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
 import CategoryNav from '../../components/CategoryNav.astro';
 import ProductCard from '../../components/ProductCard.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
 import { getCatalog, type CatalogSection } from '../../lib/catalog';
 import { site } from '../../lib/site';
 ```
@@ -37,8 +38,9 @@ import { site } from '../../lib/site';
 - Las rutas empiezan por `../../` (y no `../` como en `index.astro`) porque este archivo está
   una carpeta más adentro: `src/pages/categoria/`. Hay que subir dos niveles para llegar a
   `src/`.
-- `BaseLayout`, `SiteHeader`, `CategoryNav`, `ProductCard`: los mismos cuatro componentes que
-  usa la portada (ver [`index.astro.md`](../index.astro.md)).
+- `BaseLayout`, `SiteHeader`, `CategoryNav`, `ProductCard`, `SiteFooter`: los mismos componentes
+  que usa la portada (ver [`index.astro.md`](../index.astro.md)). Lo que no trae son `ShopInfo` y
+  `Faq`: "Cómo comprar" y las preguntas frecuentes solo salen en la portada (spec 0010).
 - `import { getCatalog, type CatalogSection } from '../../lib/catalog';`: importa la función
   `getCatalog` y, en la misma línea, el tipo `CatalogSection`. La palabra `type` delante de un
   nombre dentro de las llaves hace lo mismo que `import type`, pero solo para ese nombre.
@@ -163,6 +165,7 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
 			}
 		</ul>
 	</main>
+	<SiteFooter />
 </BaseLayout>
 ```
 
@@ -182,7 +185,11 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
     Con 3 productos por categoría, hoy todas las fotos de estas páginas son *eager*. La página
     de categoría más pesada suma unos 60 KB de fotos inmediatas, dentro del límite de 150 KB
     ([presupuesto de peso](../../../glosario.md#presupuesto-de-peso)).
-- `</ul>`, `</main>`, `</BaseLayout>`: cierran la rejilla, el contenido y el layout.
+- `</ul>`, `</main>`: cierran la rejilla y el contenido.
+- `<SiteFooter />`: el pie de página con el nombre, el municipio, el horario y el enlace a
+  WhatsApp, el mismo que en la portada ([explicación](../../components/SiteFooter.astro.md)). Va
+  fuera del `<main>`, como la cabecera, porque es común a todas las páginas.
+- `</BaseLayout>`: cierra el layout.
 
 ## Cómo se conecta
 
@@ -192,13 +199,14 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
 - **Componentes:** [`BaseLayout`](../../layouts/BaseLayout.astro.md),
   [`SiteHeader`](../../components/SiteHeader.astro.md),
   [`CategoryNav`](../../components/CategoryNav.astro.md),
-  [`ProductCard`](../../components/ProductCard.astro.md).
+  [`ProductCard`](../../components/ProductCard.astro.md),
+  [`SiteFooter`](../../components/SiteFooter.astro.md).
 - **Quién llega aquí:** los chips de `CategoryNav`, que enlazan a `/categoria/<id>` desde la
   portada y desde las otras categorías.
 - **Resultado del build:** 6 archivos, `dist/categoria/<id>/index.html`, uno por categoría con
   productos. Una categoría vacía no tiene página.
-- **Enlaza a:** `/` (chip "Todos" y nombre de la tienda) y `/producto/<id>` (tarjetas; la página de detalle,
-  [explicación](../producto/%5Bid%5D.astro.md)).
+- **Enlaza a:** `/` (chip "Todos" y nombre de la tienda), `/producto/<id>` (tarjetas; la página de detalle,
+  [explicación](../producto/%5Bid%5D.astro.md)) y WhatsApp ("Escríbenos" en la cabecera y en el pie).
 
 ## Prueba tú
 
@@ -211,7 +219,7 @@ Comprueba que `getStaticPaths` corre en el build, en tu terminal, y no en el nav
 3. En la terminal verás la lista de los 6 ids (`granos-y-pastas`, `carnicos`, …). En el
    navegador no aparece nada: ese código nunca llega a él. En `dist/categoria/` hay 6
    carpetas, una por id.
-4. Deshaz: borra la línea del `console.log` (con `Ctrl+Z` o a mano; `src/` aún no está en git)
+4. Deshaz: borra la línea del `console.log` (con `Ctrl+Z` o a mano)
    y vuelve a ejecutar `pnpm build`.
 
 ## Términos

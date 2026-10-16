@@ -4,6 +4,7 @@ import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
 import { Image, getImage } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
 import { formatPrice } from '../../lib/price';
 import { site } from '../../lib/site';
 import { orderLink } from '../../lib/whatsapp';
@@ -89,4 +90,5 @@ const orderHref = orderLink(product, pageUrl);
 			</div>
 		</article>
 	</main>
+	<SiteFooter />
 </BaseLayout>

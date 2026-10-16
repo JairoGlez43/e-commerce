@@ -90,6 +90,8 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 - Build needs `WHATSAPP_NUMBER` (8–15 digits) from `.env` or the shell, or it fails on purpose
   (spec 0007). Checks never read `.env`; they pass a fake inline:
   `WHATSAPP_NUMBER=5355555555 pnpm build`. Template: `.env.example`.
+- Weight check: `pnpm check:weight` after `pnpm build` (`scripts/check-weight.mjs`, spec 0001
+  AC7); measures every page in `dist/` against the budget, exits 1 when one is over.
 **Clean means:** `pnpm typecheck` and `pnpm build` pass with zero errors.
 
 ## Structure
@@ -97,8 +99,8 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 |---|---|---|
 | `src/pages/` | Routes: `index.astro` (catalog), `categoria/[id].astro`, `producto/[id].astro`, `estilo.astro` (internal style guide, `noindex`) | Hold data, sorting rules or shared markup that belongs in `lib/` or `components/` |
 | `src/layouts/` | `BaseLayout.astro`: `<html lang="es">`, meta and Open Graph tags, robots, global CSS, font | Be bypassed: every page renders inside it |
-| `src/components/` | Reusable `.astro` pieces (`SiteHeader`, `CategoryNav`, `ProductCard`), listed in `design.md` | Fetch data themselves (pages pass props) |
-| `src/lib/` | Plain TS helpers, each the single home of one rule: `catalog.ts` (grouping, sort), `price.ts` (CUP format), `site.ts` (shop identity, `indexable`), `whatsapp.ts` (number, order link) | Be duplicated inline in a page |
+| `src/components/` | Reusable `.astro` pieces (`SiteHeader`, `CategoryNav`, `ProductCard`, `ShopInfo`, `Faq`, `SiteFooter`), listed in `design.md` | Fetch data themselves (pages pass props) |
+| `src/lib/` | Plain TS helpers, each the single home of one rule: `catalog.ts` (grouping, sort), `price.ts` (CUP format), `site.ts` (shop identity, `indexable`, shop info), `whatsapp.ts` (number, order and contact links), `date.ts` (day format in Havana time) | Be duplicated inline in a page |
 | `src/data/` | `products.json`, `categories.json` (sample data, shape fixed by spec 0004) | Be imported by pages (only `content.config.ts` reads them) |
 | `src/assets/` | Product photos (`products/<id>.jpg` + `CREDITS.md`) and the font file, processed at build | Hold files that must be served as-is (those go in `public/`) |
 | `src/styles/` | `global.css`: Tailwind entry, `@theme` tokens, base styles, `.price` and `.awning` | Gain raw values used elsewhere: it is the only place they live |
@@ -128,6 +130,9 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
   `rounded-card`); raw values live only in `src/styles/global.css` (`--color-*: initial` removes
   Tailwind's palette). No `<style>` tags or `style=` attributes. Class names written in full;
   conditional classes with `class:list`. Prices only through `formatPrice()`.
+- Shop information (location, hours, payments, pickup, delivery, how-to-buy steps, FAQ) lives
+  only in `src/lib/site.ts`; components render it and hold no shop copy (spec 0010). Dates only
+  through `formatDay()` in `src/lib/date.ts` (`America/Havana`, since Vercel builds in UTC).
 - Design system: `design.md` (art direction, token names, component classes to copy); live
   preview at `/estilo`.
 - Env vars: `WHATSAPP_NUMBER`, build-time only (read in `src/lib/whatsapp.ts` via
@@ -159,6 +164,13 @@ _Added by /sync from /debug findings: symptom → cause → rule._
   holds 4321 → measure built output on the port `pnpm preview` prints, never on the dev server.
 - The owner's browser closed during a check → headless browsers were killed by process name →
   stop only processes you started, by PID or by their temporary profile path.
+- A FAQ question shows no ▶ triangle → `display: flex` on `<summary>` removes its disclosure
+  marker → never put `flex` on `<summary>`; reach 44 px with padding (spec 0010).
+- A headless `--window-size=360,…` screenshot looks cut on the right → headless Edge/Chrome
+  windows have a minimum width above 360 px → check 360 px with DevTools device emulation
+  (`Emulation.setDeviceMetricsOverride`) or inside a 360 px `<iframe>` (spec 0010 verify).
+- `pnpm preview` exits with "Another astro preview server is already running" → Astro allows one
+  preview and prints the running one's URL → use that URL; never `--force`, it kills the owner's.
 
 ## Git
 integration: off   <!-- on = /develop branches and commits as milestones land -->

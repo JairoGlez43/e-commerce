@@ -2,7 +2,7 @@
 
 **Delivery style:** facade
 **Workflow depth:** alpha
-**Updated:** 2026-10-02
+**Updated:** 2026-10-16
 
 ## At a glance
 | #  | Feature                          | Status            | Depth   | Spec |
@@ -15,11 +15,25 @@
 | 06 | Product detail page              | in-progress       | default | docs/specs/0006-product-detail-page.md |
 | 07 | Order contact (WhatsApp)         | done              | default | docs/specs/0007-whatsapp-order.md |
 | 08 | Demo online                      | done              | default | docs/specs/0008-demo-online.md |
+| 16 | Shop information                 | done              | default | docs/specs/0010-shop-information.md |
+| 09 | Admin backend and publishing     | needs-a-decision  | default | —    |
+| 10 | Catalog data online              | needs-a-decision  | default | —    |
+| 11 | Owner login                      | needs-a-decision  | default | —    |
+| 12 | Manage products                  | needs-a-decision  | default | —    |
+| 13 | Publish changes                  | needs-a-decision  | default | —    |
+| 14 | Product photos upload            | needs-a-decision  | default | —    |
+| 15 | Manage categories                | needs-a-decision  | default | —    |
 
 Status values: `planned` · `needs-a-decision` · `in-progress` · `done`
 
-Later, only if the owner buys the site (not planned yet): real product data the owner can
-update (stock and prices), cart or delivery flow if they offer delivery.
+Feature 16 was added after 09–15 but is built first: the demo shown to prospective clients
+must be complete before the admin panel starts.
+
+Features 09–15 are the admin panel: the shop owner manages the whole catalog from a phone,
+without the developer. It is sold as the "Autónomo" package, priced above the "Gestionado"
+package where the developer makes every update.
+
+Later (not planned yet): cart or delivery flow if the shop offers delivery.
 
 ---
 
@@ -33,7 +47,7 @@ update (stock and prices), cart or delivery flow if they offer delivery.
 - The choice keeps pages very light for slow, unreliable connections in Cuba.
 - The choice allows wiring real, owner-editable data later without a rewrite.
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [x] Build it — /develop
 - [x] Verify it — /check verify
 **Notes:** —
@@ -137,3 +151,149 @@ A cart is out of the demo unless the owner confirms delivery.
 - [x] Build it — /develop
 - [x] Verify it — /check verify
 **Notes:** Hosting is chosen in the stack spec (feature 01).
+
+## 16 · Shop information
+**Status:** done
+**Spec:** docs/specs/0010-shop-information.md
+**Code:** src/lib/site.ts, src/lib/date.ts, src/lib/whatsapp.ts, src/components/SiteHeader.astro, src/components/ShopInfo.astro, src/components/Faq.astro, src/components/SiteFooter.astro, src/pages/index.astro, src/pages/categoria/[id].astro, src/pages/producto/[id].astro, src/pages/estilo.astro
+**Depth:** default
+**Done when:**
+- At the top of the home page, a visitor sees which payment methods the shop accepts and the
+  date the catalog was last updated.
+- From the header of every page, a visitor opens a WhatsApp chat with the shop in one tap.
+- Below the products on the home page, a visitor finds how to buy in 3 steps, delivery and
+  pickup options, opening hours and the shop's municipality.
+- A visitor can open answers to frequently asked questions one at a time.
+- Every page ends with a footer showing the shop name, hours and WhatsApp contact, and every
+  page stays within the weight budget of spec 0001.
+**Tasks:**
+- [x] Decide it — /architect
+- [x] Build it — /develop
+- [x] Verify it — /check verify
+**Notes:** Goal: the demo must look like a complete shop to owners who judge by look and feel,
+and answer the questions customers now ask the owner in private. Everything is about the
+shop's customers: no developer credit or self-promotion on the site. Out: search (18
+products; Baymard finds search matters from about 20), floating WhatsApp button (covers
+content, repeats the product page's order button), embedded map (heavy, may fail in Cuba),
+separate "about" page. Open for /architect: the demo info must be invented but realistic, and
+spec 0009 says the demo has no address (municipality only?); where the shop info lives so
+adapting it to a client is a one-file change; FAQ questions and answers. Research (2026-10-16):
+https://www.nngroup.com/articles/contact-us-pages/ ·
+https://www.nngroup.com/articles/trustworthy-design/ ·
+https://www.baymard.com/blog/footer-links-ecommerce · https://baymard.com/blog/dtc-search ·
+Cuban reference store: https://mercadito-demo.biznecubano.com (payment methods near the
+top, delivery by municipio, hours, "¿Cómo comprar?", FAQ).
+
+## 09 · Admin backend and publishing
+**Status:** needs-a-decision
+**Spec:** —
+**Code:** —
+**Depth:** default
+**Done when:**
+- A spec records where catalog data, product photos and the owner's account live, and how a
+  published change reaches the public site.
+- The public pages keep the weight budget of spec 0001: customers never load the admin.
+- The admin and the public site both open from a phone in Cuba.
+- The monthly running cost per shop is known, so the "Autónomo" price covers it.
+**Tasks:**
+- [ ] Decide it — /architect
+- [ ] Build it — /develop
+- [ ] Verify it — /check verify
+**Notes:** Owner's preferences for /architect (not decisions yet): option A, the public site
+stays static and is rebuilt when the owner publishes, never rendered on each visit; a BaaS,
+specifically Supabase, where the owner already has an account. Open: one setup per shop
+(each buyer gets their own copy) or one shared admin for many shops.
+
+## 10 · Catalog data online
+**Status:** needs-a-decision
+**Spec:** —
+**Code:** —
+**Depth:** default
+**Done when:**
+- The public site shows the catalog stored online instead of the sample files in the repo.
+- The current sample products and categories appear online unchanged, same links and prices.
+- If the online data cannot be reached, the live site keeps showing the last published catalog.
+**Tasks:**
+- [ ] Decide it — /architect
+- [ ] Build it — /develop
+- [ ] Verify it — /check verify
+**Notes:** Depends on 09. Data must keep the product shape of spec 0004.
+
+## 11 · Owner login
+**Status:** needs-a-decision
+**Spec:** —
+**Code:** —
+**Depth:** default
+**Done when:**
+- The owner signs in to the admin with their own credentials from a phone.
+- Without signing in, nobody can open the admin or change the catalog.
+- The owner can sign out, and can recover a forgotten password without the developer.
+**Tasks:**
+- [ ] Decide it — /architect
+- [ ] Build it — /develop
+- [ ] Verify it — /check verify
+**Notes:** Depends on 09. Changes auth: use plan mode before building (CLAUDE.md).
+
+## 12 · Manage products
+**Status:** needs-a-decision
+**Spec:** —
+**Code:** —
+**Depth:** default
+**Done when:**
+- The signed-in owner sees all products, in stock or not, on a phone.
+- The owner can add a product with name, category, price, availability and details.
+- The owner can edit any of those fields, including marking a product in or out of stock.
+- The owner can delete a product after confirming.
+- Invalid input (empty name, negative price) is refused with a clear message in Spanish.
+**Tasks:**
+- [ ] Decide it — /architect
+- [ ] Build it — /develop
+- [ ] Verify it — /check verify
+**Notes:** Depends on 10 and 11. The admin UI is not bound by the public pages' no-client-JS
+rule unless /architect says so.
+
+## 13 · Publish changes
+**Status:** needs-a-decision
+**Spec:** —
+**Code:** —
+**Depth:** default
+**Done when:**
+- After saving changes, the owner can publish them, and customers see them within a few minutes.
+- The owner can tell whether a publish is still running, finished, or failed.
+- Many edits in a row cause one update of the public site, not one per edit.
+**Tasks:**
+- [ ] Decide it — /architect
+- [ ] Build it — /develop
+- [ ] Verify it — /check verify
+**Notes:** Depends on 12.
+
+## 14 · Product photos upload
+**Status:** needs-a-decision
+**Spec:** —
+**Code:** —
+**Depth:** default
+**Done when:**
+- The owner can add or replace a product's photo straight from the phone's camera or gallery.
+- A large phone photo still appears on the public site within the image budget of spec 0001.
+- A product without a photo still shows correctly on the public site.
+**Tasks:**
+- [ ] Decide it — /architect
+- [ ] Build it — /develop
+- [ ] Verify it — /check verify
+**Notes:** Depends on 12.
+
+## 15 · Manage categories
+**Status:** needs-a-decision
+**Spec:** —
+**Code:** —
+**Depth:** default
+**Done when:**
+- The owner can add, rename and delete categories.
+- Deleting a category that still has products is refused, or the owner is asked where those
+  products go.
+- The public site's category menu follows the owner's categories after publishing.
+**Tasks:**
+- [ ] Decide it — /architect
+- [ ] Build it — /develop
+- [ ] Verify it — /check verify
+**Notes:** Depends on 12.

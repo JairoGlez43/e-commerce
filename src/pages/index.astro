@@ -3,7 +3,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import CategoryNav from '../components/CategoryNav.astro';
 import ProductCard from '../components/ProductCard.astro';
+import ShopInfo from '../components/ShopInfo.astro';
+import Faq from '../components/Faq.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 import { getCatalog } from '../lib/catalog';
+import { formatDay } from '../lib/date';
 import { site } from '../lib/site';
 
 // Home catalog (spec 0005): every product, one section per category.
@@ -17,6 +21,9 @@ const sections = catalog.map((section, sectionIndex) => {
 		.reduce((count, previous) => count + previous.products.length, 0);
 	return { ...section, cardsBefore };
 });
+
+// The page is built once, so "now" is the build date: the last time the catalog changed (spec 0010).
+const updated = formatDay(new Date());
 ---
 
 <BaseLayout title={site.name} description={site.description}>
@@ -24,6 +31,10 @@ const sections = catalog.map((section, sectionIndex) => {
 	<main class="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-8">
 		<div class="flex flex-col gap-4">
 			<h1>Productos</h1>
+			<div class="flex flex-col gap-1">
+				<p class="text-sm text-muted">Actualizado el {updated}</p>
+				<p class="text-sm">Aceptamos: {site.payments.join(' · ')}</p>
+			</div>
 			<CategoryNav categories={catalog} currentId={null} />
 		</div>
 		{
@@ -48,5 +59,8 @@ const sections = catalog.map((section, sectionIndex) => {
 				))
 			)
 		}
+		<ShopInfo />
+		<Faq />
 	</main>
+	<SiteFooter />
 </BaseLayout>

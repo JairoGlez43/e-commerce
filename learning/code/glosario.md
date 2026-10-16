@@ -251,10 +251,20 @@ da a `image` ese valor si la prop no llegó (`undefined`).
 `new URL('/foto.png', 'https://tienda.com').href` da `'https://tienda.com/foto.png'`: une una
 ruta con una base. Si la ruta ya es una URL completa, ignora la base.
 
+### array-map
+`lista.map((x, i) => …)` crea una lista **nueva** del mismo tamaño: llama a la función con cada
+elemento (`x`) y su posición (`i`, que empieza en 0) y guarda lo que la función devuelve. En
+una plantilla de Astro se usa para escribir un trozo de HTML por elemento (ver
+[expresión en plantilla](#expresion-en-plantilla)). La lista original no cambia.
+
 ### reduce
 `lista.reduce((acum, x) => acum + x, 0)` recorre una lista llevando un valor acumulado que
 empieza en el segundo argumento (aquí `0`) y devuelve el resultado final. En `index.astro`
 suma cuántos productos tienen las secciones anteriores.
+
+### array-join
+`['a', 'b', 'c'].join(' · ')` une los elementos de una lista en **un solo texto**, poniendo el
+separador entre cada dos: `'a · b · c'`. No añade separador ni al principio ni al final.
 
 ### import-meta-env
 `import.meta.env.NOMBRE` lee una [variable de entorno](#variable-de-entorno) en un proyecto de
@@ -334,6 +344,20 @@ significa "si `x` no decide (es 0), usa `y`": así se ordena por un criterio y l
 ### intl-numberformat
 `new Intl.NumberFormat('es-ES').format(12500)` da `"12.500"`: formatea números con las
 convenciones de un idioma. Ojo: en `es-ES` los números de 4 cifras no se agrupan (`3400`).
+
+### zona-horaria
+La hora oficial de un lugar. Un mismo instante tiene fecha y hora distintas según dónde lo
+mires: la 01:08 del 16 de octubre en UTC (la hora de referencia mundial) son las 21:08 del
+**15** de octubre en La Habana. Cada zona tiene un nombre estándar: `America/Havana`,
+`Europe/Madrid`, `UTC`. Si no indicas ninguna, JavaScript usa la del ordenador donde corre.
+
+### intl-datetimeformat
+`new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' })` crea un formateador de
+fechas, como [Intl.NumberFormat](#intl-numberformat) pero para fechas; su método
+`.format(fecha)` devuelve el texto, por ejemplo `"16 de octubre"`. Las opciones dicen qué
+partes salen y cómo: `day: 'numeric'` = el día en número, `month: 'long'` = el nombre completo
+del mes; lo que no se pide (año, hora) no sale. `timeZone: 'America/Havana'` elige la
+[zona horaria](#zona-horaria) con la que se calcula la fecha.
 
 ### expresion-regular
 Un patrón para validar texto. `/^[a-z0-9]+(-[a-z0-9]+)*$/` acepta palabras en minúsculas y
@@ -505,6 +529,12 @@ cualquier punto cae en ese `::after`, que pertenece al enlace.
 Los números de Tailwind son múltiplos de 0,25 rem (4 px): `p-4` = 16 px, `min-h-11` = 44 px,
 `gap-12` = 48 px. `max-w-5xl` = 64 rem (1024 px) de ancho máximo.
 
+### flex-wrap
+`flex-wrap` = `flex-wrap: wrap`. En una fila `flex`, los hijos que ya no caben en el ancho
+**bajan a una línea nueva**, en vez de apretarse o salirse por el borde (que daría scroll
+horizontal). Suele ir con `justify-between` (`justify-content: space-between`: el primero a la
+izquierda, el último a la derecha) y con `gap-*`, que también separa las líneas entre sí.
+
 ---
 
 ## HTML y accesibilidad
@@ -557,6 +587,12 @@ así que el orden importa: un `h1` por página, `h2` por sección, `h3` dentro.
 ### area-tactil
 El tamaño mínimo de algo que se toca con el dedo: 44 × 44 px en este proyecto
 (`min-h-11`).
+
+### details-summary
+`<details>` es un bloque plegable que trae HTML: al principio solo se ve su `<summary>` (el
+título), con un triangulito delante que pinta el navegador. Al tocar el título se despliega el
+resto del contenido, y al tocarlo otra vez se pliega. Funciona **sin JavaScript** y con teclado
+(Tab hasta el título, Enter para abrir). Con el atributo `open` empieza desplegado.
 
 ---
 

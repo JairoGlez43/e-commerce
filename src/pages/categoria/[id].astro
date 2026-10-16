@@ -4,6 +4,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
 import CategoryNav from '../../components/CategoryNav.astro';
 import ProductCard from '../../components/ProductCard.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
 import { getCatalog, type CatalogSection } from '../../lib/catalog';
 import { site } from '../../lib/site';
 
@@ -47,4 +48,5 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
 			}
 		</ul>
 	</main>
+	<SiteFooter />
 </BaseLayout>

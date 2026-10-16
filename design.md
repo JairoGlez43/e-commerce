@@ -67,9 +67,33 @@ _Added by /develop as they ship: name · path · exact classes · variants._
   - out of stock: `<p class="mt-auto inline-flex w-fit items-center rounded-full border border-border px-2 py-0.5 text-xs font-medium text-unavailable">Agotado</p>`
 
 - **SiteHeader** · `src/components/SiteHeader.astro` · no props · the Header above without the
-  search field: awning → `<div class="mx-auto max-w-5xl px-4 py-3">` → shop name as
-  `<a href="/" class="inline-flex min-h-11 items-center font-display text-2xl font-semibold">`
-  (name from `src/lib/site.ts`; `min-h-11` keeps the 44px touch target).
+  search field: awning → `<div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">`
+  → shop name as `<a href="/" class="inline-flex min-h-11 items-center font-display text-2xl font-semibold">`
+  (name from `src/lib/site.ts`; `min-h-11` keeps the 44px touch target) → the Contact link. When
+  both do not fit (360 px), the link wraps under the name.
+- **Contact link** · `src/components/SiteHeader.astro`, shown in `src/pages/estilo.astro` · the
+  Category chip default plus `font-medium`:
+  `<a href={contactLink()} class="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent">Escríbenos</a>`.
+  Same tab, no logo (spec 0007).
+- **ShopInfo** · `src/components/ShopInfo.astro` · no props (reads `site`) ·
+  `<section class="flex flex-col gap-4">` → `h2` "Cómo comprar" → `<ol class="flex flex-col gap-2">`,
+  each step `<li class="flex items-center gap-3">` with a number circle
+  `<span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent font-medium text-surface" aria-hidden="true">`
+  → `<div class="grid gap-4 sm:grid-cols-2">` with two **Info blocks**.
+- **Info block** · `src/components/ShopInfo.astro` ·
+  `<div class="flex flex-col gap-2 rounded-card border border-border bg-surface p-4">` with an `h3`
+  and plain `<p>` / `<ul>` lines. No shadow (it is not clickable, unlike the Product card).
+- **Faq** · `src/components/Faq.astro` · no props (reads `site.faq`) · `<section class="flex flex-col gap-4">`
+  → `h2` "Preguntas frecuentes" → `<div class="flex flex-col gap-2">` of
+  `<details class="rounded-card border border-border bg-surface">` →
+  `<summary class="min-h-11 cursor-pointer px-4 py-3 font-medium">` + answer `<p class="px-4 pb-4">`.
+  Never put `flex` on the `<summary>`: it hides the browser's disclosure triangle.
+- **SiteFooter** · `src/components/SiteFooter.astro` · no props · after `<main>` on every customer
+  page: `<footer class="mt-12 border-t border-border bg-surface">` →
+  `<div class="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-8 text-sm">` with the shop name
+  `<p class="font-display text-xl font-semibold">`, location, hours `<ul>`, and the link
+  `<a class="inline-flex min-h-11 w-fit items-center font-medium text-accent hover:text-accent-hover">Escríbenos por WhatsApp</a>`.
+  Shop content only: no developer credit.
 - **CategoryNav** · `src/components/CategoryNav.astro` · props `categories` (from `getCatalog()`),
   `currentId` (`null` = "Todos") · `<nav aria-label="Categorías">` + the Category chip list; a
   "Todos" chip (`/`) first, then one chip per category (`/categoria/<id>`). The current chip uses

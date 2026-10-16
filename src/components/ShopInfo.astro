@@ -1,0 +1,44 @@
+---
+import { site } from '../lib/site';
+
+// "Cómo comprar" plus pickup/delivery and hours/location, below the products on / (spec 0010).
+---
+
+<section aria-labelledby="como-comprar" class="flex flex-col gap-4">
+	<h2 id="como-comprar">Cómo comprar</h2>
+	<ol class="flex flex-col gap-2">
+		{
+			site.howToBuy.map((step, index) => (
+				<li class="flex items-center gap-3">
+					<span
+						class="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent font-medium text-surface"
+						aria-hidden="true"
+					>
+						{index + 1}
+					</span>
+					{step}
+				</li>
+			))
+		}
+	</ol>
+	<div class="grid gap-4 sm:grid-cols-2">
+		<div class="flex flex-col gap-2 rounded-card border border-border bg-surface p-4">
+			<h3>Recogida y entrega</h3>
+			<p>{site.pickup}</p>
+			<p>{site.delivery}</p>
+		</div>
+		<div class="flex flex-col gap-2 rounded-card border border-border bg-surface p-4">
+			<h3>Horario y ubicación</h3>
+			<ul>
+				{
+					site.hours.map(({ days, time }) => (
+						<li>
+							{days}: {time}
+						</li>
+					))
+				}
+			</ul>
+			<p>{site.location}</p>
+		</div>
+	</div>
+</section>

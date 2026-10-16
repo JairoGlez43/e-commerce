@@ -6,7 +6,7 @@
 > **Lo usan:** nadie lo importa; Astro genera `dist/producto/<id>/index.html` por cada producto
 > ([ruta dinámica](../../../glosario.md#ruta-por-archivo)). Las tarjetas del catálogo enlazan
 > aquí ([`ProductCard.astro`](../../components/ProductCard.astro.md)) ·
-> **Usa:** `BaseLayout`, `SiteHeader`, `formatPrice()` (`src/lib/price.ts`), `site`
+> **Usa:** `BaseLayout`, `SiteHeader`, `SiteFooter`, `formatPrice()` (`src/lib/price.ts`), `site`
 > (`src/lib/site.ts`), `orderLink()` (`src/lib/whatsapp.ts`), las colecciones `products` y
 > `categories`
 
@@ -30,6 +30,7 @@ import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
 import { Image, getImage } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
 import { formatPrice } from '../../lib/price';
 import { site } from '../../lib/site';
 import { orderLink } from '../../lib/whatsapp';
@@ -55,9 +56,10 @@ import { orderLink } from '../../lib/whatsapp';
   - `getImage`: la misma optimización, pero en vez de una etiqueta devuelve la **URL** del
     archivo generado ([getimage](../../../glosario.md#getimage)). La necesitamos para la vista
     previa de WhatsApp, que va en una etiqueta `<meta>`, no en un `<img>`.
-- `BaseLayout` y `SiteHeader`: el esqueleto de la página y la cabecera, los mismos que usa el
-  catálogo ([`BaseLayout.astro.md`](../../layouts/BaseLayout.astro.md),
-  [`SiteHeader.astro.md`](../../components/SiteHeader.astro.md)).
+- `BaseLayout`, `SiteHeader` y `SiteFooter`: el esqueleto de la página, la cabecera y el pie,
+  los mismos que usa el catálogo ([`BaseLayout.astro.md`](../../layouts/BaseLayout.astro.md),
+  [`SiteHeader.astro.md`](../../components/SiteHeader.astro.md),
+  [`SiteFooter.astro.md`](../../components/SiteFooter.astro.md)).
 - `formatPrice` y `site`: el formato `280 CUP` ([`price.ts.md`](../../lib/price.ts.md)) y el
   nombre de la tienda ([`site.ts.md`](../../lib/site.ts.md)).
 - `orderLink`: arma el enlace del botón de WhatsApp (feature 07,
@@ -186,7 +188,8 @@ const orderHref = orderLink(product, pageUrl);
   con estos tres valores. `BaseLayout` convierte la ruta de la imagen en una
   [URL absoluta](../../../glosario.md#url-absoluta), que es lo que exige Open Graph. Todo lo que
   va dentro de `<BaseLayout>` cae en su [slot](../../../glosario.md#slot).
-- `<SiteHeader />`: la cabecera con el toldo y el nombre de la tienda, que enlaza a `/`.
+- `<SiteHeader />`: la cabecera con el toldo, el nombre de la tienda, que enlaza a `/`, y el
+  enlace "Escríbenos" a WhatsApp.
 - `<main class="…">`: el contenido principal. Clases
   ([unidades](../../../glosario.md#unidades-tailwind)):
   - `mx-auto`: margen izquierdo y derecho automáticos, para centrar.
@@ -321,6 +324,7 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
 			</div>
 		</article>
 	</main>
+	<SiteFooter />
 </BaseLayout>
 ```
 
@@ -353,7 +357,10 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
   disponibilidad (el dueño eligió que los agotados también tengan botón, para preguntar).
   El mensaje que se escribe en WhatsApp también cambia; eso lo decide `orderLink()`.
 - `<p>{description}</p>`: la descripción completa, en texto normal.
-- Las últimas líneas cierran el `div`, el `article`, el `main` y el `BaseLayout`.
+- `</div>`, `</article>`, `</main>`: cierran la columna de datos, el artículo y el contenido.
+- `<SiteFooter />`: el pie de página, igual que en el catálogo
+  ([`SiteFooter.astro.md`](../../components/SiteFooter.astro.md)). Va fuera del `<main>`.
+- `</BaseLayout>`: cierra el layout.
 
 ## Cómo se conecta
 
@@ -367,7 +374,8 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
 - **A dónde se va desde aquí:** a `/` (el nombre de la tienda en la cabecera, o "Productos") y a
   `/categoria/<id>` (el segundo paso de la ruta).
 - **A WhatsApp:** el botón abre `wa.me` con el número de `WHATSAPP_NUMBER` y el mensaje del
-  producto ([`whatsapp.ts.md`](../../lib/whatsapp.ts.md)).
+  producto ([`whatsapp.ts.md`](../../lib/whatsapp.ts.md)). "Escríbenos" (cabecera) y
+  "Escríbenos por WhatsApp" (pie) abren el mismo chat con un mensaje general, sin producto.
 
 ## Prueba tú
 
@@ -378,7 +386,7 @@ Cambia el orden de la descripción de la vista previa y míralo en el HTML gener
 3. Abre `dist/producto/arroz-blanco/index.html` en VS Code y busca `og:description`.
    **Qué deberías ver:** `1 lb · Disponible. Arroz blanco de grano largo…`, ya sin el precio.
 4. **Deshacer:** vuelve a poner `${formatPrice(price)} · ` al principio del texto y ejecuta
-   `pnpm build` otra vez. (Como `src/` todavía no está en git, deshazlo a mano o con Ctrl+Z.)
+   `pnpm build` otra vez (deshazlo a mano o con Ctrl+Z).
 
 ## Términos
 

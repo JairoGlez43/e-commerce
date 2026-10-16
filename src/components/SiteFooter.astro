@@ -1,0 +1,28 @@
+---
+import { site } from '../lib/site';
+import { contactLink } from '../lib/whatsapp';
+
+// Footer on every customer page (spec 0010). About the shop only: no developer credit.
+---
+
+<footer class="mt-12 border-t border-border bg-surface">
+	<div class="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-8 text-sm">
+		<p class="font-display text-xl font-semibold">{site.name}</p>
+		<p>{site.location}</p>
+		<ul>
+			{
+				site.hours.map(({ days, time }) => (
+					<li>
+						{days}: {time}
+					</li>
+				))
+			}
+		</ul>
+		<a
+			href={contactLink()}
+			class="inline-flex min-h-11 w-fit items-center font-medium text-accent hover:text-accent-hover"
+		>
+			Escríbenos por WhatsApp
+		</a>
+	</div>
+</footer>

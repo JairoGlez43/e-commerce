@@ -1,0 +1,19 @@
+---
+import { site } from '../lib/site';
+
+// Frequently asked questions on / (spec 0010). Native <details>: opens and closes with no JS.
+---
+
+<section aria-labelledby="preguntas" class="flex flex-col gap-4">
+	<h2 id="preguntas">Preguntas frecuentes</h2>
+	<div class="flex flex-col gap-2">
+		{
+			site.faq.map(({ question, answer }) => (
+				<details class="rounded-card border border-border bg-surface">
+					<summary class="min-h-11 cursor-pointer px-4 py-3 font-medium">{question}</summary>
+					<p class="px-4 pb-4">{answer}</p>
+				</details>
+			))
+		}
+	</div>
+</section>

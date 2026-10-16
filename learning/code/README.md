@@ -28,16 +28,20 @@ por último las páginas que ve el cliente.
 | 6 | `src/data/products.json` | Los 18 productos de ejemplo | [ver](src/data/products.json.md) |
 | 7 | `src/content.config.ts` | La forma obligatoria de productos y categorías | [ver](src/content.config.ts.md) |
 | 8 | `src/lib/price.ts` | Formatea un precio: `12500` → `12.500 CUP` | [ver](src/lib/price.ts.md) |
-| 9 | `src/lib/site.ts` | Nombre y descripción de la tienda | [ver](src/lib/site.ts.md) |
+| 9 | `src/lib/site.ts` | Nombre, descripción e información de la tienda (horario, pagos, preguntas) | [ver](src/lib/site.ts.md) |
 | 10 | `src/lib/catalog.ts` | Agrupa productos por categoría y los ordena | [ver](src/lib/catalog.ts.md) |
-| 10b | `src/lib/whatsapp.ts` | El número de WhatsApp y el enlace con el mensaje | [ver](src/lib/whatsapp.ts.md) |
+| 10b | `src/lib/whatsapp.ts` | El número de WhatsApp y los enlaces con el mensaje (pedido y contacto) | [ver](src/lib/whatsapp.ts.md) |
+| 10c | `src/lib/date.ts` | Formatea una fecha con la hora de Cuba: `16 de octubre` | [ver](src/lib/date.ts.md) |
 | 11 | `src/styles/global.css` | Colores, fuentes y estilos base | [ver](src/styles/global.css.md) |
 | 12 | `src/layouts/BaseLayout.astro` | El esqueleto `<html>` de todas las páginas | [ver](src/layouts/BaseLayout.astro.md) |
-| 13 | `src/components/SiteHeader.astro` | La cabecera con el toldo | [ver](src/components/SiteHeader.astro.md) |
+| 13 | `src/components/SiteHeader.astro` | La cabecera con el toldo y el enlace "Escríbenos" | [ver](src/components/SiteHeader.astro.md) |
 | 14 | `src/components/CategoryNav.astro` | La fila de chips de categorías | [ver](src/components/CategoryNav.astro.md) |
 | 15 | `src/components/ProductCard.astro` | La tarjeta de un producto | [ver](src/components/ProductCard.astro.md) |
+| 15b | `src/components/ShopInfo.astro` | "Cómo comprar", recogida y horario, debajo de los productos | [ver](src/components/ShopInfo.astro.md) |
+| 15c | `src/components/Faq.astro` | Las preguntas frecuentes, plegables sin JavaScript | [ver](src/components/Faq.astro.md) |
+| 15d | `src/components/SiteFooter.astro` | El pie de página de todas las páginas de clientes | [ver](src/components/SiteFooter.astro.md) |
 | 16 | `src/pages/index.astro` | La portada `/` | [ver](src/pages/index.astro.md) |
-| 17 | `src/pages/categoria/[id].astro` | Las páginas `/categoria/<id>` | [ver](src/pages/categoria/[id].astro.md) |
+| 17 | `src/pages/categoria/[id].astro` | Las páginas `/categoria/<id>` | [ver](src/pages/categoria/%5Bid%5D.astro.md) |
 | 18 | `src/pages/producto/[id].astro` | Las páginas `/producto/<id>` y su vista previa en WhatsApp | [ver](src/pages/producto/%5Bid%5D.astro.md) |
 | 19 | `src/pages/estilo.astro` | La guía de estilo interna `/estilo` | [ver](src/pages/estilo.astro.md) |
 

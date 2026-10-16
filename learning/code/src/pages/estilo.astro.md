@@ -1,17 +1,20 @@
 # `src/pages/estilo.astro`
 
 > **Qué es:** la guía de estilo interna, la página `/estilo` ·
-> **Lo decidió:** [spec 0002](../../../../docs/specs/0002-design-base.md) (AC5) ·
+> **Lo decidió:** [spec 0002](../../../../docs/specs/0002-design-base.md) (AC5); las muestras de
+> la información de la tienda, [spec 0010](../../../../docs/specs/0010-shop-information.md) (AC8) ·
 > **Lo usan:** nadie lo importa; es una página propia por
 > [ruta por archivo](../../glosario.md#ruta-por-archivo). Las features 05–07 copian de aquí
 > las clases exactas, y `design.md` la nombra como "vista en vivo" ·
 > **Usa:** `astro:content` (`getCollection`), `astro:assets` (`<Image>`), `BaseLayout`,
-> `src/lib/price.ts`
+> `ShopInfo`, `Faq`, `SiteFooter`, `src/lib/price.ts`
 
 ## Para qué sirve
 
 Es un muestrario: enseña en una sola página todos los colores, la tipografía y los componentes
-del sitio (cabecera, chips, botón, tarjeta en sus dos estados). Sirve para revisar el diseño de
+del sitio (cabecera, chips, botón, enlace de contacto, tarjeta en sus dos estados) y, al final,
+los componentes reales de información de la tienda: "Cómo comprar", las preguntas frecuentes y
+el pie de página. Sirve para revisar el diseño de
 un vistazo y para copiar las clases exactas al construir una página nueva. No es para clientes:
 lleva [`noindex`](../../glosario.md#noindex) para que los buscadores no la muestren.
 
@@ -29,6 +32,9 @@ se explican en breve y se enlaza a la explicación detallada:
 import { getCollection } from 'astro:content';
 import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ShopInfo from '../components/ShopInfo.astro';
+import Faq from '../components/Faq.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 import { formatPrice } from '../lib/price';
 ```
 
@@ -41,6 +47,11 @@ import { formatPrice } from '../lib/price';
   para las fotos de la tarjeta de muestra.
 - `import BaseLayout from '../layouts/BaseLayout.astro';`: el [layout](../../glosario.md#layout)
   común ([explicación](../layouts/BaseLayout.astro.md)).
+- `import ShopInfo ...`, `import Faq ...`, `import SiteFooter ...`: tres componentes reales, los
+  mismos que usa la portada ([`ShopInfo`](../components/ShopInfo.astro.md),
+  [`Faq`](../components/Faq.astro.md), [`SiteFooter`](../components/SiteFooter.astro.md)). A
+  diferencia del resto de la página, que copia las clases a mano, estos se muestran tal cual
+  (bloque 14).
 - `import { formatPrice } from '../lib/price';`: formatea precios
   ([explicación](../lib/price.ts.md)).
 
@@ -387,7 +398,37 @@ const products = (await getCollection('products'))
     visual al tocar.
 - `Ver producto`: el texto del botón.
 
-### 12. Sección "Tarjeta de producto"
+### 12. Sección "Enlace de contacto"
+
+```astro
+		<section class="flex flex-col gap-4" aria-labelledby="contacto">
+			<h2 id="contacto">Enlace de contacto</h2>
+			<p class="text-muted">En la cabecera, junto al nombre de la tienda (spec 0010).</p>
+			<div>
+				<a
+					href="#contacto"
+					class="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent"
+				>
+					Escríbenos
+				</a>
+			</div>
+		</section>
+```
+
+- Sección y `h2` como en el bloque 8.
+- `<p class="text-muted">`: dice dónde se usa este enlace, en gris: "En la cabecera, junto al
+  nombre de la tienda (spec 0010)".
+- `<div>`: envoltorio, por la misma razón que en el bloque 11: así el enlace solo ocupa lo que
+  mide su texto.
+- `<a href="#contacto" class="...">Escríbenos</a>`: una copia del enlace "Escríbenos" de
+  [`SiteHeader`](../components/SiteHeader.astro.md), con las mismas clases: las del chip de
+  categoría sin seleccionar más `font-medium` (píldora blanca con borde beige, al menos 44 px de
+  alto, el borde se vuelve rojo al pasar el ratón). Explicadas clase a clase en
+  [`SiteHeader.astro.md`](../components/SiteHeader.astro.md).
+- `href="#contacto"`: como los chips de muestra, apunta a esta misma sección. La muestra no
+  abre WhatsApp: el enlace real usa `contactLink()`.
+
+### 13. Sección "Tarjeta de producto"
 
 ```astro
 		<section class="flex flex-col gap-4" aria-labelledby="tarjetas">
@@ -457,8 +498,6 @@ const products = (await getCollection('products'))
 				}
 			</ul>
 		</section>
-	</main>
-</BaseLayout>
 ```
 
 - `<div class="flex flex-1 flex-col gap-1 p-3">`: el bloque de texto (columna que crece, 4 px
@@ -474,9 +513,32 @@ const products = (await getCollection('products'))
   `mt-auto`, del ancho de su texto con `w-fit`, en forma de píldora; el punto es un círculo de
   6 px oculto al lector de pantalla. Detalle en
   [`ProductCard.astro.md`](../components/ProductCard.astro.md).
-- `</div>`, `</article>`, `</li>`, `))`, `}`, `</ul>`, `</section>`, `</main>`, `</BaseLayout>`:
-  cierran, en orden, el bloque de texto, la tarjeta, el elemento de lista, el `map`, la
-  expresión, la rejilla, la sección, el contenido y el layout.
+- `</div>`, `</article>`, `</li>`, `))`, `}`, `</ul>`, `</section>`: cierran, en orden, el
+  bloque de texto, la tarjeta, el elemento de lista, el `map`, la expresión, la rejilla y la
+  sección.
+
+### 14. Los componentes reales de información de la tienda
+
+```astro
+
+		<!-- The real components with the shop's data, as they appear below the products on / (spec 0010). -->
+		<ShopInfo />
+		<Faq />
+	</main>
+	<SiteFooter />
+</BaseLayout>
+```
+
+- `<!-- ... -->`: un comentario HTML; no se ve en la página. Dice: "Los componentes reales con
+  los datos de la tienda, tal como aparecen debajo de los productos en `/` (spec 0010)".
+- `<ShopInfo />` y `<Faq />`: "Cómo comprar", los recuadros de recogida y horario, y las
+  preguntas frecuentes, con los textos de verdad de `src/lib/site.ts`. No son copias: si cambia
+  el componente, esta muestra cambia con él.
+- `</main>`: cierra el contenido.
+- `<SiteFooter />`: el pie de página real, fuera del `<main>` como en las páginas de clientes.
+  Su enlace "Escríbenos por WhatsApp" sí es el de verdad: lo arma `contactLink()` con el número
+  de `WHATSAPP_NUMBER`.
+- `</BaseLayout>`: cierra el layout.
 
 ## Cómo se conecta
 
@@ -485,9 +547,13 @@ const products = (await getCollection('products'))
 - **Estilo:** todos los tokens y las clases `awning` y `price` de `src/styles/global.css`. Si
   cambias un valor allí, esta página lo refleja.
 - **Layout:** [`BaseLayout`](../layouts/BaseLayout.astro.md), con `noindex`.
+- **Componentes reales que muestra:** [`ShopInfo`](../components/ShopInfo.astro.md),
+  [`Faq`](../components/Faq.astro.md) y [`SiteFooter`](../components/SiteFooter.astro.md), con
+  los datos de `src/lib/site.ts`.
 - **Quién copia de aquí:** `design.md` apunta a esta página como vista en vivo, y los
   componentes reales partieron de sus clases:
-  [`SiteHeader`](../components/SiteHeader.astro.md) (la cabecera sin buscador),
+  [`SiteHeader`](../components/SiteHeader.astro.md) (la cabecera sin buscador, más el enlace
+  de contacto),
   [`CategoryNav`](../components/CategoryNav.astro.md) (los chips) y
   [`ProductCard`](../components/ProductCard.astro.md) (la tarjeta, más el enlace).
 - **Resultado:** `dist/estilo/index.html`, la URL `/estilo`. Ninguna página del catálogo
@@ -502,8 +568,7 @@ Cambia qué chip de muestra sale seleccionado.
 2. En `src/pages/estilo.astro`, cambia `const selectedCategory = categories[0]?.id;` por
    `const selectedCategory = categories[2]?.id;` y guarda.
 3. La página se recarga: ahora el chip rojo es "Despensa" (la tercera categoría, posición 2).
-4. Deshaz: vuelve a poner `categories[0]?.id` (a mano o con `Ctrl+Z`; `src/` aún no está en
-   git).
+4. Deshaz: vuelve a poner `categories[0]?.id` (a mano o con `Ctrl+Z`) y guarda.
 
 ## Términos
 
@@ -511,4 +576,5 @@ Cambia qué chip de muestra sale seleccionado.
 - [getcollection](../../glosario.md#getcollection) · [slug](../../glosario.md#slug) · [image-component](../../glosario.md#image-component) · [srcset](../../glosario.md#srcset)
 - [async-await](../../glosario.md#async-await) · [ordenar-con-sort](../../glosario.md#ordenar-con-sort) · [encadenamiento-opcional](../../glosario.md#encadenamiento-opcional) (nuevo) · [expresion-en-plantilla](../../glosario.md#expresion-en-plantilla) · [class-list](../../glosario.md#class-list)
 - [tailwind](../../glosario.md#tailwind) · [token](../../glosario.md#token) · [variante](../../glosario.md#variante) · [escala-de-texto](../../glosario.md#escala-de-texto) (nuevo) · [stretched-link](../../glosario.md#stretched-link)
+- [details-summary](../../glosario.md#details-summary) · [click-to-chat](../../glosario.md#click-to-chat)
 - [aria-label](../../glosario.md#aria-label) · [aria-current](../../glosario.md#aria-current) · [aria-hidden](../../glosario.md#aria-hidden) · [sr-only](../../glosario.md#sr-only) · [area-tactil](../../glosario.md#area-tactil)
