@@ -72,7 +72,7 @@ export const site = {
 	// Shop information shown on the home page, header and footer (spec 0010).
 	// Demo values: a municipality, never a street address (spec 0009). A client who delivers
 	// changes `delivery`, step 3 of `howToBuy` and the delivery answer in `faq`.
-	location: 'La Lisa, La Habana',
+	location: 'Boyeros, La Habana',
 ```
 
 - La línea en blanco separa la identidad (arriba) de la información de la tienda (abajo), que
@@ -81,7 +81,7 @@ export const site = {
   (spec 0010). Valores de demo: un municipio, nunca una dirección (spec 0009). Un cliente que
   haga entregas cambia `delivery`, el paso 3 de `howToBuy` y la respuesta sobre entregas de
   `faq`." Es la lista de lo que hay que tocar al adaptar la demo a una tienda con entregas.
-- `location: 'La Lisa, La Habana',`: dónde está la tienda. Solo el municipio (lo eligió el
+- `location: 'Boyeros, La Habana',`: dónde está la tienda. Solo el municipio (lo eligió el
   dueño), porque la demo no es de ningún negocio real. Sale en el recuadro "Horario y
   ubicación" y en el pie.
 

@@ -17,7 +17,7 @@
 | 08 | Demo online                      | done              | default | docs/specs/0008-demo-online.md |
 | 16 | Shop information                 | done              | default | docs/specs/0010-shop-information.md |
 | 17 | Visual polish                    | done              | default | docs/specs/0011-visual-polish.md |
-| 09 | Admin backend and publishing     | needs-a-decision  | default | —    |
+| 09 | Admin backend and publishing     | in-progress       | default | docs/specs/0012-admin-backend.md |
 | 10 | Catalog data online              | needs-a-decision  | default | —    |
 | 11 | Owner login                      | needs-a-decision  | default | —    |
 | 12 | Manage products                  | needs-a-decision  | default | —    |
@@ -211,8 +211,8 @@ Suggestion from the 2026-10-16 session, not a decision: keep the product categor
 cream page (alternating 6 category bands would look busy); an inline SVG icon adds about 1 KB.
 
 ## 09 · Admin backend and publishing
-**Status:** needs-a-decision
-**Spec:** —
+**Status:** in-progress
+**Spec:** docs/specs/0012-admin-backend.md
 **Code:** —
 **Depth:** default
 **Done when:**
