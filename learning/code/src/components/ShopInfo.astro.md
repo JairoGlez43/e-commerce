@@ -147,7 +147,7 @@ import { site } from '../lib/site';
   ([desestructuración](../../glosario.md#desestructuracion)).
 - `{days}: {time}`: escribe, por ejemplo, `Lunes a sábado: 9:00 a.m. – 6:00 p.m.`. Los dos
   puntos y el espacio son texto normal entre las dos expresiones.
-- `<p>{site.location}</p>`: `La Lisa, La Habana`. Un municipio, nunca una calle (spec 0009).
+- `<p>{site.location}</p>`: `Municipio, Provincia`, el texto de relleno de la demo. Nunca una calle (spec 0009).
 - `</div>`, `</div>`, `</section>`: cierran el segundo recuadro, la rejilla y la sección.
 
 ## Cómo se conecta

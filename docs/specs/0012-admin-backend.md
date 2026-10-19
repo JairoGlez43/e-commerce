@@ -155,11 +155,11 @@ recovery (custom SMTP is out of scope).
 - That a failed Pages build leaves the last deploy live (repeat AC2 on Pages).
 
 ## Build plan
-- [ ] **T1** (AC3) Owner creates the Supabase demo project, guided step by step. No tables.
-- [ ] **T2** (AC1, AC2) Owner creates the Vercel deploy hook and stores the URL privately
+- [x] **T1** (AC3) Owner creates the Supabase demo project, guided step by step. No tables.
+- [x] **T2** (AC1, AC2) Owner creates the Vercel deploy hook and stores the URL privately
   (it moves into the Edge Function secret in feature 13). Fire it once for a good build,
   then run the failing-build test and restore.
-- [ ] **T3** (AC4) Confirm the Supabase health endpoint URL (`researcher`, ask first). Then run
+- [x] **T3** (AC4) Confirm the Supabase health endpoint URL (`researcher`, ask first). Then run
   the Cuba reachability check from a phone on mobile data.
 - [x] **T4** (AC5) `pnpm build` + `pnpm check:weight` on the unchanged repo.
 

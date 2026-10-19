@@ -82,7 +82,7 @@ import WhatsAppIcon from './WhatsAppIcon.astro';
   un título: la página ya tiene sus títulos y el pie no debe meterse en esa jerarquía
   ([jerarquía de títulos](../../glosario.md#jerarquia-de-titulos)). Por eso las clases de
   letra se ponen a mano.
-- `<p>{site.location}</p>`: `La Lisa, La Habana`.
+- `<p>{site.location}</p>`: `Municipio, Provincia`.
 
 ```astro
 		<ul>
@@ -170,7 +170,7 @@ Mira el pie ya construido en una página de categoría, sin tocar código.
 1. En la terminal de VS Code (Git Bash), ejecuta `WHATSAPP_NUMBER=5355555555 pnpm build`.
 2. Abre `dist/categoria/aseo/index.html` en VS Code y busca `<footer`.
 3. **Qué deberías ver:** la etiqueta de apertura es `<footer class="bg-ink text-cream">`;
-   dentro, `La Lisa, La Habana`, las dos líneas de horario y un enlace con
+   dentro, `Municipio, Provincia`, las dos líneas de horario y un enlace con
    `href="https://wa.me/5355555555?text=Hola%2C%20tengo%20una%20pregunta%20sobre%20la%20tienda."`.
    Busca ahora `wa.me` en todo el archivo: aparece también en la cabecera, con el mismo
    mensaje.

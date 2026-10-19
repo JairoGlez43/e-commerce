@@ -9,9 +9,9 @@ export const site = {
 	indexable: false,
 
 	// Shop information shown on the home page, header and footer (spec 0010).
-	// Demo values: a municipality, never a street address (spec 0009). A client who delivers
-	// changes `delivery`, step 3 of `howToBuy` and the delivery answer in `faq`.
-	location: 'Boyeros, La Habana',
+	// Demo values: a generic placeholder, never a street address (spec 0009). A client
+	// who delivers changes `delivery`, step 3 of `howToBuy` and the delivery answer in `faq`.
+	location: 'Municipio, Provincia',
 	hours: [
 		{ days: 'Lunes a sábado', time: '9:00 a.m. – 6:00 p.m.' },
 		{ days: 'Domingo', time: '9:00 a.m. – 1:00 p.m.' },
@@ -42,7 +42,7 @@ export const site = {
 		},
 		{
 			question: '¿Hacen entregas a domicilio?',
-			answer: 'Por ahora no. Puedes recoger tu pedido en la tienda, en La Lisa.',
+			answer: 'Por ahora no. Puedes recoger tu pedido en la tienda, en Municipio, Provincia.',
 		},
 		{
 			question: '¿Qué hago si un producto está agotado?',

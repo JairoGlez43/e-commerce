@@ -2,6 +2,8 @@
 
 **Status:** Accepted
 **Date:** 2026-10-16
+**Revised:** 2026-10-20: the demo location `La Lisa, La Habana` becomes the placeholder
+`Municipio, Provincia` (owner's choice). The delivery FAQ answer changes with it (AC1, T8).
 **Scope:** `docs/scope/scope.md` → feature 16
 **Supersedes:** —
 **Amended by:** 0011 (WhatsApp icon on the header and footer links; Faq summary classes)
@@ -18,8 +20,10 @@ contact, hours and a footer, and an FAQ over search for small catalogs.
 ## Decision
 - **All shop information lives in `src/lib/site.ts`**, next to the name and description (spec
   0009). Adapting the demo to a client stays a one-file change; no component holds shop copy.
-- **The demo shop is in La Lisa, La Habana** (owner's choice). A municipality, never a street
-  address: spec 0009 still holds (no real business, no address).
+- **The demo location is the placeholder `Municipio, Provincia`** (owner's choice, revised
+  2026-10-20). The demo is pitched to shops in different places, so it names none. When a site
+  is sold, the value becomes that shop's municipality and province, never a street address.
+  Spec 0009 still holds: no real business, no address.
 - **The demo offers pickup only, no delivery** (owner's choice: the first prospective client has
   no delivery). Delivery is a sentence in `site.ts`, so a client who delivers changes one string.
 - **Top of the home page:** a "last updated" line with the build date, and a "we accept" line
@@ -35,7 +39,8 @@ contact, hours and a footer, and an FAQ over search for small catalogs.
 ## Acceptance criteria
 - **AC1:** `src/lib/site.ts` holds every piece of shop information listed in Design (location,
   hours, payments, pickup, delivery, how-to-buy steps, FAQ). Components render them from
-  `site`; `La Lisa`, `Transfermóvil` and the FAQ answers appear in no other file under `src/`.
+  `site`; `Municipio, Provincia`, `Transfermóvil` and the FAQ answers appear in no other file
+  under `src/`. No file under `src/` names a real place as the shop's location.
 - **AC2:** On `/`, between the `h1` and the category nav, two lines show: `Actualizado el <day>
   de <month>` with the build date in the `America/Havana` time zone (e.g. `Actualizado el 16 de
   octubre`), and `Aceptamos: Efectivo (CUP) · Transfermóvil · EnZona · USD en efectivo`.
@@ -82,7 +87,7 @@ props for shop information.
 
 **`src/lib/site.ts` — new fields (demo values, exact Spanish copy):**
 ```ts
-location: 'La Lisa, La Habana',
+location: 'Municipio, Provincia',
 hours: [
   { days: 'Lunes a sábado', time: '9:00 a.m. – 6:00 p.m.' },
   { days: 'Domingo', time: '9:00 a.m. – 1:00 p.m.' },
@@ -103,7 +108,7 @@ faq: [
   { question: '¿Cómo puedo pagar?',
     answer: 'En efectivo, en CUP o USD, o por transferencia con Transfermóvil o EnZona, al recoger tu pedido.' },
   { question: '¿Hacen entregas a domicilio?',
-    answer: 'Por ahora no. Puedes recoger tu pedido en la tienda, en La Lisa.' },
+    answer: 'Por ahora no. Puedes recoger tu pedido en la tienda, en Municipio, Provincia.' },
   { question: '¿Qué hago si un producto está agotado?',
     answer: 'Abre el producto y toca «Preguntar por WhatsApp». Te avisamos cuando vuelva a haber.' },
 ],
@@ -171,6 +176,10 @@ A client who delivers changes `delivery`, step 3 of `howToBuy` and the FAQ deliv
 - [x] **T7** (AC1–AC7) `pnpm typecheck`; `WHATSAPP_NUMBER=5355555555 pnpm build`;
   `pnpm check:weight`; check the date, the decoded `href`s and the 360 px header in the
   built output.
+- [x] **T8** (AC1, AC4, AC6) Make `location` and the delivery FAQ answer in `src/lib/site.ts`
+  the placeholder above, and update the `site.ts`, `ShopInfo` and `SiteFooter` walkthroughs in
+  `learning/code/` (done on 2026-10-20, before this revision). Then update the location text in
+  `0010-shop-information.verify.md` (AC1, AC4, AC6) and rerun the T7 checks.
 
 ## Out of scope
 - Search, a floating WhatsApp button, an embedded map, an "about" page (scope feature 16 notes).
@@ -194,6 +203,8 @@ A client who delivers changes `delivery`, step 3 of `howToBuy` and the FAQ deliv
   (identity in `site.ts`, generic demo, no address), `docs/specs/0005-catalog-page.md`
   (home layout), `design.md` (tokens, chip and card classes)
 - Owner answers, 2026-10-16: location La Lisa; the demo shows pickup only.
+- Owner answer, 2026-10-20: the location becomes the placeholder `Municipio, Provincia`, so the
+  demo fits every shop it is pitched to.
 - `Intl.DateTimeFormat` with `timeZone` and `<details>`/`<summary>` behaviour: from memory, standard
   web platform; T7 checks them in the built output.
 
@@ -212,6 +223,9 @@ A client who delivers changes `delivery`, step 3 of `howToBuy` and the FAQ deliv
   repeats the product page's order button).
 - Native `<details>` FAQ (chosen: works with no JS) vs an always-open list (runner-up: simpler,
   but five open answers make the page long on a phone).
+- Demo location as the placeholder `Municipio, Provincia` (chosen, owner, 2026-10-20) vs a
+  real municipality such as La Lisa (the original choice: it reads more naturally, but it
+  places the demo in one town while it is pitched to shops everywhere).
 - Delivery as a sentence (chosen: a client changes one string) vs a boolean flag that switches
   copy (runner-up: less typing per client, but the copy would move into components).
 

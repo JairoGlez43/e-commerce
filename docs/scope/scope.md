@@ -213,7 +213,7 @@ cream page (alternating 6 category bands would look busy); an inline SVG icon ad
 ## 09 · Admin backend and publishing
 **Status:** in-progress
 **Spec:** docs/specs/0012-admin-backend.md
-**Code:** —
+**Code:** — (no repo code; Supabase project `tienda-demo-cuba`, Vercel deploy hook `admin-publish`)
 **Depth:** default
 **Done when:**
 - A spec records where catalog data, product photos and the owner's account live, and how a
@@ -223,7 +223,7 @@ cream page (alternating 6 category bands would look busy); an inline SVG icon ad
 - The monthly running cost per shop is known, so the "Autónomo" price covers it.
 **Tasks:**
 - [ ] Decide it — /architect
-- [ ] Build it — /develop
+- [x] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** Owner's preferences for /architect (not decisions yet): option A, the public site
 stays static and is rebuilt when the owner publishes, never rendered on each visit; a BaaS,

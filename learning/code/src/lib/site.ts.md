@@ -70,20 +70,22 @@ export const site = {
 ```ts
 
 	// Shop information shown on the home page, header and footer (spec 0010).
-	// Demo values: a municipality, never a street address (spec 0009). A client who delivers
-	// changes `delivery`, step 3 of `howToBuy` and the delivery answer in `faq`.
-	location: 'Boyeros, La Habana',
+	// Demo values: a generic placeholder, never a street address (spec 0009). A client
+	// who delivers changes `delivery`, step 3 of `howToBuy` and the delivery answer in `faq`.
+	location: 'Municipio, Provincia',
 ```
 
 - La línea en blanco separa la identidad (arriba) de la información de la tienda (abajo), que
   añadió la [spec 0010](../../../../docs/specs/0010-shop-information.md).
 - El comentario: "Información de la tienda que se muestra en la portada, la cabecera y el pie
-  (spec 0010). Valores de demo: un municipio, nunca una dirección (spec 0009). Un cliente que
-  haga entregas cambia `delivery`, el paso 3 de `howToBuy` y la respuesta sobre entregas de
-  `faq`." Es la lista de lo que hay que tocar al adaptar la demo a una tienda con entregas.
-- `location: 'Boyeros, La Habana',`: dónde está la tienda. Solo el municipio (lo eligió el
-  dueño), porque la demo no es de ningún negocio real. Sale en el recuadro "Horario y
-  ubicación" y en el pie.
+  (spec 0010). Valores de demo: un texto genérico de relleno, nunca una dirección (spec 0009).
+  Un cliente que haga entregas cambia `delivery`, el paso 3 de `howToBuy` y la respuesta sobre
+  entregas de `faq`." Es la lista de lo que hay que tocar al adaptar la demo a una tienda con
+  entregas.
+- `location: 'Municipio, Provincia',`: dónde está la tienda. En la demo es un texto de relleno,
+  literalmente "Municipio, Provincia" (lo eligió el dueño), porque la demo se enseña a
+  tiendas de distintos lugares. Al vender la web se cambia por el municipio y la provincia
+  reales de esa tienda. Sale en el recuadro "Horario y ubicación" y en el pie.
 
 ```ts
 	hours: [
@@ -150,7 +152,7 @@ export const site = {
 		},
 		{
 			question: '¿Hacen entregas a domicilio?',
-			answer: 'Por ahora no. Puedes recoger tu pedido en la tienda, en La Lisa.',
+			answer: 'Por ahora no. Puedes recoger tu pedido en la tienda, en Municipio, Provincia.',
 		},
 		{
 			question: '¿Qué hago si un producto está agotado?',
@@ -165,7 +167,7 @@ export const site = {
   pregunta) y `answer` (la respuesta).
 - `answer:` con el texto en la línea siguiente: igual que `description`, solo porque es largo.
   La cuarta respuesta es corta y cabe en la misma línea.
-- Las respuestas repiten datos de otros campos ("La Lisa", "Transfermóvil"), pero en una frase
+- Las respuestas repiten datos de otros campos ("Municipio, Provincia", "Transfermóvil"), pero en una frase
   pensada para leerse sola. Por eso, si cambia la ubicación o las formas de pago, hay que
   revisar también estas respuestas.
 - `],`: cierra la lista; `};`: cierra el objeto `site`.
