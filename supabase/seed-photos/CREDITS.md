@@ -1,6 +1,8 @@
 # Product photo credits
 
 Free-license stock photos (spec 0004). Each file was center-cropped to a square and resized.
+They are the seed of the `product-photos` bucket in Supabase Storage, uploaded with the same
+file names; the site reads them from there, not from this folder (spec 0013).
 Pexels License: https://www.pexels.com/license/ · Unsplash License: https://unsplash.com/license
 
 | Product id | Author | License | Source |

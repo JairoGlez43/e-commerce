@@ -200,8 +200,8 @@ const description = `${category.data.name}: precios y disponibilidad en ${site.n
 ## Cómo se conecta
 
 - **Datos:** `getCatalog()` (`src/lib/catalog.ts`), que lee las colecciones de
-  `src/content.config.ts`, alimentadas por `src/data/categories.json` y
-  `src/data/products.json`.
+  `src/content.config.ts`, alimentadas por las tablas `categories` y `products` de Supabase
+  (leídas en el build por `src/lib/supabase.ts`).
 - **Componentes:** [`BaseLayout`](../../layouts/BaseLayout.astro.md),
   [`SiteHeader`](../../components/SiteHeader.astro.md),
   [`CategoryNav`](../../components/CategoryNav.astro.md),

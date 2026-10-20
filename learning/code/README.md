@@ -19,14 +19,15 @@ por último las páginas que ve el cliente.
 |---|---|---|---|
 | 1 | `package.json` | Nombre del proyecto, comandos y librerías | [ver](package.json.md) |
 | 2 | `pnpm-workspace.yaml` | Permiso para que dos librerías se compilen al instalar | [ver](pnpm-workspace.yaml.md) |
-| 3 | `astro.config.mjs` | Configuración de Astro: Tailwind y la fuente de títulos | [ver](astro.config.mjs.md) |
+| 3 | `astro.config.mjs` | Configuración de Astro: Tailwind, las fotos remotas de Supabase y la fuente de títulos | [ver](astro.config.mjs.md) |
 | 4 | `tsconfig.json` | Configuración de TypeScript | [ver](tsconfig.json.md) |
 | 1b | `scripts/check-weight.mjs` | El script `pnpm check:weight`: mide cada página contra el presupuesto de peso | [ver](scripts/check-weight.mjs.md) |
-| 4b | `.env.example` | Plantilla de las variables de entorno (el número de WhatsApp) | [ver](.env.example.md) |
+| 4b | `.env.example` | Plantilla de las variables de entorno (el número de WhatsApp y el proyecto de Supabase) | [ver](.env.example.md) |
 | 4c | `src/env.d.ts` | Los tipos de esas variables | [ver](src/env.d.ts.md) |
-| 5 | `src/data/categories.json` | Las 6 categorías | [ver](src/data/categories.json.md) |
-| 6 | `src/data/products.json` | Los 18 productos de ejemplo | [ver](src/data/products.json.md) |
-| 7 | `src/content.config.ts` | La forma obligatoria de productos y categorías | [ver](src/content.config.ts.md) |
+| 5 | `supabase/schema.sql` | Las tablas del catálogo en Supabase, quién puede leerlas y el bucket de fotos | [ver](supabase/schema.sql.md) |
+| 6 | `supabase/seed.sql` | Los datos de ejemplo: 6 categorías y 18 productos (viven en Supabase) | [ver](supabase/seed.sql.md) |
+| 6b | `src/lib/supabase.ts` | Lee las tablas y las fotos de Supabase durante el build | [ver](src/lib/supabase.ts.md) |
+| 7 | `src/content.config.ts` | Las colecciones: traen los datos de Supabase y validan su forma | [ver](src/content.config.ts.md) |
 | 8 | `src/lib/price.ts` | Formatea un precio: `12500` → `12.500 CUP` | [ver](src/lib/price.ts.md) |
 | 9 | `src/lib/site.ts` | Nombre, descripción e información de la tienda (horario, pagos, preguntas) | [ver](src/lib/site.ts.md) |
 | 10 | `src/lib/catalog.ts` | Agrupa productos por categoría y los ordena | [ver](src/lib/catalog.ts.md) |
@@ -46,9 +47,11 @@ por último las páginas que ve el cliente.
 | 18 | `src/pages/producto/[id].astro` | Las páginas `/producto/<id>` y su vista previa en WhatsApp | [ver](src/pages/producto/%5Bid%5D.astro.md) |
 | 19 | `src/pages/estilo.astro` | La guía de estilo interna `/estilo` | [ver](src/pages/estilo.astro.md) |
 
-Archivos que no son código y no tienen explicación: `src/assets/` (fotos, la fuente y, en
+Archivos que no son código y no tienen explicación: `src/assets/` (la fuente y, en
 `src/assets/icons/`, los dos iconos oficiales de WhatsApp con su `SOURCE.md`: de dónde salen y
 por qué no se editan; ver [`WhatsAppIcon.astro.md`](src/components/WhatsAppIcon.astro.md)),
+`supabase/seed-photos/` (las 18 fotos de ejemplo y su `CREDITS.md`, que se suben a mano al bucket
+de Supabase; ver [`seed.sql.md`](supabase/seed.sql.md)),
 `public/` (favicon e imagen para WhatsApp), `pnpm-lock.yaml` (ver
 [lockfile](glosario.md#lockfile)), `dist/` y `.astro/` (generados por Astro).
 

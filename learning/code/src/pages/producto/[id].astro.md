@@ -123,7 +123,9 @@ const category = await getEntry(product.data.category);
   vez por página**: en la página del arroz, `product` es el arroz; en la de los huevos, los
   huevos.
 - `const { name, unit, price, inStock, description, photo } = product.data;`: saca los seis
-  campos del producto en variables cortas, para no escribir `product.data.` cada vez.
+  campos del producto en variables cortas, para no escribir `product.data.` cada vez. `photo` es,
+  desde la spec 0013, la URL de la foto en Supabase
+  ([imagen remota](../../../glosario.md#imagen-remota)).
 - `const category = await getEntry(product.data.category);`: busca la categoría del producto.
   `product.data.category` no es el nombre de la categoría sino una
   [referencia](../../../glosario.md#reference), `{ collection: 'categories', id: 'granos-y-pastas' }`
@@ -139,7 +141,7 @@ const category = await getEntry(product.data.category);
 const availability = inStock ? 'Disponible' : 'Agotado';
 const title = `${name} · ${site.name}`;
 const metaDescription = `${formatPrice(price)} · ${unit} · ${availability}. ${description}`;
-const previewImage = await getImage({ src: photo, width: 600, format: 'jpg' });
+const previewImage = await getImage({ src: photo, inferSize: true, width: 600, format: 'jpg' });
 
 // The same absolute page URL as og:url, so the shop sees which product the message is about.
 const pageUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
@@ -158,11 +160,17 @@ const orderHref = orderLink(product, pageUrl);
 - `const metaDescription = ...`: la descripción para la vista previa. Para el arroz da
   "280 CUP · 1 lb · Disponible. Arroz blanco de grano largo, vendido por libra. …". El precio va
   primero para que se lea aunque WhatsApp corte el texto.
-- `const previewImage = await getImage({ src: photo, width: 600, format: 'jpg' });`: en el build,
-  crea una copia de la foto de 600 px de ancho en formato JPG y devuelve, entre otras cosas, su
-  ruta en `previewImage.src` (por ejemplo `/_astro/arroz-blanco.C4YTeKtW_Z1GFxzh.jpg`). El nombre
-  lleva letras al azar (un *hash*) para que, si la foto cambia, el archivo nuevo tenga otro
-  nombre y nadie vea una copia vieja guardada.
+- `const previewImage = await getImage({ src: photo, inferSize: true, width: 600, format: 'jpg' });`:
+  en el build, descarga la foto de Supabase, crea una copia de 600 px de ancho en formato JPG y
+  devuelve, entre otras cosas, su ruta en `previewImage.src` (por ejemplo
+  `/_astro/arroz-blanco_182Kbk.jpg`). El nombre lleva letras que parecen al azar (un *hash*) para
+  que, si la foto cambia, el archivo nuevo tenga otro nombre y nadie vea una copia vieja guardada.
+  - `inferSize: true` (spec 0013): como `photo` es una URL, Astro no sabe cuánto mide la foto;
+    con esta opción la descarga y la mide antes de reducirla
+    ([inferSize](../../../glosario.md#infersize)). Es lo mismo que el `inferSize` del `<Image>` del
+    bloque 7, escrito como propiedad de un objeto.
+  - La vista previa apunta a esa copia de `dist/`, no a Supabase: WhatsApp nunca pide nada a
+    Supabase.
 - El comentario siguiente: "La misma URL absoluta de la página que `og:url`, para que la tienda
   vea de qué producto habla el mensaje."
 - `const pageUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;`: la dirección
@@ -254,6 +262,7 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
 			<Image
 				src={photo}
 				alt={name}
+				inferSize
 				widths={[400, 800]}
 				sizes="(min-width: 768px) 480px, 100vw"
 				loading="eager"
@@ -271,9 +280,15 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
     derecha. `md:` es la variante de 768 px (como `sm:` es la de 640 px).
   - `md:items-start`: en dos columnas, cada celda se pega arriba en vez de estirarse.
 - `<Image …>` ([image-component](../../../glosario.md#image-component)):
-  - `src={photo}`: la foto original de `src/assets/products/`.
+  - `src={photo}`: la URL de la foto original en Supabase. Astro la descarga en el build (lo
+    permite `remotePatterns` en [`astro.config.mjs`](../../../astro.config.mjs.md)) y el `<img>`
+    final apunta a las copias de `dist/_astro/`.
   - `alt={name}`: el texto alternativo es el nombre del producto, que es lo que lee el lector de
     pantalla ([nombre accesible](../../../glosario.md#nombre-accesible)).
+  - `inferSize` (spec 0013): Astro descarga la foto y la mide, porque una URL no trae sus medidas
+    ([inferSize](../../../glosario.md#infersize)). En la página del arroz, el `<img>` sale con
+    `width="1067" height="1067"`, las medidas de la foto original. Escrito sin `={…}` equivale a
+    `inferSize={true}`.
   - `widths={[400, 800]}`: genera dos versiones, de 400 y 800 px, en
     [WebP](../../../glosario.md#webp), y las pone en el [srcset](../../../glosario.md#srcset).
   - `sizes="(min-width: 768px) 480px, 100vw"`: le dice al navegador cuánto ocupará la foto:
@@ -382,9 +397,10 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
 
 ## Cómo se conecta
 
-- **Entra:** la colección `products` (de [`products.json`](../../data/products.json.md)) y, para
-  cada producto, su categoría de la colección `categories`, ambas definidas en
-  [`content.config.ts`](../../content.config.ts.md). La foto viene de `src/assets/products/`.
+- **Entra:** la colección `products` y, para cada producto, su categoría de la colección
+  `categories`, ambas definidas en [`content.config.ts`](../../content.config.ts.md) con datos
+  leídos de Supabase en el build ([`supabase.ts`](../../lib/supabase.ts.md)). La foto viene del
+  bucket `product-photos` de Supabase.
 - **Sale:** 18 archivos `dist/producto/<id>/index.html`, sus fotos WebP de 400 y 800 px y un JPG
   de 600 px por producto para la vista previa.
 - **Quién llega aquí:** las tarjetas de la portada y de las páginas de categoría (cada una
@@ -421,7 +437,9 @@ Cambia el orden de la descripción de la vista previa y míralo en el HTML gener
   [slot](../../../glosario.md#slot)
 - [image-component](../../../glosario.md#image-component) · [getimage](../../../glosario.md#getimage) ·
   [webp](../../../glosario.md#webp) · [srcset](../../../glosario.md#srcset) ·
-  [lazy-loading](../../../glosario.md#lazy-loading)
+  [lazy-loading](../../../glosario.md#lazy-loading) ·
+  [imagen-remota](../../../glosario.md#imagen-remota) · [infersize](../../../glosario.md#infersize)
+  (nuevos)
 - [open-graph](../../../glosario.md#open-graph) · [url-absoluta](../../../glosario.md#url-absoluta) ·
   [constructor-url](../../../glosario.md#constructor-url) ·
   [astro-url-y-site](../../../glosario.md#astro-url-y-site) · [nullish](../../../glosario.md#nullish)

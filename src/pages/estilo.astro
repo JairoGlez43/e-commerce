@@ -165,6 +165,7 @@ const products = (await getCollection('products'))
 								<Image
 									src={product.data.photo}
 									alt={product.data.name}
+									inferSize
 									widths={[200, 400]}
 									sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
 									class:list={['aspect-square w-full object-cover', { 'opacity-50': !product.data.inStock }]}

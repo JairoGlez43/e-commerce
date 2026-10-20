@@ -1,17 +1,14 @@
 import { defineCollection, reference } from 'astro:content';
 import { z } from 'astro/zod';
-import { file } from 'astro/loaders';
-import categoryData from './data/categories.json';
+import { photoUrl, readCategories, readProducts } from './lib/supabase';
 
-// Shapes decided in spec 0004. Real owner-editable data must match them later.
+// Shapes decided in spec 0004; the data is read from Supabase at build (spec 0013).
+// The loaders map the table columns back to that shape, and the schemas still validate every row.
 const slug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'id must be lowercase kebab-case');
 
-// reference() alone only logs an unknown id and the build still exits 0,
-// so the id is checked here first, where a schema error fails the build.
-const categoryIds = categoryData.map((category) => category.id);
-
 const categories = defineCollection({
-	loader: file('src/data/categories.json'),
+	loader: async () =>
+		(await readCategories()).map((row) => ({ id: row.id, name: row.name, order: row.sort_order })),
 	schema: z.object({
 		id: slug,
 		name: z.string().min(1).max(30),
@@ -20,21 +17,29 @@ const categories = defineCollection({
 });
 
 const products = defineCollection({
-	loader: file('src/data/products.json'),
-	schema: ({ image }) =>
-		z.object({
-			id: slug,
-			name: z.string().min(1).max(60),
-			category: z
-				.string()
-				.refine((id) => categoryIds.includes(id), { message: 'unknown category id' })
-				.pipe(reference('categories')),
-			price: z.number().int().positive(),
-			unit: z.string().min(1).max(30),
-			inStock: z.boolean(),
-			description: z.string().min(1).max(300),
-			photo: image(),
-		}),
+	loader: async () =>
+		(await readProducts()).map((row) => ({
+			id: row.id,
+			name: row.name,
+			category: row.category_id,
+			price: row.price,
+			unit: row.unit,
+			inStock: row.in_stock,
+			description: row.description,
+			photo: photoUrl(row.photo_path),
+		})),
+	schema: z.object({
+		id: slug,
+		name: z.string().min(1).max(60),
+		// Unknown ids are already refused in readProducts(); reference() alone would only log them.
+		category: reference('categories'),
+		price: z.number().int().positive(),
+		unit: z.string().min(1).max(30),
+		inStock: z.boolean(),
+		description: z.string().min(1).max(300),
+		// Remote photo, optimized at build by astro:assets (allowed in astro.config.mjs).
+		photo: z.url(),
+	}),
 });
 
 export const collections = { categories, products };

@@ -22,6 +22,7 @@ const href = `/producto/${product.id}`;
 	<Image
 		src={photo}
 		alt={name}
+		inferSize
 		widths={[200, 400]}
 		sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
 		loading={eager ? 'eager' : 'lazy'}

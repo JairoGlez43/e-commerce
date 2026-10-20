@@ -71,8 +71,8 @@ formato `es-ES` se lee con naturalidad en Cuba, y si no, se cambia aquí, en una
 
 ## Cómo se conecta
 
-- **Entra:** un número, el `price` de un producto (que viene de
-  [`src/data/products.json`](../data/products.json.md) ya validado por
+- **Entra:** un número, el `price` de un producto (que viene de la tabla `products` de
+  Supabase, cargada con [`supabase/seed.sql`](../../supabase/seed.sql.md), ya validado por
   [`src/content.config.ts`](../content.config.ts.md)).
 - **Sale hacia:**
   - `src/components/ProductCard.astro`: `{formatPrice(price)}` en cada tarjeta del catálogo.

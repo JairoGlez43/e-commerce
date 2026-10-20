@@ -61,8 +61,9 @@ para guardar este ajuste.
   `pnpm why esbuild` muestra la cadena: la piden `astro` directamente, y también `vite`, que
   a su vez la piden `astro` y `@tailwindcss/vite`.
 - **`sharp`** sí está en `package.json` (y además `astro` también la pide). La usa el
-  [componente `<Image>`](glosario.md#image-component) en `src/components/ProductCard.astro` y
-  `src/pages/estilo.astro`, cuando el build optimiza las fotos de `src/assets/products/`.
+  [componente `<Image>`](glosario.md#image-component) en `src/components/ProductCard.astro`,
+  `src/pages/producto/[id].astro` y `src/pages/estilo.astro`, cuando el build optimiza las fotos
+  de los productos, que descarga de Supabase ([imagen remota](glosario.md#imagen-remota)).
 - **Si faltara este archivo** (según la spec 0001): `pnpm install` avisaría con
   `ERR_PNPM_IGNORED_BUILDS` y la optimización de imágenes podría fallar en el build.
 

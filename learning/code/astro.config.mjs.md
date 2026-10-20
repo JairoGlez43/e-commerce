@@ -1,18 +1,23 @@
 # `astro.config.mjs`
 
-> **Qué es:** la configuración de Astro: activa Tailwind y declara la fuente de los títulos ·
+> **Qué es:** la configuración de Astro: activa Tailwind, permite las fotos remotas de Supabase
+> y declara la fuente de los títulos ·
 > **Lo decidió:** [spec 0001 · Stack](../../docs/specs/0001-stack.md) (Tailwind, valores por
-> defecto) y [spec 0002 · Base de diseño](../../docs/specs/0002-design-base.md) (la fuente
-> Fraunces) · **Lo usan:** Astro, cada vez que arranca `pnpm dev`, `pnpm build` o
-> `pnpm typecheck` · **Usa:** `astro/config`, `@tailwindcss/vite` y el archivo
+> defecto), [spec 0002 · Base de diseño](../../docs/specs/0002-design-base.md) (la fuente
+> Fraunces), [spec 0008](../../docs/specs/0008-demo-online.md) (`site`) y
+> [spec 0013](../../docs/specs/0013-catalog-data-online.md) (las fotos remotas) · **Lo usan:**
+> Astro, cada vez que arranca `pnpm dev`, `pnpm build` o `pnpm typecheck` · **Usa:**
+> `astro/config`, `@tailwindcss/vite` y el archivo
 > `src/assets/fonts/fraunces-latin-600-normal.woff2`.
 
 ## Para qué sirve
 
-Astro funciona sin configuración, pero este proyecto necesita dos cosas más: que
-[Tailwind](glosario.md#tailwind) procese el CSS, y una [fuente web](glosario.md#fuente-web)
-para títulos y precios que se sirva desde el propio sitio, sin pedir nada a Google Fonts ni a
-ningún otro servidor. Las dos se declaran aquí.
+Astro funciona sin configuración, pero este proyecto necesita tres cosas más: que
+[Tailwind](glosario.md#tailwind) procese el CSS; permiso para descargar y optimizar las fotos de
+los productos, que desde la spec 0013 están en [Supabase](glosario.md#supabase); y una
+[fuente web](glosario.md#fuente-web) para títulos y precios que se sirva desde el propio sitio,
+sin pedir nada a Google Fonts ni a ningún otro servidor. Las tres se declaran aquí, junto con la
+dirección pública del sitio.
 
 ## El código, por partes
 
@@ -78,6 +83,43 @@ export default defineConfig({
   crea el de Tailwind. Gracias a él, cuando Vite procesa `src/styles/global.css` y encuentra
   `@import "tailwindcss";`, Tailwind mira qué clases usas en tus archivos y genera solo ese CSS.
 - `},` cierra `vite`.
+
+```js
+  // Product photos live in each shop's Supabase Storage and are optimized at build (spec 0013).
+  // `*.supabase.co` matches any one project, so this line is the same for every shop.
+  image: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/product-photos/**'
+      }
+    ]
+  },
+```
+
+- El comentario: "Las fotos de los productos viven en el Storage de Supabase de cada tienda y se
+  optimizan en el build (spec 0013). `*.supabase.co` encaja con cualquier proyecto, así que esta
+  línea es la misma para todas las tiendas."
+- `image: {`: opciones de imágenes de Astro.
+- `remotePatterns: [`: la lista de direcciones de las que Astro acepta descargar y optimizar
+  [imágenes remotas](glosario.md#imagen-remota) ([remotePatterns](glosario.md#remote-patterns)).
+  Hay una sola entrada.
+- `protocol: 'https'`: solo direcciones seguras, que empiezan por `https://`.
+- `hostname: '*.supabase.co'`: el dominio. `*` = cualquier subdominio de un nivel, así que encaja
+  con `abcdefghijklmnop.supabase.co` y con el proyecto de cualquier otra tienda, sin escribir el
+  de cada una. La spec 0013 comprobó en el código instalado de Astro que el `*` cubre un solo
+  nivel: `a.b.supabase.co` no encajaría.
+- `pathname: '/storage/v1/object/public/product-photos/**'`: la ruta. Solo los archivos públicos
+  del bucket `product-photos` ([Storage y bucket](glosario.md#storage-y-bucket)); `/**` = cualquier
+  archivo debajo, como en un [patrón glob](glosario.md#patron-glob). Cualquier otra cosa de
+  Supabase queda fuera.
+- `}`, `]`, `},`: cierran el patrón, la lista y `image`.
+
+Con esto, el componente `<Image>` descarga cada foto en el build, la convierte a
+[WebP](glosario.md#webp) en varios tamaños y la guarda en `dist/_astro/`. El HTML final apunta a
+esas copias, nunca a Supabase: los clientes no se conectan a Supabase (spec 0013, AC7). Astro
+guarda las descargas en `node_modules/.astro` para no repetirlas en cada build.
 
 ```js
   // One self-hosted heading font, no network at build or run time (spec 0002).
@@ -184,6 +226,13 @@ estático (spec 0001).
 
 - **Entra:** el archivo `src/assets/fonts/fraunces-latin-600-normal.woff2` (con su licencia,
   `OFL.txt`, al lado) y el plugin de `@tailwindcss/vite`.
+- **Las fotos:** sus URLs las arma `photoUrl()` en [`src/lib/supabase.ts`](src/lib/supabase.ts.md)
+  y llegan como el campo `photo` de cada producto
+  ([`content.config.ts`](src/content.config.ts.md)). `<Image>` las descarga en
+  [`ProductCard.astro`](src/components/ProductCard.astro.md),
+  [`producto/[id].astro`](src/pages/producto/%5Bid%5D.astro.md) y
+  [`estilo.astro`](src/pages/estilo.astro.md) solo porque encajan con el patrón de
+  `remotePatterns`.
 - **Tailwind:** el plugin procesa `src/styles/global.css`, que empieza con
   `@import "tailwindcss";` y define los [tokens](glosario.md#token) con
   [`@theme`](glosario.md#theme).
@@ -220,6 +269,12 @@ Vas a ver qué cambia en el CSS si la fuente no usa `swap`.
 
 - [tailwind](glosario.md#tailwind)
 - [vite](glosario.md#vite)
+- [supabase](glosario.md#supabase) (nuevo)
+- [imagen remota](glosario.md#imagen-remota) (nuevo)
+- [remotePatterns](glosario.md#remote-patterns) (nuevo)
+- [Storage y bucket](glosario.md#storage-y-bucket) (nuevo)
+- [patrón glob](glosario.md#patron-glob)
+- [WebP](glosario.md#webp)
 - [variable CSS](glosario.md#variable-css)
 - [token](glosario.md#token)
 - [theme](glosario.md#theme)

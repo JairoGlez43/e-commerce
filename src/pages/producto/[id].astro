@@ -32,7 +32,7 @@ const category = await getEntry(product.data.category);
 const availability = inStock ? 'Disponible' : 'Agotado';
 const title = `${name} · ${site.name}`;
 const metaDescription = `${formatPrice(price)} · ${unit} · ${availability}. ${description}`;
-const previewImage = await getImage({ src: photo, width: 600, format: 'jpg' });
+const previewImage = await getImage({ src: photo, inferSize: true, width: 600, format: 'jpg' });
 
 // The same absolute page URL as og:url, so the shop sees which product the message is about.
 const pageUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
@@ -57,6 +57,7 @@ const orderHref = orderLink(product, pageUrl);
 			<Image
 				src={photo}
 				alt={name}
+				inferSize
 				widths={[400, 800]}
 				sizes="(min-width: 768px) 480px, 100vw"
 				loading="eager"

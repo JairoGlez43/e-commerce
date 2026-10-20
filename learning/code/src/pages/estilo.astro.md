@@ -463,6 +463,7 @@ const products = (await getCollection('products'))
 								<Image
 									src={product.data.photo}
 									alt={product.data.name}
+									inferSize
 									widths={[200, 400]}
 									sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
 									class:list={['aspect-square w-full object-cover', { 'opacity-50': !product.data.inStock }]}
@@ -478,7 +479,11 @@ const products = (await getCollection('products'))
   Detalle de cada clase en [`ProductCard.astro.md`](../components/ProductCard.astro.md).
 - `<Image`: la foto, con los mismos atributos que en `ProductCard`:
   - `src={product.data.photo}` y `alt={product.data.name}`: la foto y su texto alternativo (el
-    nombre). Aquí se lee `product.data.x` directamente en vez de desestructurar antes.
+    nombre). Aquí se lee `product.data.x` directamente en vez de desestructurar antes. Desde la
+    spec 0013, `photo` es la URL de la foto en Supabase
+    ([imagen remota](../../glosario.md#imagen-remota)).
+  - `inferSize` (spec 0013): Astro descarga la foto y la mide, porque una URL no trae sus medidas
+    ([inferSize](../../glosario.md#infersize)). Igual que en `ProductCard`.
   - `widths={[200, 400]}` y `sizes="..."`: dos tamaños y cuánto ocupará la foto en cada ancho
     de pantalla ([srcset](../../glosario.md#srcset)).
   - No lleva `loading`: se queda con el valor por defecto de Astro, que es `lazy` (según la
@@ -569,8 +574,9 @@ const products = (await getCollection('products'))
 
 ## Cómo se conecta
 
-- **Datos:** las colecciones `categories` y `products` (`src/content.config.ts`, con datos de
-  `src/data/categories.json` y `src/data/products.json`), leídas con `getCollection`.
+- **Datos:** las colecciones `categories` y `products`
+  ([`src/content.config.ts`](../content.config.ts.md), con datos leídos de Supabase en el
+  build), leídas con `getCollection`.
 - **Estilo:** todos los tokens y las clases `awning` y `price` de `src/styles/global.css`. Si
   cambias un valor allí, esta página lo refleja.
 - **Layout:** [`BaseLayout`](../layouts/BaseLayout.astro.md), con `noindex`.
@@ -601,7 +607,7 @@ Cambia qué chip de muestra sale seleccionado.
 ## Términos
 
 - [ruta-por-archivo](../../glosario.md#ruta-por-archivo) · [frontmatter](../../glosario.md#frontmatter) · [layout](../../glosario.md#layout) · [slot](../../glosario.md#slot) · [props](../../glosario.md#props) · [noindex](../../glosario.md#noindex) (nuevo)
-- [getcollection](../../glosario.md#getcollection) · [slug](../../glosario.md#slug) · [image-component](../../glosario.md#image-component) · [srcset](../../glosario.md#srcset)
+- [getcollection](../../glosario.md#getcollection) · [slug](../../glosario.md#slug) · [image-component](../../glosario.md#image-component) · [srcset](../../glosario.md#srcset) · [imagen-remota](../../glosario.md#imagen-remota) · [infersize](../../glosario.md#infersize) (nuevos)
 - [async-await](../../glosario.md#async-await) · [ordenar-con-sort](../../glosario.md#ordenar-con-sort) · [encadenamiento-opcional](../../glosario.md#encadenamiento-opcional) (nuevo) · [expresion-en-plantilla](../../glosario.md#expresion-en-plantilla) · [class-list](../../glosario.md#class-list)
 - [tailwind](../../glosario.md#tailwind) · [token](../../glosario.md#token) · [variante](../../glosario.md#variante) · [escala-de-texto](../../glosario.md#escala-de-texto) (nuevo) · [stretched-link](../../glosario.md#stretched-link)
 - [details-summary](../../glosario.md#details-summary) · [click-to-chat](../../glosario.md#click-to-chat) · [comentario-en-plantilla](../../glosario.md#comentario-en-plantilla) (nuevo) · [banda-a-todo-el-ancho](../../glosario.md#banda-a-todo-el-ancho) (nuevo) · [imagen-decorativa](../../glosario.md#imagen-decorativa) (nuevo)

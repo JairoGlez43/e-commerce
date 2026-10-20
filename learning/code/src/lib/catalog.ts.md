@@ -182,8 +182,9 @@ Despensa, Lácteos y huevos, Bebidas, Aseo.
 ## Cómo se conecta
 
 - **Entra:** las colecciones `categories` y `products` que define
-  [`src/content.config.ts`](../content.config.ts.md) a partir de
-  [`categories.json`](../data/categories.json.md) y [`products.json`](../data/products.json.md).
+  [`src/content.config.ts`](../content.config.ts.md) a partir de las tablas de Supabase
+  (las lee [`supabase.ts`](supabase.ts.md); datos de ejemplo en
+  [`supabase/seed.sql`](../../supabase/seed.sql.md)).
 - **Sale hacia:**
   - `src/pages/index.astro`: `const catalog = await getCatalog();` y dibuja una sección por
     elemento. También cuenta cuántas tarjetas van antes de cada sección para decidir qué

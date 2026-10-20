@@ -341,8 +341,8 @@ const updated = formatDay(new Date());
 
 ## Cómo se conecta
 
-- **Datos:** `src/data/categories.json` y `src/data/products.json` → colecciones de
-  `src/content.config.ts` → `getCatalog()` en `src/lib/catalog.ts` → esta página.
+- **Datos:** las tablas de Supabase (leídas en el build por `src/lib/supabase.ts`) → colecciones
+  de `src/content.config.ts` → `getCatalog()` en `src/lib/catalog.ts` → esta página.
 - **Textos:** `site.name`, `site.description` y `site.payments` de `src/lib/site.ts`; la fecha,
   de `formatDay()` en [`src/lib/date.ts`](../lib/date.ts.md).
 - **Componentes que pinta:** [`BaseLayout`](../layouts/BaseLayout.astro.md),

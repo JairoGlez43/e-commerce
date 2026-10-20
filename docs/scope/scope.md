@@ -17,8 +17,8 @@
 | 08 | Demo online                      | done              | default | docs/specs/0008-demo-online.md |
 | 16 | Shop information                 | done              | default | docs/specs/0010-shop-information.md |
 | 17 | Visual polish                    | done              | default | docs/specs/0011-visual-polish.md |
-| 09 | Admin backend and publishing     | in-progress       | default | docs/specs/0012-admin-backend.md |
-| 10 | Catalog data online              | needs-a-decision  | default | —    |
+| 09 | Admin backend and publishing     | done              | default | docs/specs/0012-admin-backend.md |
+| 10 | Catalog data online              | in-progress       | default | docs/specs/0013-catalog-data-online.md |
 | 11 | Owner login                      | needs-a-decision  | default | —    |
 | 12 | Manage products                  | needs-a-decision  | default | —    |
 | 13 | Publish changes                  | needs-a-decision  | default | —    |
@@ -211,7 +211,7 @@ Suggestion from the 2026-10-16 session, not a decision: keep the product categor
 cream page (alternating 6 category bands would look busy); an inline SVG icon adds about 1 KB.
 
 ## 09 · Admin backend and publishing
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0012-admin-backend.md
 **Code:** — (no repo code; Supabase project `tienda-demo-cuba`, Vercel deploy hook `admin-publish`)
 **Depth:** default
@@ -222,25 +222,25 @@ cream page (alternating 6 category bands would look busy); an inline SVG icon ad
 - The admin and the public site both open from a phone in Cuba.
 - The monthly running cost per shop is known, so the "Autónomo" price covers it.
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [x] Build it — /develop
-- [ ] Verify it — /check verify
+- [x] Verify it — /check verify
 **Notes:** Owner's preferences for /architect (not decisions yet): option A, the public site
 stays static and is rebuilt when the owner publishes, never rendered on each visit; a BaaS,
 specifically Supabase, where the owner already has an account. Open: one setup per shop
 (each buyer gets their own copy) or one shared admin for many shops.
 
 ## 10 · Catalog data online
-**Status:** needs-a-decision
-**Spec:** —
-**Code:** —
+**Status:** in-progress
+**Spec:** docs/specs/0013-catalog-data-online.md
+**Code:** `src/lib/supabase.ts`, `src/content.config.ts`, `supabase/` (schema, seed, seed photos)
 **Depth:** default
 **Done when:**
 - The public site shows the catalog stored online instead of the sample files in the repo.
 - The current sample products and categories appear online unchanged, same links and prices.
 - If the online data cannot be reached, the live site keeps showing the last published catalog.
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [ ] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** Depends on 09. Data must keep the product shape of spec 0004.

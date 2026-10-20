@@ -10,6 +10,17 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()]
   },
+  // Product photos live in each shop's Supabase Storage and are optimized at build (spec 0013).
+  // `*.supabase.co` matches any one project, so this line is the same for every shop.
+  image: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/product-photos/**'
+      }
+    ]
+  },
   // One self-hosted heading font, no network at build or run time (spec 0002).
   fonts: [
     {

@@ -81,7 +81,8 @@ const href = `/producto/${product.id}`;
   [desestructuración](../../glosario.md#desestructuracion).
 - `const { name, unit, price, inStock, photo } = product.data;`: lo mismo con los campos del
   producto: nombre, formato, precio (número entero), si hay existencias (`true`/`false`) y la
-  foto (ya importada por Astro desde `src/assets/`).
+  foto. Desde la spec 0013, `photo` es un texto: la URL de la foto en Supabase
+  ([imagen remota](../../glosario.md#imagen-remota)), no una foto de `src/assets/`.
 - ``const href = `/producto/${product.id}`;``: arma la URL del producto con un
   [template literal](../../glosario.md#template-literal): `/producto/arroz-blanco`. Esa página
   la genera [`src/pages/producto/[id].astro`](../pages/producto/%5Bid%5D.astro.md) (feature 06).
@@ -123,6 +124,7 @@ const href = `/producto/${product.id}`;
 	<Image
 		src={photo}
 		alt={name}
+		inferSize
 		widths={[200, 400]}
 		sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
 		loading={eager ? 'eager' : 'lazy'}
@@ -131,10 +133,17 @@ const href = `/producto/${product.id}`;
 ```
 
 - `<Image`: el componente de `astro:assets`. En el build escribe una etiqueta `<img>` normal.
-- `src={photo}`: la foto del producto.
+- `src={photo}`: la URL de la foto del producto en Supabase. En el build, Astro la descarga y
+  genera las versiones optimizadas en `dist/_astro/`; el `<img>` final apunta a esas copias, no a
+  Supabase. Astro solo acepta descargarla porque la dirección está permitida en
+  [`astro.config.mjs`](../../astro.config.mjs.md) ([remotePatterns](../../glosario.md#remote-patterns)).
 - `alt={name}`: el texto alternativo es el nombre del producto (lo pide la spec 0005, AC2).
   Lo lee el [lector de pantalla](../../glosario.md#accesibilidad) y se muestra si la foto no
   carga.
+- `inferSize`: añadido en la spec 0013. Una URL no dice cuánto mide la foto, y `<Image>` lo
+  necesita; con `inferSize`, Astro la descarga y la mide él mismo
+  ([inferSize](../../glosario.md#infersize)). Escribirlo sin `={…}` equivale a `inferSize={true}`,
+  como un atributo HTML sin valor (por ejemplo `disabled`).
 - `widths={[200, 400]}`: genera dos versiones, de 200 px y 400 px de ancho, y las pone en el
   [srcset](../../glosario.md#srcset). `design.md` prohíbe pedir más de 400 px en tarjetas, por
   el [presupuesto de peso](../../glosario.md#presupuesto-de-peso).
@@ -276,8 +285,9 @@ const href = `/producto/${product.id}`;
 
 ## Cómo se conecta
 
-- **Recibe:** un `product` de la colección `products` (definida en `src/content.config.ts`,
-  datos en `src/data/products.json`), ya agrupado y ordenado por `getCatalog()` de
+- **Recibe:** un `product` de la colección `products` (definida en
+  [`src/content.config.ts`](../content.config.ts.md), datos leídos de Supabase en el build), ya
+  agrupado y ordenado por `getCatalog()` de
   `src/lib/catalog.ts`; más `headingLevel` y `eager`, que decide cada página.
 - **Lo usan:**
   - [`src/pages/index.astro`](../pages/index.astro.md): `headingLevel={3}`, y `eager` para las
@@ -309,5 +319,6 @@ Comprueba qué hace el enlace estirado quitándolo un momento.
 - [comentario-jsdoc](../../glosario.md#comentario-jsdoc) (nuevo)
 - [desestructuracion](../../glosario.md#desestructuracion) · [template-literal](../../glosario.md#template-literal) · [expresion-en-plantilla](../../glosario.md#expresion-en-plantilla) · [class-list](../../glosario.md#class-list)
 - [image-component](../../glosario.md#image-component) · [webp](../../glosario.md#webp) · [srcset](../../glosario.md#srcset) · [lazy-loading](../../glosario.md#lazy-loading) · [presupuesto-de-peso](../../glosario.md#presupuesto-de-peso)
+- [imagen-remota](../../glosario.md#imagen-remota) · [remote-patterns](../../glosario.md#remote-patterns) · [infersize](../../glosario.md#infersize) (nuevos)
 - [tailwind](../../glosario.md#tailwind) · [token](../../glosario.md#token) · [variante](../../glosario.md#variante) · [unidades-tailwind](../../glosario.md#unidades-tailwind) · [escala-de-texto](../../glosario.md#escala-de-texto) (nuevo) · [layer-y-apply](../../glosario.md#layer-y-apply) · [stretched-link](../../glosario.md#stretched-link)
 - [accesibilidad](../../glosario.md#accesibilidad) · [jerarquia-de-titulos](../../glosario.md#jerarquia-de-titulos) · [nombre-accesible](../../glosario.md#nombre-accesible) (nuevo) · [aria-hidden](../../glosario.md#aria-hidden) · [focus-visible](../../glosario.md#focus-visible)

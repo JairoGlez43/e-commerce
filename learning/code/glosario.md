@@ -6,7 +6,7 @@ de repetir la definición. Si un término necesita una lección entera, lo indic
 
 Índice: [Proceso y herramientas](#proceso-y-herramientas) · [Astro](#astro) ·
 [TypeScript y JavaScript moderno](#typescript-y-javascript-moderno) · [Datos](#datos) ·
-[Imágenes](#imágenes) · [Tailwind y CSS](#tailwind-y-css) ·
+[Supabase y SQL](#supabase-y-sql) · [Imágenes](#imágenes) · [Tailwind y CSS](#tailwind-y-css) ·
 [HTML y accesibilidad](#html-y-accesibilidad) · [Web y rendimiento](#web-y-rendimiento)
 
 ---
@@ -214,7 +214,8 @@ Declara la forma de un objeto con nombre propio:
 ### generico
 Un tipo con un parámetro entre `< >`. `CollectionEntry<'products'>` se lee "una entrada de la
 colección `products`"; `Promise<CatalogSection[]>` es "una promesa que, al resolverse, da una
-lista de `CatalogSection`".
+lista de `CatalogSection`". Una función también puede tener uno: `readTable<Row>(…)` recibe
+un tipo `Row` al llamarla (`readTable<ProductRow>(…)`) y lo usa en lo que devuelve.
 
 <a id="modulos-es"></a>
 ### import-export
@@ -231,7 +232,8 @@ uno solo: `import { getCatalog, type CatalogSection } from '...'`.
 ### importar-json
 `import datos from './data/categories.json'` da el contenido del JSON ya convertido en objeto o
 lista de JavaScript, como `JSON.parse(fs.readFileSync(...))`, pero lo hace la herramienta
-([Vite](#vite)) al construir el sitio.
+([Vite](#vite)) al construir el sitio. El proyecto lo usó en `content.config.ts` hasta la spec
+0013, cuando los datos pasaron a [Supabase](#supabase).
 
 ### ts-check
 `// @ts-check` en la primera línea de un archivo JavaScript pide a TypeScript que lo revise
@@ -314,10 +316,32 @@ lanzar un error. Ejemplo: `categories[0]?.id` con una lista vacía.
 el tipo más preciso que TypeScript ya dedujo. Se usa en `getStaticPaths` para que Astro sepa
 qué [props](#props) recibe la página.
 
+### afirmacion-de-tipo
+`valor as Tipo` le dice al [typecheck](#typecheck): "confía en mí, esto es de este tipo". No
+comprueba nada, ni al revisar ni al ejecutar: si te equivocas, TypeScript no se entera. Se usa
+cuando el valor llega de fuera y TypeScript no puede conocer su forma, como el JSON que
+devuelve un [fetch](#fetch). Es lo contrario de [satisfies](#satisfies), que sí comprueba.
+
 ### async-await
 Una función `async` puede esperar resultados lentos con `await` (leer datos, por ejemplo)
 sin bloquearse. `const datos = await getCollection('products');` espera a tener los datos y
 luego sigue. Siempre devuelve una *Promise* (promesa): un valor que llegará más tarde.
+
+### fetch
+`await fetch(url, { headers: { … } })` hace una petición HTTP desde el código, como hace el
+navegador al abrir una URL; `headers` son las cabeceras que se envían con ella. Viene incluida
+en Node (desde la versión 18) y en los navegadores. Devuelve un objeto `Response` (la
+respuesta): `response.ok` es `true` si el código de estado está entre 200 y 299,
+`response.status` es ese código (`200`, `401`…) y `await response.json()` convierte el cuerpo
+JSON en objetos de JavaScript. Si no hay red o la dirección no existe, `fetch` lanza un error
+([throw](#throw)); una respuesta con error (un 401, un 500) **no** lo lanza: hay que mirar `ok`.
+
+### promise-all
+`await Promise.all([tareaA(), tareaB()])` lanza dos tareas lentas **a la vez** y espera a que
+terminen las dos. Da una lista con los resultados, en el mismo orden. Si una falla, falla todo.
+Se suele leer con `const [a, b] = await Promise.all([…]);`: la misma
+[desestructuración](#desestructuracion), con corchetes porque es una lista (`a` = el primer
+elemento, `b` = el segundo).
 
 ### desestructuracion
 Sacar campos de un objeto en variables, en una línea:
@@ -336,6 +360,11 @@ dentro del texto.
 ### nullish
 `a ?? b` da `a`, salvo que `a` sea `null` o `undefined`; entonces da `b`. Sirve para valores
 por defecto.
+
+### asignacion-nullish
+`a ??= b` significa "si `a` es `null` o `undefined`, guarda `b` en `a`; si ya tiene valor, no
+hagas nada". Es la forma corta de `a = a ?? b` ([nullish](#nullish)). Sirve para calcular algo
+solo la primera vez y reutilizarlo después: `b` ni siquiera se evalúa si `a` ya tiene valor.
 
 ### ordenar-con-sort
 `lista.sort((a, b) => …)` ordena comparando pares. Si la función devuelve un número negativo,
@@ -384,9 +413,12 @@ build falla si un dato no cumple la forma. Aquí hay dos: `products` y `categori
 luego usa `getCollection('...')`.
 
 ### loader
-La pieza que trae los datos de una colección. `file('src/data/products.json')` lee un archivo
-JSON. El día que los datos vengan de un servidor, se cambia el loader y las páginas no se
-tocan.
+La pieza que trae los datos de una colección. Puede ser uno que trae Astro, como
+`file('datos.json')`, que lee un archivo JSON, o una función propia (un *loader en línea*):
+`loader: async () => [ … ]`, que devuelve la lista de elementos, cada uno con su `id`. Astro la
+llama en cada build y luego valida cada elemento con el [esquema](#esquema). El proyecto usó
+`file()` hasta la spec 0013; desde entonces usa dos funciones propias que leen de
+[Supabase](#supabase), y las páginas no se tocaron.
 
 ### esquema
 La descripción de la forma de cada dato: qué campos tiene y qué reglas cumple (texto de
@@ -395,7 +427,8 @@ La descripción de la forma de cada dato: qué campos tiene y qué reglas cumple
 ### zod
 La librería de esquemas que usa Astro. Se importa de `astro/zod`. Ejemplos:
 `z.string().min(1)` = texto no vacío; `z.number().int().positive()` = entero mayor que 0;
-`z.boolean()` = verdadero/falso; `z.object({...})` = objeto con esos campos.
+`z.boolean()` = verdadero/falso; `z.object({...})` = objeto con esos campos; `z.url()` = texto
+con forma de URL (`https://…`).
 `.refine(fn, { message })` añade una regla propia; `.pipe(otro)` pasa el valor ya validado a
 otro esquema.
 
@@ -422,6 +455,123 @@ Un identificador apto para URL: minúsculas, sin acentos ni espacios, con guione
 
 ---
 
+## Supabase y SQL
+
+### backend-como-servicio
+Un servicio en internet que te da hecha la parte de servidor que en Express montarías a mano:
+la base de datos, una API para leerla y escribirla, un almacén de archivos, los usuarios. En
+inglés, *Backend as a Service* (BaaS). No escribes ni mantienes ese servidor: lo configuras en
+un panel web (*dashboard*) y lo usas desde tu código. Aquí es [Supabase](#supabase).
+
+### supabase
+El [backend como servicio](#backend-como-servicio) del proyecto (elegido en la spec 0012; el
+catálogo vive ahí desde la spec 0013). Cada proyecto de Supabase trae una base de datos
+[Postgres](#postgres), una [API REST](#api-rest) que se genera sola a partir de sus tablas y un
+almacén de archivos ([Storage](#storage-y-bucket)). Su dirección es
+`https://<ref>.supabase.co`, donde `<ref>` es un código único del proyecto. Aquí solo lo lee el
+[build](#build): los clientes reciben páginas estáticas y nunca hablan con Supabase.
+
+### postgres
+PostgreSQL: una base de datos que guarda los datos en [tablas](#tabla-sql) y se maneja con SQL.
+Es la base de datos de cada proyecto de Supabase.
+
+### tabla-sql
+SQL es el lenguaje para crear tablas y leer o escribir sus datos. Cada orden termina en `;`, las
+palabras clave (`create table`, `insert into`) dan igual en mayúsculas o minúsculas, los textos
+van entre comillas simples (`'Aseo'`) y `--` empieza un comentario. Una **tabla** guarda los datos
+en filas y columnas, como una hoja de cálculo: cada columna tiene un nombre y un tipo fijo
+(`text` = texto, `integer` = número entero, `boolean` = `true`/`false`), y cada fila es un
+registro (un producto). Una columna puede llevar reglas: `not null` (obligatoria),
+`default true` (el valor si no se da ninguno), [check](#restriccion-check)…
+
+### esquema-sql
+En Postgres, un esquema es como una carpeta con nombre que agrupa tablas: `public.products` es
+la tabla `products` del esquema `public`. Supabase pone tus tablas en `public` y las suyas en
+otros, como `storage` (los archivos). No confundir con el [esquema de zod](#esquema), que
+describe la forma de un dato.
+
+### snake-case
+Escribir nombres en minúsculas unidos por guiones bajos: `in_stock`, `category_id`. Es la
+costumbre en SQL; en JavaScript se usa *camelCase* (`inStock`, `categoryId`).
+
+### clave-primaria
+`primary key`: la columna que identifica cada fila de una [tabla](#tabla-sql). Es obligatoria y
+no puede repetirse: insertar otra fila con un `id` que ya existe da error. Aquí es `id`
+(`arroz-blanco`), el mismo [slug](#slug) de la URL.
+
+### restriccion-check
+`check (condición)` en una columna: Postgres rechaza cualquier fila que no la cumpla, venga de
+donde venga, y no guarda nada. `check (price > 0)` impide guardar un precio de 0. Junto con
+`not null` son las reglas que la base de datos hace cumplir por sí sola, igual que el
+[esquema](#esquema) de zod en el build. Postgres les pone nombre solo: `products_price_check`.
+
+### clave-foranea
+`references otra_tabla (columna)`: el valor de esta columna tiene que existir en la otra tabla.
+`category_id … references public.categories (id)` impide guardar un producto con una categoría
+que no existe. `on delete restrict` impide además borrar una categoría que todavía tiene
+productos.
+
+### editor-sql
+La página *SQL Editor* del panel de Supabase: pegas un archivo `.sql`, pulsas *Run* y Postgres
+ejecuta sus órdenes una tras otra. El proyecto la usa en vez de la herramienta de comandos de
+Supabase (spec 0013).
+
+### datos-semilla
+En inglés, *seed*: los datos iniciales que se cargan **una vez** en una base de datos vacía para
+que la aplicación tenga algo que mostrar. Aquí, las 6 categorías y los 18 productos de la demo,
+en `supabase/seed.sql`.
+
+### api-rest
+Lo que harías en Express con `app.get('/products', …)`: URLs que devuelven o cambian datos en
+JSON según el método HTTP (`GET` leer, `POST` crear, `PATCH` cambiar, `DELETE` borrar).
+Supabase crea una, sin escribir código, para cada tabla del esquema `public` (lo hace una pieza
+suya llamada PostgREST). Por ejemplo,
+`GET https://<ref>.supabase.co/rest/v1/categories?select=id,name` devuelve una lista JSON con
+esas dos columnas de cada fila. Cada petición lleva una [clave](#clave-publishable) en la
+cabecera `apikey`. Por defecto, una petición devuelve como mucho 1000 filas (spec 0013).
+
+### clave-publishable
+La clave que identifica tu proyecto ante la [API REST](#api-rest) de Supabase; empieza por
+`sb_publishable_`. Es **pública por diseño**: se puede ver sin peligro, porque solo permite lo
+que dejan las [políticas](#politica) de [RLS](#rls). Su opuesta es la clave secreta
+(`sb_secret_…`), que se salta RLS y lo puede todo: nunca debe salir de un servidor de confianza.
+Sustituye a la antigua clave `anon`, que Supabase está retirando.
+
+### rol
+En Postgres, un rol es un "usuario" de la base de datos con sus permisos. Supabase elige el rol
+de cada petición a la API: `anon` si llega solo con la [clave publishable](#clave-publishable)
+(un visitante sin sesión, como nuestro build) y `authenticated` si además lleva la sesión de un
+usuario que ha iniciado sesión (lo usará el panel del dueño, features 11 y 12).
+
+### grant
+`grant select on table public.products to anon, authenticated;` da a esos [roles](#rol) permiso
+para **leer** (`select`) esa tabla. Es la primera puerta: sin `grant`, Postgres rechaza la
+lectura con el error `42501`. La segunda puerta es [RLS](#rls), que decide qué filas.
+
+### rls
+*Row Level Security*, seguridad por fila. Con `alter table … enable row level security`,
+Postgres no deja ver ni cambiar **ninguna** fila a través de la API salvo las que permita alguna
+[política](#politica). Una lectura sin política no da error: devuelve una lista vacía. Es lo que
+hace segura una clave pública: aunque cualquiera tenga la
+[clave publishable](#clave-publishable), solo puede hacer lo que digan las políticas.
+
+### politica
+En inglés, *policy*. Una regla de [RLS](#rls):
+`create policy "nombre" on tabla for select to anon, authenticated using (true);` se lee "para
+leer (`for select`), a estos [roles](#rol), deja ver las filas en las que la condición de
+`using` sea verdadera". `using (true)` = todas las filas. Cada acción (`select`, `insert`,
+`update`, `delete`) necesita su propia política; una acción sin política queda prohibida.
+
+### storage-y-bucket
+Supabase Storage es el almacén de archivos de Supabase, como la carpeta de subidas que montarías
+a mano en un servidor Express, pero en el suyo. Los archivos se agrupan en *buckets* (cubos):
+carpetas con nombre y sus propias reglas. De un bucket **público** cualquiera puede descargar un
+archivo por su URL, sin clave:
+`https://<ref>.supabase.co/storage/v1/object/public/<bucket>/<archivo>`. Subir o borrar sigue
+necesitando permiso. Aquí el bucket es `product-photos`.
+
+---
+
 ## Imágenes
 
 ### image-component
@@ -438,7 +588,30 @@ de la imagen en otro sitio, como una etiqueta [Open Graph](#open-graph).
 ### image-en-esquema
 `image()` es un ayudante que Astro pasa a la función del [esquema](#esquema)
 (`schema: ({ image }) => ...`). Marca un campo como ruta a una imagen local, relativa al
-archivo de datos, para que Astro la procese y `<Image>` pueda optimizarla.
+archivo de datos, para que Astro la procese y `<Image>` pueda optimizarla. El proyecto lo usó
+hasta la spec 0013; desde entonces `photo` es una [imagen remota](#imagen-remota).
+
+### imagen-remota
+Una imagen que no está en tu proyecto sino en otro servidor, y se da por su URL
+(`https://…/arroz-blanco.jpg`). [`<Image>`](#image-component) también las optimiza: en el build,
+Astro la descarga, genera las versiones [WebP](#webp) y las guarda en `dist/_astro/`, así que la
+página final apunta a tu propio sitio y no al servidor original. Solo lo hace con las
+direcciones permitidas en [`remotePatterns`](#remote-patterns). Guarda las descargas en
+`node_modules/.astro` para no repetirlas en cada build.
+
+### remote-patterns
+`image.remotePatterns` en `astro.config.mjs`: la lista de direcciones de las que Astro acepta
+descargar y optimizar [imágenes remotas](#imagen-remota). Cada patrón fija `protocol` (`https`),
+`hostname` (el dominio; `*.supabase.co` = cualquier subdominio de un nivel, como
+`abcd.supabase.co`) y `pathname` (la ruta; `/**` al final = cualquier cosa debajo, como en un
+[patrón glob](#patron-glob)). Una URL que no encaja con ningún patrón no se optimiza.
+
+### infersize
+Una foto importada de `src/assets/` ya trae su ancho y alto, pero una
+[imagen remota](#imagen-remota) es solo un texto con una URL. `<Image>` necesita esas medidas
+(para el `width` y `height` del `<img>`, y para no generar versiones más grandes que el
+original). `inferSize` en `<Image>`, o `inferSize: true` en [`getImage()`](#getimage), le dice a
+Astro "descárgala y mídela tú". En la página del arroz da `width="1067" height="1067"`.
 
 ### webp
 Un formato de imagen más ligero que JPG con la misma calidad aparente. Todos los navegadores

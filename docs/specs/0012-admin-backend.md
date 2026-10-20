@@ -1,6 +1,6 @@
 # 0012 · Admin backend and publishing
 
-**Status:** In Progress
+**Status:** Accepted
 **Date:** 2026-10-17
 **Scope:** `docs/scope/scope.md` → feature 09
 **Supersedes:** — (the demo keeps the Vercel hosting of 0001 and 0008; sold sites add
