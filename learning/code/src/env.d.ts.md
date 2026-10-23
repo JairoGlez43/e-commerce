@@ -48,7 +48,7 @@ interface ImportMeta {
   opcional y texto. Añadida en la spec 0013.
 - `readonly SUPABASE_PUBLISHABLE_KEY?: string;`: la
   [clave publishable](../glosario.md#clave-publishable) del proyecto (`sb_publishable_…`). También
-  opcional: por eso `getConfig()`, en `supabase.ts`, comprueba las dos antes de usarlas y para el
+  opcional: por eso `supabaseConfig()`, en `supabase.ts`, comprueba las dos antes de usarlas y para el
   build si falta alguna.
 - `interface ImportMeta { readonly env: ImportMetaEnv; }`: dice que `import.meta.env` tiene la
   forma de arriba. Es el patrón que indica la guía de variables de entorno de Astro.

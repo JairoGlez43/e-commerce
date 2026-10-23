@@ -133,6 +133,31 @@ _Added by /develop as they ship: name · path · exact classes · variants._
   → `<WhatsAppIcon variant="white" />` → "Pedir por WhatsApp" (in stock) or "Preguntar por
   WhatsApp" (out of stock). Same tab.
 
+_Admin (`/admin/`, spec 0014): the only route with forms and client JS._
+- **Admin header** · `src/pages/admin/index.astro` · `<header class="border-b border-border bg-surface">`
+  → awning → `<div class="mx-auto flex max-w-md items-center px-4 py-3">` with the shop name
+  `<p class="font-display text-2xl font-semibold">` (not a link: the admin never links to public
+  pages). The page column is `<main class="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">`.
+- **Admin card** · `src/pages/admin/index.astro` · one per view:
+  `<section class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">` (the Info
+  block with `gap-4`), with an `h2` and a `<form class="flex flex-col gap-4">`.
+- **Text field** · `src/pages/admin/index.astro` · label above, always visible:
+  `<div class="flex flex-col gap-1">` → `<label class="font-medium">` →
+  `<input class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink">`.
+  The border uses `muted`, not `border`, so the field's edge is visible against `surface`
+  (`border` is decorative only).
+- **Primary button (form)** · the Primary button plus `disabled:opacity-50`. While a request runs,
+  it is disabled and its label ends in "…" (the label lives in `data-label`).
+- **Secondary button** · `src/pages/admin/index.astro` ("Cerrar sesión") ·
+  `inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent disabled:opacity-50`
+  (the Contact link's look, for an action that is not the main one).
+- **Text button** · `src/pages/admin/index.astro` ("¿Olvidaste tu contraseña?", "Volver") ·
+  `<button type="button" class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4">`.
+- **Form messages** · `src/pages/admin/index.astro` · errors
+  `<p role="alert" class="font-medium text-accent empty:hidden">` (the words carry the meaning, the
+  color only supports it); notices `<p role="status" class="text-sm text-muted empty:hidden">`.
+  `empty:hidden` keeps an empty message from adding a gap.
+
 ## Contrast added by spec 0011
 The base table is in `docs/specs/0002-design-base.md`. New pairs (WCAG ratios, 2026-10-16):
 | Text | Background | Ratio |

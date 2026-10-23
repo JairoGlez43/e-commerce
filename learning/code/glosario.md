@@ -7,7 +7,8 @@ de repetir la definición. Si un término necesita una lección entera, lo indic
 Índice: [Proceso y herramientas](#proceso-y-herramientas) · [Astro](#astro) ·
 [TypeScript y JavaScript moderno](#typescript-y-javascript-moderno) · [Datos](#datos) ·
 [Supabase y SQL](#supabase-y-sql) · [Imágenes](#imágenes) · [Tailwind y CSS](#tailwind-y-css) ·
-[HTML y accesibilidad](#html-y-accesibilidad) · [Web y rendimiento](#web-y-rendimiento)
+[HTML y accesibilidad](#html-y-accesibilidad) · [Web y rendimiento](#web-y-rendimiento) ·
+[Autenticación y sesiones](#autenticación-y-sesiones)
 
 ---
 
@@ -188,6 +189,18 @@ La forma de Astro de servir [fuentes web](#fuente-web). Se declaran en `astro.co
 (archivo, grosor, nombre de variable). El componente `<Font cssVariable="--font-fraunces" />` de
 `astro:assets` escribe en el `<head>` el CSS que la carga y crea esa [variable CSS](#variable-css).
 
+### script-en-astro
+Una etiqueta `<script>` escrita en la plantilla de un `.astro` **sin ningún atributo**. Es la
+única parte de un `.astro` que se ejecuta **en el navegador** del visitante, no en el build.
+Astro la procesa al construir el sitio: acepta TypeScript e `import`, la junta con todo lo que
+importa en un solo archivo `.js` dentro de `dist/_astro/` y escribe en la página un
+`<script type="module" src="/_astro/….js">`. Si le pones cualquier atributo (por ejemplo
+`is:inline`), Astro deja de procesarla y la copia tal cual. El [frontmatter](#frontmatter) no
+puede pasarle variables directamente, porque corre en otro momento (el build) y en otro sitio
+(tu PC o Vercel); se le pasan escribiéndolas en el HTML con [atributos data](#atributo-data).
+En este proyecto solo la usa la página `/admin/` (specs 0012 y 0014); las páginas de clientes
+no llevan ninguna.
+
 ---
 
 ## TypeScript y JavaScript moderno
@@ -321,6 +334,51 @@ qué [props](#props) recibe la página.
 comprueba nada, ni al revisar ni al ejecutar: si te equivocas, TypeScript no se entera. Se usa
 cuando el valor llega de fuera y TypeScript no puede conocer su forma, como el JSON que
 devuelve un [fetch](#fetch). Es lo contrario de [satisfies](#satisfies), que sí comprueba.
+
+### afirmacion-no-nulo
+Un `!` **detrás** de un valor, como `document.getElementById('admin')!`, le dice al
+[typecheck](#typecheck): "confía en mí, esto no es `null` ni `undefined`". Igual que la
+[afirmación de tipo](#afirmacion-de-tipo), no comprueba nada al ejecutar: si te equivocas, el
+error sale más tarde, al usar el valor. Se usa cuando sabes que algo existe, por ejemplo un
+elemento que está en tu propio HTML.
+
+### alias-de-tipo
+`type View = 'sign-in' | 'recover';` da un nombre a un [tipo](#tipo), aquí una
+[unión](#union) de textos exactos: una variable de tipo `View` solo puede valer uno de ellos.
+Se parece a una [interface](#interface), pero sirve para cualquier tipo, no solo para objetos.
+Con `export type` se puede usar desde otros archivos.
+
+### record-y-unknown
+`unknown` es el [tipo](#tipo) de un valor del que no se sabe nada: TypeScript no deja usarlo
+hasta comprobar qué es (`typeof x === 'string'`). `Record<Clave, Valor>` es el tipo de un objeto
+cuyas claves son los valores de `Clave` y que guarda un `Valor` en cada una.
+`Record<string, unknown>` = un objeto con cualquier clave y valores desconocidos. Si `Clave` es
+una [unión](#union), como en `Record<AuthErrorKind, string>`, el objeto tiene que tener **todas**
+las claves: si falta una, el [typecheck](#typecheck) avisa.
+
+### clase
+`class AuthError extends Error { … }` crea un tipo de objeto propio a partir de otro: `extends
+Error` = "es un `Error` de JavaScript, con algo más". Dentro, el `constructor(…)` se ejecuta al
+hacer `new AuthError('rate')`, y `super(…)` llama antes al constructor de `Error` (con el
+mensaje). En TypeScript, `constructor(readonly kind: …)` crea a la vez un campo `kind` que ya
+no se puede cambiar (`readonly` = solo lectura).
+
+### instanceof
+`error instanceof AuthError` es `true` si `error` se creó con `new AuthError(…)`. Sirve dentro
+de un `catch` para saber qué clase de error ha llegado ([clase](#clase)).
+
+### finally
+En `try { … } catch { … } finally { … }`, el bloque `finally` se ejecuta **siempre** al final:
+si todo fue bien, si hubo un error y también si el `try` hizo `return`. Sirve para dejar las
+cosas en orden (reactivar un botón, borrar una variable). Una promesa tiene lo mismo:
+`promesa.finally(() => …)` se ejecuta cuando la promesa termina, bien o mal. Por cierto,
+`catch { … }` sin `(error)` captura el error sin darle nombre, cuando no hace falta mirarlo.
+
+### operador-void
+`void tarea()` ejecuta `tarea()` y tira lo que devuelve. Con una función
+[async](#async-await), que devuelve una promesa, significa "la lanzo y, a propósito, no espero a
+que termine". Es una forma de dejarlo claro para quien lee el código y para las herramientas que
+avisan de promesas olvidadas.
 
 ### async-await
 Una función `async` puede esperar resultados lentos con `await` (leer datos, por ejemplo)
@@ -468,8 +526,10 @@ El [backend como servicio](#backend-como-servicio) del proyecto (elegido en la s
 catálogo vive ahí desde la spec 0013). Cada proyecto de Supabase trae una base de datos
 [Postgres](#postgres), una [API REST](#api-rest) que se genera sola a partir de sus tablas y un
 almacén de archivos ([Storage](#storage-y-bucket)). Su dirección es
-`https://<ref>.supabase.co`, donde `<ref>` es un código único del proyecto. Aquí solo lo lee el
-[build](#build): los clientes reciben páginas estáticas y nunca hablan con Supabase.
+`https://<ref>.supabase.co`, donde `<ref>` es un código único del proyecto. El catálogo solo lo
+lee el [build](#build): los clientes reciben páginas estáticas y nunca hablan con Supabase. La
+única excepción es la página del dueño, `/admin/`, cuyo navegador habla con
+[Supabase Auth](#supabase-auth) para iniciar sesión (spec 0014).
 
 ### postgres
 PostgreSQL: una base de datos que guarda los datos en [tablas](#tabla-sql) y se maneja con SQL.
@@ -541,7 +601,8 @@ Sustituye a la antigua clave `anon`, que Supabase está retirando.
 En Postgres, un rol es un "usuario" de la base de datos con sus permisos. Supabase elige el rol
 de cada petición a la API: `anon` si llega solo con la [clave publishable](#clave-publishable)
 (un visitante sin sesión, como nuestro build) y `authenticated` si además lleva la sesión de un
-usuario que ha iniciado sesión (lo usará el panel del dueño, features 11 y 12).
+usuario que ha iniciado sesión (lo usará la administración del dueño desde la feature 12, cuando
+lea y escriba el catálogo con su [access token](#access-token)).
 
 ### grant
 `grant select on table public.products to anon, authenticated;` da a esos [roles](#rol) permiso
@@ -561,6 +622,15 @@ En inglés, *policy*. Una regla de [RLS](#rls):
 leer (`for select`), a estos [roles](#rol), deja ver las filas en las que la condición de
 `using` sea verdadera". `using (true)` = todas las filas. Cada acción (`select`, `insert`,
 `update`, `delete`) necesita su propia política; una acción sin política queda prohibida.
+
+### funcion-sql
+Postgres también tiene funciones, como JavaScript. `create function public.nombre() returns
+boolean language sql as $$ select … $$` crea una, en el [esquema](#esquema-sql) `public`, que no
+recibe nada y devuelve verdadero o falso (`boolean`). `language sql` dice que el cuerpo está
+escrito en SQL; el cuerpo va entre los dos `$$`, que hacen de comillas (así dentro se pueden usar
+comillas simples sin problema). `create or replace` la crea, o la sustituye si ya existe, así que
+el archivo se puede ejecutar otra vez sin error. Se llama igual que en JavaScript:
+`select public.nombre();`. Una [política](#politica) puede usarla dentro de su `using (…)`.
 
 ### storage-y-bucket
 Supabase Storage es el almacén de archivos de Supabase, como la carpeta de subidas que montarías
@@ -668,7 +738,9 @@ que trae Tailwind, para que solo existan los colores del proyecto.
 ### variante
 Un prefijo que aplica la clase solo en un caso: `sm:` desde 640 px de ancho, `md:` desde
 768 px, `lg:` desde 1024 px, `hover:` al pasar el ratón, `active:` mientras se pulsa, `placeholder:` al texto de
-ejemplo de un input, `after:` al pseudo-elemento `::after`.
+ejemplo de un input, `after:` al pseudo-elemento `::after`, `disabled:` mientras un botón está
+desactivado (`:disabled`), `empty:` cuando el elemento no tiene nada dentro (`:empty`; así
+`empty:hidden` lo oculta mientras está vacío).
 
 ### preflight
 El "reset" que Tailwind trae con `@import "tailwindcss"`: limpia los estilos que el navegador
@@ -808,6 +880,42 @@ título), con un triangulito delante que pinta el navegador. Al tocar el título
 resto del contenido, y al tocarlo otra vez se pliega. Funciona **sin JavaScript** y con teclado
 (Tab hasta el título, Enter para abrir). Con el atributo `open` empieza desplegado.
 
+### atributo-data
+`data-algo="valor"` en cualquier etiqueta: un atributo con nombre inventado por ti para guardar
+datos en el HTML. No cambia cómo se ve nada. Desde JavaScript se lee con
+`elemento.dataset.algo`; los guiones pasan a *camelCase*: `data-supabase-url` →
+`dataset.supabaseUrl`. También sirve para encontrar elementos sin usar clases ni `id`:
+`querySelector('[data-view="recover"]')`.
+
+### atributo-hidden
+`<section hidden>` oculta el elemento, como `display: none`: no se ve, no ocupa sitio y el
+lector de pantalla lo salta. Desde JavaScript se pone y se quita con `elemento.hidden = true` o
+`false`. El [preflight](#preflight) de Tailwind lo refuerza con `display: none !important`, para
+que una clase como `flex` no lo vuelva a mostrar.
+
+### validacion-de-formularios
+HTML trae comprobaciones propias en los campos: `required` (obligatorio), `type="email"` (con
+forma de email), `minlength="8"` (al menos 8 caracteres). Normalmente el navegador las revisa al
+enviar el formulario y, si algo falla, muestra un aviso junto al campo y no lo envía.
+`novalidate` en el `<form>` apaga esa revisión automática, y `form.reportValidity()` la lanza a
+mano cuando tú quieras: revisa los campos, muestra el aviso del primero que falla y devuelve
+`true` si todo está bien o `false` si no.
+
+### autocomplete
+`autocomplete="email"`, `"current-password"` (la contraseña de siempre) o `"new-password"` (una
+contraseña nueva) en un `<input>` le dice al navegador y al gestor de contraseñas qué va en ese
+campo, para que lo rellene solo o proponga una contraseña segura.
+
+### noscript
+`<noscript>…</noscript>`: su contenido solo se muestra si el navegador **no** ejecuta
+JavaScript (porque está desactivado o bloqueado). Si JavaScript funciona, se ignora.
+
+### role-alert-status
+`role="alert"` y `role="status"` marcan una zona cuyo texto va a cambiar. Cuando JavaScript
+escribe en ella, el lector de pantalla lo lee en voz alta sin que el usuario tenga que ir hasta
+allí: `alert` interrumpe en el momento (para errores), `status` espera a que termine lo que está
+leyendo (para avisos tranquilos).
+
 ---
 
 ## Web y rendimiento
@@ -836,4 +944,116 @@ descomprime. Por eso el presupuesto de peso se mide "gzipped": es lo que viaja p
 
 ### presupuesto-de-peso
 Los límites de KB por página que fija la spec 0001 (HTML + CSS ≤ 50 KB, imágenes de la
-primera vista ≤ 150 KB…), pensados para conexiones lentas en Cuba.
+primera vista ≤ 150 KB…), pensados para conexiones lentas en Cuba. La página del dueño,
+`/admin/`, tiene uno propio (spec 0014): el mismo, pero con hasta 15 KB de JavaScript en vez
+de 5.
+
+### codigo-de-estado-http
+El número con el que un servidor dice cómo fue una petición (en Express lo eliges con
+`res.status(404)`). [fetch](#fetch) lo da en `response.status`. Los que aparecen en este
+proyecto: `200` = todo bien; `400` = la petición no vale (por ejemplo, una contraseña incorrecta);
+`401` = "no sé quién eres" (falta la identificación o no sirve); `403` = "no te dejo" (sé lo que
+pides y lo rechazo); `422` = "te entiendo, pero el dato no vale" (una contraseña demasiado
+corta); `429` = "demasiadas peticiones, espera un poco"; `5xx` (`500`, `503`…) = falló el
+propio servidor. Supabase añade a sus respuestas de error un **código de error** en texto
+(`invalid_credentials`, `bad_jwt`…) que precisa qué pasó, y no siempre usa el número que
+esperarías: por ejemplo, contesta con `403` a un [token de sesión](#jwt) que no vale.
+
+### fragmento-de-url
+La parte de una dirección que va detrás de `#`. En
+`https://tienda.com/admin/#access_token=abc`, el fragmento es `access_token=abc`. Lo normal es
+usarlo para saltar a un `id` de la página (`#contacto`). Dos cosas importantes: el navegador
+**nunca lo envía al servidor** (Vercel recibe solo `/admin/`), y JavaScript lo lee con
+`location.hash` (que incluye el `#` del principio).
+
+### url-search-params
+`new URLSearchParams('a=1&b=dos')` convierte un texto con la forma `clave=valor&clave=valor` en
+un objeto que se consulta con `.get('a')` (da el texto `'1'`, o `null` si no está) y `.has('b')`
+(`true` o `false`). Deshace solo los códigos `%XX` de [encodeURIComponent](#encodeuricomponent).
+Es lo que Express te da hecho en `req.query`.
+
+### history-replacestate
+`history.replaceState(null, '', nuevaDireccion)` cambia la dirección que se ve en la barra **sin
+recargar la página** y **sin añadir** una entrada al historial: sustituye la actual. Así, el
+botón "atrás" ya no puede volver a la dirección vieja. (`location.pathname` es la ruta de la
+dirección, `/admin/`, y `location.search` la parte `?…`, si la hay.)
+
+### localstorage
+Un pequeño almacén de textos que el navegador guarda **para cada sitio web** y que sobrevive a
+cerrar la pestaña y el navegador. `localStorage.setItem('clave', 'texto')` guarda,
+`localStorage.getItem('clave')` lee (o da `null` si no hay nada) y
+`localStorage.removeItem('clave')` borra. Solo guarda texto, así que un objeto se convierte antes
+con `JSON.stringify(objeto)` y se recupera con `JSON.parse(texto)`. Cualquier script de ese
+mismo sitio puede leerlo. En modo privado o con el almacenamiento bloqueado, usarlo puede lanzar
+un error. Se ve en las herramientas del navegador (F12 → *Application* → *Local storage*).
+
+---
+
+## Autenticación y sesiones
+
+### autenticacion
+Comprobar **quién** es alguien (en inglés, *authentication*, abreviado *auth*). En la web, lo
+normal es pedir email y contraseña una vez y, si son correctos, darle al navegador una prueba de
+que ya entró, para no pedírselos en cada petición. Esa prueba es la [sesión](#sesion). Decidir
+**qué puede hacer** quien ya entró es otra cosa, la autorización; en Supabase la hacen el
+[rol](#rol), las [políticas](#politica) y [`app_metadata`](#app-metadata).
+
+### sesion
+El estado "ya entraste", que dura de una petición a la siguiente. Si has usado
+`express-session`, allí el servidor guarda la sesión y el navegador solo lleva una cookie con un
+número. Con [Supabase Auth](#supabase-auth) es al revés: el navegador guarda la sesión entera,
+que son dos tokens (un [access token](#access-token) y un [refresh token](#refresh-token)) y la
+hora a la que caduca el primero, y manda el access token en cada petición. Aquí se guarda en
+[localStorage](#localstorage). "Cerrar sesión" = borrarla del navegador y pedir al servidor que
+no acepte más sus tokens.
+
+### jwt
+*JSON Web Token* (se pronuncia "jot"). Un texto largo en tres partes separadas por puntos
+(`xxxxx.yyyyy.zzzzz`): una cabecera, los datos y una **firma**. Los datos (en inglés, *claims*)
+son un pequeño objeto JSON: quién es el usuario (su `email`), su [`app_metadata`](#app-metadata)
+y cuándo caduca. La firma la calcula Supabase con una clave que solo él conoce: cualquiera puede
+leer los datos, pero si alguien cambia una letra, la firma deja de cuadrar y Supabase lo rechaza.
+Por eso Supabase puede fiarse de lo que dice un JWT sin buscarlo en ninguna parte. Viaja en la
+cabecera HTTP `Authorization: Bearer <jwt>` (*bearer* = "portador": entra quien lo lleva). No
+confundir con un [token de diseño](#token), que es otra cosa.
+
+### access-token
+El [JWT](#jwt) que demuestra que tienes una [sesión](#sesion) abierta. Va en cada petición que
+necesita saber quién eres. Caduca pronto (con la configuración por defecto de Supabase, que es
+la del proyecto, a la hora), para que, si alguien lo roba, le sirva poco tiempo. Al entregarlo,
+Supabase dice cuántos segundos le quedan: `expires_in: 3600`.
+
+### refresh-token
+El segundo token de la [sesión](#sesion). Solo sirve para una cosa: pedir a
+[Supabase Auth](#supabase-auth) un [access token](#access-token) nuevo cuando el actual va a
+caducar, sin volver a escribir la contraseña. Supabase contesta con una pareja nueva (access +
+refresh) y el refresh token usado queda **gastado**: es de un solo uso (en inglés, *rotation*;
+Supabase acepta repetirlo solo durante 10 segundos). En el plan gratuito de Supabase no caduca,
+así que la sesión dura hasta que el dueño la cierra (según la spec 0014).
+
+### supabase-auth
+La parte de [Supabase](#supabase) que maneja usuarios: guarda sus emails y contraseñas, comprueba
+un inicio de sesión, envía el correo para recuperar la contraseña y entrega los tokens de la
+[sesión](#sesion). Tiene su propia API, cuyas direcciones empiezan por
+`https://<ref>.supabase.co/auth/v1/`: por ejemplo `/auth/v1/token` (entrar o renovar) y
+`/auth/v1/user` ("¿quién soy?"). Como en la [API REST](#api-rest), cada petición lleva la
+[clave publishable](#clave-publishable) en la cabecera `apikey`.
+
+### app-metadata
+Un objeto JSON que [Supabase Auth](#supabase-auth) guarda con cada usuario y copia dentro de su
+[JWT](#jwt). El propio usuario **no** puede cambiarlo, aunque tenga sesión; solo quien administra
+el proyecto (desde el panel o el [editor SQL](#editor-sql)). Por eso es el sitio seguro para
+marcar permisos: aquí, `{ "role": "owner" }` significa "este usuario es el dueño de la tienda".
+Su pareja, `user_metadata`, sí la puede cambiar el usuario, así que nunca sirve para permisos.
+En la tabla de usuarios de Supabase (`auth.users`) la columna se llama `raw_app_meta_data`. No
+confundir este `role` con el [rol](#rol) de Postgres: son dos cosas distintas con el mismo nombre.
+
+### flujo-implicito
+Una de las dos formas en que [Supabase Auth](#supabase-auth) entrega una sesión a través de un
+enlace de correo (en inglés, *implicit flow*). El enlace pasa primero por Supabase, que lo
+comprueba y luego manda al navegador a tu página con los tokens pegados en el
+[fragmento](#fragmento-de-url): `…/admin/#access_token=…&expires_in=3600&refresh_token=…&type=recovery`.
+Tu página los lee de ahí. Si el enlace ya se usó o caducó, el fragmento trae un error
+(`#error=…&error_code=…`). La otra forma (*PKCE*) manda solo un código que hay que canjear desde
+el **mismo navegador** que pidió el correo; la spec 0014 eligió la implícita porque en el móvil
+la app de correo suele abrir el enlace en su propio navegador.

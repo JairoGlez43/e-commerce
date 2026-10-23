@@ -80,6 +80,9 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 - Hosting: Vercel, static `dist/`; its Git integration builds every push to `main`. Live demo at
   `https://tienda-demo-cuba.vercel.app` (`site` in `astro.config.mjs`); every page is `noindex`
   while it is a demo, switch `indexable` in `src/lib/site.ts` (spec 0008).
+- Data: Supabase (Postgres tables `categories`, `products`; public Storage bucket
+  `product-photos`), read at build time only by `src/lib/supabase.ts` with plain `fetch` and the
+  publishable key; no Supabase SDK. Visitors never call Supabase (specs 0012, 0013).
 
 ## Commands
 - Dev: `pnpm dev` (http://localhost:4321)
@@ -90,6 +93,11 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 - Build needs `WHATSAPP_NUMBER` (8–15 digits) from `.env` or the shell, or it fails on purpose
   (spec 0007). Checks never read `.env`; they pass a fake inline:
   `WHATSAPP_NUMBER=5355555555 pnpm build`. Template: `.env.example`.
+- Build and dev also need internet and `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` (spec 0013):
+  `pnpm build` loads them from `.env` by itself, so checks never open `.env` and pass only the
+  fake `WHATSAPP_NUMBER` inline.
+- Database changes: edit `supabase/*.sql` and run them by hand in the Supabase dashboard SQL
+  editor (no Supabase CLI, spec 0013).
 - Weight check: `pnpm check:weight` after `pnpm build` (`scripts/check-weight.mjs`, spec 0001
   AC7); measures every page in `dist/` against the budget, exits 1 when one is over.
 **Clean means:** `pnpm typecheck` and `pnpm build` pass with zero errors.
@@ -100,9 +108,9 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 | `src/pages/` | Routes: `index.astro` (catalog), `categoria/[id].astro`, `producto/[id].astro`, `estilo.astro` (internal style guide, `noindex`) | Hold data, sorting rules or shared markup that belongs in `lib/` or `components/` |
 | `src/layouts/` | `BaseLayout.astro`: `<html lang="es">`, meta and Open Graph tags, robots, global CSS, font | Be bypassed: every page renders inside it |
 | `src/components/` | Reusable `.astro` pieces (`SiteHeader`, `CategoryNav`, `ProductCard`, `ShopInfo`, `Faq`, `SiteFooter`, `WhatsAppIcon`), listed in `design.md` | Fetch data themselves (pages pass props) |
-| `src/lib/` | Plain TS helpers, each the single home of one rule: `catalog.ts` (grouping, sort), `price.ts` (CUP format), `site.ts` (shop identity, `indexable`, shop info), `whatsapp.ts` (number, order and contact links), `date.ts` (day format in Havana time) | Be duplicated inline in a page |
-| `src/data/` | `products.json`, `categories.json` (sample data, shape fixed by spec 0004) | Be imported by pages (only `content.config.ts` reads them) |
-| `src/assets/` | Product photos (`products/<id>.jpg` + `CREDITS.md`), the font file, and the official WhatsApp glyphs (`icons/` + `SOURCE.md`, never edited), processed at build | Hold files that must be served as-is (those go in `public/`) |
+| `src/lib/` | Plain TS helpers, each the single home of one rule: `catalog.ts` (grouping, sort), `price.ts` (CUP format), `site.ts` (shop identity, `indexable`, shop info), `whatsapp.ts` (number, order and contact links), `date.ts` (day format in Havana time), `supabase.ts` (catalog reads from Supabase, photo URLs) | Be duplicated inline in a page |
+| `supabase/` | `schema.sql` (tables, RLS, bucket), `seed.sql` (the spec 0004 sample catalog), `seed-photos/` (the 18 sample photos + `CREDITS.md`, uploaded to the bucket) | Be imported by `src/`; change without running the SQL in Supabase too |
+| `src/assets/` | The font file and the official WhatsApp glyphs (`icons/` + `SOURCE.md`, never edited), processed at build | Hold files that must be served as-is (those go in `public/`) |
 | `src/styles/` | `global.css`: Tailwind entry, `@theme` tokens, base styles, `.price` and `.awning` | Gain raw values used elsewhere: it is the only place they live |
 | `public/` | Files served as-is (favicons, `og-default.png`) | Hold product images (those go through astro:assets per spec 0001) |
 | `docs/` | Brief, scope, specs (+ `.verify.md` check steps), reviews | Be edited outside the owning skill (see Ownership) |
@@ -117,14 +125,21 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
   word (`catalog.ts`); functions camelCase (`getCatalog`, `formatPrice`, `orderLink`). URL
   segments, data ids and UI text are Spanish (`/producto/arroz-blanco`); code, identifiers and
   comments are English and cite their spec number. Ids are lowercase kebab-case, enforced by the
-  schema; a product's photo is `src/assets/products/<id>.jpg`.
+  schema; a product's photo is `<id>.jpg` in the Supabase bucket `product-photos` (column
+  `photo_path`). Table columns are snake_case; the loaders map them to the spec 0004 shape.
 - Data access: content collections `products` and `categories` in `src/content.config.ts`
-  (`file()` loader, `z` from `astro/zod`), read only through `astro:content` (`getCollection`,
-  `getEntry`). Catalog pages go through `getCatalog()` in `src/lib/catalog.ts`. The one direct
-  JSON import is in `content.config.ts`, to validate category ids (spec 0004). Dynamic routes
+  (inline loaders over `readCategories()` / `readProducts()` from `src/lib/supabase.ts`, `z` from
+  `astro/zod`), read only through `astro:content` (`getCollection`,
+  `getEntry`). Catalog pages go through `getCatalog()` in `src/lib/catalog.ts`. Unknown category
+  ids are refused in `readProducts()` (spec 0013). Dynamic routes
   export `getStaticPaths = (async () => …) satisfies GetStaticPaths`.
 - Results and errors: no server code. Bad data or config must fail the build: zod schema errors,
   and `throw new Error(…)` for a missing/invalid env var (`src/lib/whatsapp.ts`).
+  `src/lib/supabase.ts` also throws on a bad URL or key, a secret key, a failed or non-2xx read,
+  an empty table and ≥ 1000 rows; messages name the variable, never its value (spec 0013).
+- Product photos: remote URLs, allowed only by `image.remotePatterns` in `astro.config.mjs`
+  (`*.supabase.co/storage/v1/object/public/product-photos/**`); `<Image>` gets `inferSize`
+  and `getImage()` gets `inferSize: true`, so they are downloaded and optimized at build.
 - Client JS: none. No `<script>` tags and no `client:` directives in `src/` (budget: spec 0001).
 - Styling: Tailwind utilities that use token names only (`bg-accent`, `text-muted`,
   `rounded-card`); raw values live only in `src/styles/global.css` (`--color-*: initial` removes
@@ -141,6 +156,10 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 - Env vars: `WHATSAPP_NUMBER`, build-time only (read in `src/lib/whatsapp.ts` via
   `import.meta.env`, typed in `src/env.d.ts`, documented in `.env.example`); set in `.env`
   (gitignored) and in Vercel. Not secret (it ends up in the page) but kept out of the repo.
+- Env vars `SUPABASE_URL` (project URL only, no `/rest/v1`, no trailing slash) and
+  `SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_…`, never a secret key): build-time only, read in
+  `src/lib/supabase.ts`, typed in `src/env.d.ts`, documented in `.env.example`; set in `.env`
+  and in Vercel (Production and Preview). Public by design, kept out of the repo (spec 0013).
 - Framework docs: Astro ships no bundled docs for agents. Use the `researcher` subagent
   (ask first) before using an Astro API you are not sure about; installed type definitions in
   `node_modules/astro/client.d.ts` are a local first check.
@@ -151,11 +170,14 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 - Tailwind CSS v4: entry and tokens in `src/styles/global.css` (`@import "tailwindcss"`,
   `@theme`); no config file, no plugins without a new decision. Decision: `docs/specs/0001-stack.md`,
   tokens `docs/specs/0002-design-base.md`
+- Supabase: no SDK; REST (`/rest/v1/<table>`, header `apikey`) and public Storage URLs through
+  `fetch` in `src/lib/supabase.ts` only. Decision: `docs/specs/0012-admin-backend.md`,
+  `docs/specs/0013-catalog-data-online.md`
 
 ## Known pitfalls
 _Added by /sync from /debug findings: symptom → cause → rule._
 - Unknown category id builds fine → `reference()` alone only logs `[ERROR]` and exits 0 → check
-  ids in the schema (`refine`) before `.pipe(reference(...))` (spec 0004).
+  ids before `reference()`; today that is `readProducts()` in `src/lib/supabase.ts` (specs 0004, 0013).
 - A text link measures under 44 px despite `min-h-11` → `min-height` does not apply to inline
   elements → links that must be 44 px get `inline-flex min-h-11 items-center` (spec 0005 verify).
 - `3400 CUP` has no dot but `12.500 CUP` does → `Intl` `es-ES` does not group 4-digit numbers →
@@ -179,6 +201,12 @@ _Added by /sync from /debug findings: symptom → cause → rule._
   as `<img src={file.src}>`, never as a component (spec 0011).
 - `curl http://127.0.0.1:<port>` gets no answer from `pnpm preview` → it listens on `localhost`
   only → use the exact URL it prints.
+- Every Supabase read answers 404 → `SUPABASE_URL` was copied from the dashboard's Data API
+  section and ends in `/rest/v1/` → set the project URL only; the build now refuses it with a
+  message (spec 0013).
+- A wrong-env-var test on Vercel ends Ready → "Redeploy" on an older deployment rebuilds that
+  old commit, which may not read the variable → redeploy the deployment of the commit under test
+  (spec 0013 verify).
 
 ## Git
 integration: off   <!-- on = /develop branches and commits as milestones land -->

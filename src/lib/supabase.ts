@@ -24,7 +24,8 @@ const MAX_ROWS = 1000;
 
 // Both values are public by design but kept out of the repo, like WHATSAPP_NUMBER.
 // Errors name the variable, never its value. A bad value stops the build.
-function getConfig(): { url: string; key: string } {
+// The admin page also calls it at build to hand both values to its script (spec 0014).
+export function supabaseConfig(): { url: string; key: string } {
 	const url = import.meta.env.SUPABASE_URL;
 	const key = import.meta.env.SUPABASE_PUBLISHABLE_KEY;
 	if (!url || !/^https:\/\/[^/\s]+$/.test(url)) {
@@ -44,7 +45,7 @@ function getConfig(): { url: string; key: string } {
 // Reads every row of a table through the REST API. Fails on anything but a full, non-empty
 // answer: a missing grant or policy returns [] with status 200, which would publish an empty shop.
 async function readTable<Row>(table: string, columns: string): Promise<Row[]> {
-	const { url, key } = getConfig();
+	const { url, key } = supabaseConfig();
 	let response: Response;
 	try {
 		response = await fetch(`${url}/rest/v1/${table}?select=${columns}`, { headers: { apikey: key } });
@@ -89,5 +90,5 @@ export async function readProducts(): Promise<ProductRow[]> {
 
 // Public URL of a photo in the bucket; astro:assets downloads and optimizes it at build.
 export function photoUrl(path: string): string {
-	return `${getConfig().url}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
+	return `${supabaseConfig().url}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
 }

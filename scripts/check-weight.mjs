@@ -16,6 +16,11 @@ const BUDGET = {
 	firstView: 150,
 };
 
+// The owner's admin (/admin/) is the only route allowed client JS (spec 0012), so it gets its
+// own JS limit (spec 0014). HTML+CSS, fonts and images keep the public limits.
+const ADMIN_BUDGET = { ...BUDGET, js: 15 };
+const isAdminRoute = (route) => route.startsWith('/admin/');
+
 const dist = process.argv[2] ?? 'dist';
 if (!fs.existsSync(dist)) {
 	console.error(`No ${dist}/ folder. Run \`pnpm build\` first.`);
@@ -72,8 +77,9 @@ function measure(file) {
 	const firstView = images.filter((image) => image.eager).reduce((sum, image) => sum + image.size, 0);
 
 	const failures = [];
-	if (kb(htmlCss) > BUDGET.htmlCss) failures.push(`HTML+CSS ${kb(htmlCss).toFixed(1)} > ${BUDGET.htmlCss} KB`);
-	if (kb(js) > BUDGET.js) failures.push(`JS ${kb(js).toFixed(1)} > ${BUDGET.js} KB`);
+	const budget = isAdminRoute(route) ? ADMIN_BUDGET : BUDGET;
+	if (kb(htmlCss) > budget.htmlCss) failures.push(`HTML+CSS ${kb(htmlCss).toFixed(1)} > ${budget.htmlCss} KB`);
+	if (kb(js) > budget.js) failures.push(`JS ${kb(js).toFixed(1)} > ${budget.js} KB`);
 	if (fonts.length > BUDGET.fontFiles) failures.push(`${fonts.length} font files > ${BUDGET.fontFiles}`);
 	if (fontSizes.some((size) => kb(size) > BUDGET.fontFile)) failures.push(`font file > ${BUDGET.fontFile} KB`);
 	if (kb(largest) > imageLimit) failures.push(`image ${kb(largest).toFixed(1)} > ${imageLimit} KB`);
@@ -92,6 +98,7 @@ function measure(file) {
 
 const rows = findPages(dist).sort().map(measure);
 console.log(`Weight budget (KB): HTML+CSS ≤ ${BUDGET.htmlCss} gz · JS ≤ ${BUDGET.js} gz · font ≤ ${BUDGET.fontFile} · thumbnail ≤ ${BUDGET.thumbnail} · detail photo ≤ ${BUDGET.detailPhoto} · first view ≤ ${BUDGET.firstView}`);
+console.log(`Admin (/admin/): HTML+CSS ≤ ${ADMIN_BUDGET.htmlCss} gz · JS ≤ ${ADMIN_BUDGET.js} gz`);
 console.table(rows);
 
 const failed = rows.filter((row) => row.result !== 'ok');

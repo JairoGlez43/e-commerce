@@ -3,7 +3,9 @@
 > **Qué es:** las funciones que leen el catálogo de Supabase durante el build: las categorías, los
 > productos y la URL de cada foto · **Lo decidió:**
 > [spec 0013](../../../../docs/specs/0013-catalog-data-online.md) (sección Design → Reading) ·
-> **Lo usan:** [`src/content.config.ts`](../content.config.ts.md) (sus dos loaders) ·
+> **Lo usan:** [`src/content.config.ts`](../content.config.ts.md) (sus dos loaders) y, solo
+> `supabaseConfig()`, [`src/pages/admin/index.astro`](../pages/admin/index.astro.md) (spec
+> [0014](../../../../docs/specs/0014-owner-login.md)) ·
 > **Usa:** las variables de entorno `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`, y la
 > [API REST](../../glosario.md#api-rest) de Supabase con `fetch`
 
@@ -11,8 +13,10 @@
 
 Desde la spec 0013, el catálogo vive en dos tablas de [Supabase](../../glosario.md#supabase)
 (las crea [`supabase/schema.sql`](../../supabase/schema.sql.md)). Este archivo es **el único
-sitio del código que sabe hablar con Supabase**: arma las peticiones, comprueba las respuestas y
-devuelve las filas. Si mañana cambia la forma de leer Supabase, se toca solo aquí.
+sitio del código que sabe leer el catálogo de Supabase**: arma las peticiones, comprueba las
+respuestas y devuelve las filas. Si mañana cambia la forma de leer Supabase, se toca solo aquí.
+(El login del dueño también habla con Supabase, pero desde el navegador y con su propio archivo,
+[`auth.ts`](auth.ts.md).)
 
 Corre **solo en el build** (en tu PC o en Vercel), nunca en el navegador: el cliente recibe
 páginas estáticas ya hechas y no llama nunca a Supabase. Y sigue una regla de la spec 0013,
@@ -93,7 +97,8 @@ const MAX_ROWS = 1000;
 ```ts
 // Both values are public by design but kept out of the repo, like WHATSAPP_NUMBER.
 // Errors name the variable, never its value. A bad value stops the build.
-function getConfig(): { url: string; key: string } {
+// The admin page also calls it at build to hand both values to its script (spec 0014).
+export function supabaseConfig(): { url: string; key: string } {
 	const url = import.meta.env.SUPABASE_URL;
 	const key = import.meta.env.SUPABASE_PUBLISHABLE_KEY;
 ```
@@ -102,8 +107,16 @@ function getConfig(): { url: string; key: string } {
   `WHATSAPP_NUMBER`. Los errores nombran la variable, nunca su valor. Un valor malo para el
   build." Nombrar solo la variable evita que la clave acabe impresa en los registros (*logs*)
   de Vercel.
-- `function getConfig(): { url: string; key: string }`: una función **sin** `export`: solo la
-  usa este archivo. Devuelve un objeto con dos textos, `url` y `key`.
+- La tercera línea del comentario, nueva con la spec 0014: "La página de administración también
+  la llama en el build, para pasar los dos valores a su script." Esa página los escribe en su
+  HTML, y su script, que corre en el navegador, los lee de ahí
+  ([`admin/index.astro.md`](../pages/admin/index.astro.md)).
+- `export function supabaseConfig(): { url: string; key: string }`: devuelve un objeto con dos
+  textos, `url` y `key`. Hasta la spec 0014 se llamaba `getConfig` y no tenía `export`, porque
+  solo la usaba este archivo; ahora lleva `export`
+  ([import-export](../../glosario.md#import-export)) para que la página de administración la
+  importe, y un nombre que dice qué configuración da. Las comprobaciones y los mensajes no
+  cambiaron.
 - `const url = import.meta.env.SUPABASE_URL;` y la línea de `key`: leen las dos
   [variables de entorno](../../glosario.md#variable-de-entorno) con
   [import.meta.env](../../glosario.md#import-meta-env), igual que `whatsapp.ts` lee el número.
@@ -159,7 +172,7 @@ function getConfig(): { url: string; key: string } {
 // Reads every row of a table through the REST API. Fails on anything but a full, non-empty
 // answer: a missing grant or policy returns [] with status 200, which would publish an empty shop.
 async function readTable<Row>(table: string, columns: string): Promise<Row[]> {
-	const { url, key } = getConfig();
+	const { url, key } = supabaseConfig();
 ```
 
 - El comentario: "Lee todas las filas de una tabla a través de la API REST. Falla ante cualquier
@@ -173,7 +186,7 @@ async function readTable<Row>(table: string, columns: string): Promise<Row[]> {
     las dos tablas.
   - `table` y `columns`: el nombre de la tabla y las columnas a pedir, separadas por comas.
   - `Promise<Row[]>`: devuelve, más tarde, una lista de filas.
-- `const { url, key } = getConfig();`: lee y valida la configuración del bloque 4. Si algo está
+- `const { url, key } = supabaseConfig();`: lee y valida la configuración del bloque 4. Si algo está
   mal, el error sale aquí y no se llega a llamar a Supabase.
 
 ```ts
@@ -318,7 +331,7 @@ de seguridad, por si algún día los datos llegan de otro sitio.
 ```ts
 // Public URL of a photo in the bucket; astro:assets downloads and optimizes it at build.
 export function photoUrl(path: string): string {
-	return `${getConfig().url}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
+	return `${supabaseConfig().url}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
 }
 ```
 
@@ -329,7 +342,7 @@ export function photoUrl(path: string): string {
 - El resultado es `https://<ref>.supabase.co/storage/v1/object/public/product-photos/arroz-blanco.jpg`.
   `public` en la ruta significa "bucket público": se descarga sin clave
   ([Storage y bucket](../../glosario.md#storage-y-bucket)).
-- `getConfig().url`: vuelve a leer y validar la configuración y se queda solo con la URL.
+- `supabaseConfig().url`: vuelve a leer y validar la configuración y se queda solo con la URL.
 - Esta URL **no** llega a las páginas: el componente `<Image>` la descarga en el build y escribe
   en el HTML la copia optimizada de `dist/_astro/` ([imagen remota](../../glosario.md#imagen-remota)).
   Para que Astro acepte descargarla, la dirección tiene que estar permitida en
@@ -343,9 +356,13 @@ export function photoUrl(path: string): string {
   [`schema.sql`](../../supabase/schema.sql.md) y llena [`seed.sql`](../../supabase/seed.sql.md).
 - **Sale:** `readCategories()`, `readProducts()` y `photoUrl()` hacia los loaders de
   [`src/content.config.ts`](../content.config.ts.md). De ahí, a todas las páginas, que no saben
-  nada de Supabase.
-- **No sale:** ni la clave ni la dirección de Supabase llegan a `dist/`. La spec 0013 lo comprueba
-  buscando `supabase.co` y `sb_publishable_` en todos los archivos del build (AC7).
+  nada de Supabase. Y `supabaseConfig()` hacia
+  [`src/pages/admin/index.astro`](../pages/admin/index.astro.md), que escribe los dos valores en
+  su HTML para el login del dueño (spec 0014).
+- **No sale:** ni la clave ni la dirección de Supabase llegan a las páginas de clientes. La spec
+  0013 lo comprueba buscando `supabase.co` y `sb_publishable_` en los archivos del build (AC7).
+  Desde la spec 0014, la única excepción permitida es `/admin/`: los dos valores son públicos
+  por diseño y su script los necesita.
 
 ## Prueba tú
 

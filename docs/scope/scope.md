@@ -18,8 +18,8 @@
 | 16 | Shop information                 | done              | default | docs/specs/0010-shop-information.md |
 | 17 | Visual polish                    | done              | default | docs/specs/0011-visual-polish.md |
 | 09 | Admin backend and publishing     | done              | default | docs/specs/0012-admin-backend.md |
-| 10 | Catalog data online              | in-progress       | default | docs/specs/0013-catalog-data-online.md |
-| 11 | Owner login                      | needs-a-decision  | default | —    |
+| 10 | Catalog data online              | done              | default | docs/specs/0013-catalog-data-online.md |
+| 11 | Owner login                      | in-progress       | default | docs/specs/0014-owner-login.md |
 | 12 | Manage products                  | needs-a-decision  | default | —    |
 | 13 | Publish changes                  | needs-a-decision  | default | —    |
 | 14 | Product photos upload            | needs-a-decision  | default | —    |
@@ -231,7 +231,7 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 (each buyer gets their own copy) or one shared admin for many shops.
 
 ## 10 · Catalog data online
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0013-catalog-data-online.md
 **Code:** `src/lib/supabase.ts`, `src/content.config.ts`, `supabase/` (schema, seed, seed photos)
 **Depth:** default
@@ -241,14 +241,14 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 - If the online data cannot be reached, the live site keeps showing the last published catalog.
 **Tasks:**
 - [x] Decide it — /architect
-- [ ] Build it — /develop
-- [ ] Verify it — /check verify
+- [x] Build it — /develop
+- [x] Verify it — /check verify
 **Notes:** Depends on 09. Data must keep the product shape of spec 0004.
 
 ## 11 · Owner login
-**Status:** needs-a-decision
-**Spec:** —
-**Code:** —
+**Status:** in-progress
+**Spec:** docs/specs/0014-owner-login.md
+**Code:** `src/lib/auth.ts`, `src/pages/admin/index.astro`, `supabase/auth.sql`, `scripts/check-weight.mjs`
 **Depth:** default
 **Done when:**
 - The owner signs in to the admin with their own credentials from a phone.
@@ -256,7 +256,7 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 - The owner can sign out, and can recover a forgotten password without the developer.
 **Tasks:**
 - [ ] Decide it — /architect
-- [ ] Build it — /develop
+- [x] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** Depends on 09. Changes auth: use plan mode before building (CLAUDE.md).
 

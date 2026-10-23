@@ -54,6 +54,13 @@ slash) and `$KEY` the publishable key.
   deploy ends **Error**, its log shows `failed with status 401`, and
   `https://tienda-demo-cuba.vercel.app` still shows the catalog. Restore the real key and
   redeploy → **Ready**, and the live catalog matches AC4 (same products, prices, stock).
+  Redeploy the deployment of a commit that includes this feature: redeploying an older
+  deployment rebuilds the old JSON-based code, which ignores the key and ends Ready.
+  Owner reported 2026-10-21: wrong key on commit `15da6b1` → Error, log
+  `Supabase: reading "categories" failed with status 401.`, exit 1, no key printed; restored →
+  Ready. Measured 2026-10-21: the 26 live pages' text equals the baseline except the
+  "Actualizado el" date, live photos come from the remote pipeline (`arroz-blanco_….webp`), and
+  no live page contains `supabase.co` or `sb_publishable_`.
 - **AC7 (visitors never call Supabase):** after a build, `grep -rl "supabase.co" dist`,
   `grep -rl "sb_publishable_" dist` and `grep -rl "<script" dist --include=*.html` → no
   files. `og:image` on a product page is `https://tienda-demo-cuba.vercel.app/_astro/<id>_….jpg`.

@@ -1,0 +1,327 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { site } from '../../lib/site';
+import { supabaseConfig } from '../../lib/supabase';
+
+// The owner's admin (spec 0014): a static page whose script talks to Supabase Auth from the
+// browser. The only route allowed client JS (spec 0012). Public pages never link here.
+// Both values are public by design; the script reads them from the data attributes below.
+const { url, key } = supabaseConfig();
+---
+
+<BaseLayout title={`Administración · ${site.name}`} description="Administración del catálogo." noindex>
+	<header class="border-b border-border bg-surface">
+		<div class="awning" aria-hidden="true"></div>
+		<div class="mx-auto flex max-w-md items-center px-4 py-3">
+			<p class="font-display text-2xl font-semibold">{site.name}</p>
+		</div>
+	</header>
+	<main id="admin" data-supabase-url={url} data-supabase-key={key} class="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">
+		<h1>Administración</h1>
+		<noscript>
+			<p class="rounded-card border border-border bg-surface p-4">La administración necesita JavaScript activado.</p>
+		</noscript>
+
+		<!-- Every view starts hidden; the script shows one at a time. -->
+		<section data-view="sign-in" hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+			<h2>Entrar</h2>
+			<form data-form="sign-in" method="post" novalidate class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<label for="sign-in-email" class="font-medium">Email</label>
+					<input
+						id="sign-in-email"
+						name="email"
+						type="email"
+						autocomplete="email"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label for="sign-in-password" class="font-medium">Contraseña</label>
+					<input
+						id="sign-in-password"
+						name="password"
+						type="password"
+						autocomplete="current-password"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+				</div>
+				<p data-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="submit"
+					data-label="Entrar"
+					class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+				>
+					Entrar
+				</button>
+			</form>
+			<button type="button" data-go="recover" class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4">
+				¿Olvidaste tu contraseña?
+			</button>
+		</section>
+
+		<section data-view="recover" hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+			<h2>Recuperar la contraseña</h2>
+			<p class="text-sm text-muted">Te enviaremos un enlace a tu email para crear una contraseña nueva.</p>
+			<p data-requested role="status" hidden>
+				Si el email es correcto, te enviamos un enlace. El correo llega en inglés, con el asunto «Reset your
+				password». Ábrelo y toca el enlace. Caduca en 1 hora.
+			</p>
+			<form data-form="recover" method="post" novalidate class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<label for="recover-email" class="font-medium">Email</label>
+					<input
+						id="recover-email"
+						name="email"
+						type="email"
+						autocomplete="email"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+				</div>
+				<p data-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="submit"
+					data-label="Enviarme un enlace"
+					class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+				>
+					Enviarme un enlace
+				</button>
+			</form>
+			<button type="button" data-go="sign-in" class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4">
+				Volver
+			</button>
+		</section>
+
+		<section data-view="new-password" hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+			<h2>Nueva contraseña</h2>
+			<form data-form="new-password" method="post" novalidate class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<label for="new-password-password" class="font-medium">Nueva contraseña</label>
+					<input
+						id="new-password-password"
+						name="password"
+						type="password"
+						autocomplete="new-password"
+						minlength="8"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label for="new-password-repeat" class="font-medium">Repite la contraseña</label>
+					<input
+						id="new-password-repeat"
+						name="repeat"
+						type="password"
+						autocomplete="new-password"
+						minlength="8"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+				</div>
+				<p data-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="submit"
+					data-label="Cambiar contraseña"
+					class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+				>
+					Cambiar contraseña
+				</button>
+			</form>
+		</section>
+
+		<section data-view="signed-in" hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+			<p>Sesión iniciada como <strong data-email></strong></p>
+			<p data-status role="status" class="text-sm text-muted empty:hidden"></p>
+			<p data-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+			<button
+				type="button"
+				data-sign-out
+				data-label="Cerrar sesión"
+				class="inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent disabled:opacity-50"
+			>
+				Cerrar sesión
+			</button>
+		</section>
+	</main>
+</BaseLayout>
+
+<script>
+	// The admin's views (spec 0014). Every Auth rule lives in src/lib/auth.ts; this script only
+	// reads the forms, shows one view at a time and turns errors into Spanish messages.
+	import {
+		AuthError,
+		type AuthErrorKind,
+		type AuthUser,
+		getUser,
+		hasSession,
+		initAuth,
+		isOwner,
+		readRecoveryLink,
+		requestRecovery,
+		setPassword,
+		signIn,
+		signOut,
+		storedUser,
+	} from '../../lib/auth';
+
+	type View = 'sign-in' | 'recover' | 'new-password' | 'signed-in';
+
+	const MESSAGES: Record<AuthErrorKind, string> = {
+		credentials: 'Email o contraseña incorrectos.',
+		linkError: 'El enlace no es válido o ya caducó. Pide otro.',
+		weak: 'La contraseña debe tener al menos 8 caracteres.',
+		same: 'La nueva contraseña debe ser distinta de la anterior.',
+		rate: 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
+		signedOut: 'Tu sesión terminó. Entra de nuevo.',
+		offline: 'Sin conexión. Revisa tus datos e inténtalo otra vez.',
+		unknown: 'Algo salió mal. Inténtalo otra vez.',
+	};
+	const NO_ACCESS = 'Esta cuenta no tiene acceso a la administración.';
+	const MISMATCH = 'Las contraseñas no coinciden.';
+	const PASSWORD_CHANGED = 'Contraseña cambiada.';
+	// The project's minimum password length, set in the Supabase dashboard (spec 0014).
+	const MIN_PASSWORD = 8;
+
+	const root = document.getElementById('admin')!;
+	initAuth({ url: root.dataset.supabaseUrl!, key: root.dataset.supabaseKey! });
+
+	const section = (view: View) => root.querySelector<HTMLElement>(`[data-view="${view}"]`)!;
+	const form = (view: View) => section(view).querySelector<HTMLFormElement>('[data-form]')!;
+	const requested = root.querySelector<HTMLElement>('[data-requested]')!;
+
+	function kindOf(error: unknown): AuthErrorKind {
+		return error instanceof AuthError ? error.kind : 'unknown';
+	}
+
+	// Shows one view, with an optional error message in its alert area.
+	function show(view: View, alert = '') {
+		for (const element of root.querySelectorAll<HTMLElement>('[data-view]')) {
+			element.hidden = element.dataset.view !== view;
+			element.querySelector('[data-alert]')!.textContent = '';
+		}
+		section(view).querySelector('[data-alert]')!.textContent = alert;
+		if (view === 'recover') {
+			form('recover').hidden = false;
+			requested.hidden = true;
+		}
+	}
+
+	function showSignedIn(user: AuthUser, status = '', alert = '') {
+		root.querySelector('[data-email]')!.textContent = user.email;
+		root.querySelector('[data-status]')!.textContent = status;
+		show('signed-in', alert);
+	}
+
+	// Disables the button and ends its label in "…" while the request runs.
+	async function whileBusy(button: HTMLButtonElement, task: () => Promise<void>) {
+		const label = button.dataset.label!;
+		button.disabled = true;
+		button.textContent = `${label}…`;
+		try {
+			await task();
+		} finally {
+			button.disabled = false;
+			button.textContent = label;
+		}
+	}
+
+	// Only the owner may use the admin; any other account is signed out at once (AC4).
+	async function enter(user: AuthUser, status = '') {
+		if (!isOwner(user)) {
+			await signOut();
+			show('sign-in', NO_ACCESS);
+			return;
+		}
+		showSignedIn(user, status);
+	}
+
+	function onSubmit(view: View, handler: (data: FormData, button: HTMLButtonElement) => Promise<void>) {
+		const element = form(view);
+		element.addEventListener('submit', (event) => {
+			// Forms never submit themselves, so a password can never end up in a URL (AC9).
+			event.preventDefault();
+			if (!element.reportValidity()) return;
+			const button = element.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+			section(view).querySelector('[data-alert]')!.textContent = '';
+			void whileBusy(button, () => handler(new FormData(element), button));
+		});
+	}
+
+	onSubmit('sign-in', async (data) => {
+		try {
+			const user = await signIn(String(data.get('email')), String(data.get('password')));
+			form('sign-in').reset();
+			await enter(user);
+		} catch (error) {
+			show('sign-in', MESSAGES[kindOf(error)]);
+		}
+	});
+
+	onSubmit('recover', async (data) => {
+		try {
+			await requestRecovery(String(data.get('email')));
+			form('recover').hidden = true;
+			requested.hidden = false;
+		} catch (error) {
+			show('recover', MESSAGES[kindOf(error)]);
+		}
+	});
+
+	onSubmit('new-password', async (data) => {
+		const password = String(data.get('password'));
+		// Checked here, before any request is sent (AC8).
+		if (password.length < MIN_PASSWORD) return show('new-password', MESSAGES.weak);
+		if (password !== String(data.get('repeat'))) return show('new-password', MISMATCH);
+		try {
+			const user = await setPassword(password);
+			form('new-password').reset();
+			showSignedIn(user, PASSWORD_CHANGED);
+		} catch (error) {
+			const kind = kindOf(error);
+			show(kind === 'signedOut' ? 'sign-in' : 'new-password', MESSAGES[kind]);
+		}
+	});
+
+	for (const button of root.querySelectorAll<HTMLButtonElement>('[data-go]')) {
+		button.addEventListener('click', () => show(button.dataset.go as View));
+	}
+
+	const signOutButton = root.querySelector<HTMLButtonElement>('[data-sign-out]')!;
+	signOutButton.addEventListener('click', () => {
+		void whileBusy(signOutButton, async () => {
+			await signOut();
+			show('sign-in');
+		});
+	});
+
+	async function start() {
+		// The recovery link is read first, before anything else looks at the session.
+		const link = readRecoveryLink();
+		if (link === 'linkError') return show('recover', MESSAGES.linkError);
+		if (!hasSession()) return show('sign-in');
+		try {
+			// Checks the session with Supabase and the owner role before showing anything.
+			const user = await getUser();
+			if (!isOwner(user)) {
+				await signOut();
+				return show('sign-in', NO_ACCESS);
+			}
+			if (link === 'recovery') show('new-password');
+			else showSignedIn(user);
+		} catch (error) {
+			const kind = kindOf(error);
+			if (kind === 'signedOut') return show('sign-in', MESSAGES.signedOut);
+			// Offline, rate-limited or a server error: the session is kept (AC5).
+			const user = storedUser();
+			if (link === 'recovery') show('new-password', MESSAGES[kind]);
+			else if (user) showSignedIn(user, '', MESSAGES[kind]);
+			else show('sign-in', MESSAGES[kind]);
+		}
+	}
+
+	void start();
+</script>

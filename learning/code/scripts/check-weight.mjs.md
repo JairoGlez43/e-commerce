@@ -1,7 +1,9 @@
 # `scripts/check-weight.mjs`
 
 > **Qué es:** el script que mide cada página construida contra el presupuesto de peso ·
-> **Lo decidió:** [spec 0001](../../../docs/specs/0001-stack.md) (AC7, tabla "Weight budget") ·
+> **Lo decidió:** [spec 0001](../../../docs/specs/0001-stack.md) (AC7, tabla "Weight budget");
+> el presupuesto de `/admin/`, [spec 0014](../../../docs/specs/0014-owner-login.md) (Design →
+> Weight) ·
 > **Lo usan:** el comando `pnpm check:weight` ([`package.json`](../package.json.md)) ·
 > **Usa:** solo módulos que trae Node: `fs`, `path`, `zlib`
 
@@ -10,9 +12,13 @@
 La regla que no se puede romper en este proyecto es que el sitio sea ligero, porque en Cuba las
 conexiones son lentas. La spec 0001 la convirtió en números: por ejemplo, el HTML + CSS de cada
 página no puede pasar de 50 KB comprimidos. Este script lo comprueba solo: recorre `dist/`, mide
-las 26 páginas, imprime una tabla y **sale con error** si alguna se pasa. Así nadie tiene que
+las 27 páginas, imprime una tabla y **sale con error** si alguna se pasa. Así nadie tiene que
 acordarse de medir a mano, y una página que engorda se detecta en cuanto se ejecuta. Es un
 script de Node normal, como los que ya conoces, sin librerías.
+
+Desde la spec 0014 hay una página con reglas propias: la administración del dueño, `/admin/`, la
+única con JavaScript. Se mide con su propio presupuesto, que solo cambia el límite de JavaScript
+(bloque 2).
 
 ## El código, por partes
 
@@ -63,11 +69,29 @@ const BUDGET = {
   ([presupuesto de peso](../glosario.md#presupuesto-de-peso)). Escribir el nombre en
   mayúsculas es una costumbre para "constante de configuración".
   - `htmlCss: 50`: HTML + CSS de una página, ≤ 50 KB comprimidos.
-  - `js: 5`: JavaScript para el navegador, ≤ 5 KB (hoy hay 0).
+  - `js: 5`: JavaScript para el navegador, ≤ 5 KB (las páginas de clientes tienen 0).
   - `fontFile: 25` y `fontFiles: 1`: una sola fuente web, de ≤ 25 KB.
   - `thumbnail: 25`: cada miniatura del catálogo, ≤ 25 KB.
   - `detailPhoto: 80`: la foto de la página de producto, ≤ 80 KB.
   - `firstView: 150`: todas las imágenes de la primera pantalla juntas, ≤ 150 KB.
+
+```js
+
+// The owner's admin (/admin/) is the only route allowed client JS (spec 0012), so it gets its
+// own JS limit (spec 0014). HTML+CSS, fonts and images keep the public limits.
+const ADMIN_BUDGET = { ...BUDGET, js: 15 };
+const isAdminRoute = (route) => route.startsWith('/admin/');
+```
+
+- El comentario: "La administración del dueño (`/admin/`) es la única ruta a la que se le
+  permite JavaScript en el cliente (spec 0012), así que tiene su propio límite de JS (spec 0014).
+  HTML+CSS, fuentes e imágenes mantienen los límites públicos."
+- `const ADMIN_BUDGET = { ...BUDGET, js: 15 };`: copia todos los límites de `BUDGET`
+  ([spread](../glosario.md#spread)) y cambia solo uno: JavaScript hasta 15 KB comprimidos, en vez
+  de 5. La spec 0014 lo llama provisional: la feature 12 lo puede subir si lo justifica con una
+  medida. Al copiarlo así, si algún día cambia un límite público, la administración lo hereda.
+- `const isAdminRoute = (route) => route.startsWith('/admin/');`: una función flecha que dice si
+  una ruta es de la administración. Se usa en el bloque 9.
 
 ### 3. Qué carpeta medir
 
@@ -195,8 +219,9 @@ function measure(file) {
 - `inlineJs`: el JavaScript escrito **dentro** de etiquetas `<script>…</script>` que no tienen
   `src`. La parte `(?![^>]*\bsrc=)` del patrón significa "que no tenga `src=` en la etiqueta".
   `[\s\S]*?` es "cualquier cosa, incluidos saltos de línea, lo mínimo posible".
-- `js`: la suma de los dos, comprimidos. Hoy da 0 en todas las páginas: el sitio no manda
-  JavaScript (spec 0001).
+- `js`: la suma de los dos, comprimidos. Da 0 en todas las páginas de clientes, que no mandan
+  JavaScript (spec 0001). Solo `/admin/` tiene: su `<script type="module" src="…">` pesaba 2,6 KB
+  comprimido el 2026-10-23.
 
 ### 8. Medir una página: fuentes e imágenes
 
@@ -236,8 +261,9 @@ function measure(file) {
 
 ```js
 	const failures = [];
-	if (kb(htmlCss) > BUDGET.htmlCss) failures.push(`HTML+CSS ${kb(htmlCss).toFixed(1)} > ${BUDGET.htmlCss} KB`);
-	if (kb(js) > BUDGET.js) failures.push(`JS ${kb(js).toFixed(1)} > ${BUDGET.js} KB`);
+	const budget = isAdminRoute(route) ? ADMIN_BUDGET : BUDGET;
+	if (kb(htmlCss) > budget.htmlCss) failures.push(`HTML+CSS ${kb(htmlCss).toFixed(1)} > ${budget.htmlCss} KB`);
+	if (kb(js) > budget.js) failures.push(`JS ${kb(js).toFixed(1)} > ${budget.js} KB`);
 	if (fonts.length > BUDGET.fontFiles) failures.push(`${fonts.length} font files > ${BUDGET.fontFiles}`);
 	if (fontSizes.some((size) => kb(size) > BUDGET.fontFile)) failures.push(`font file > ${BUDGET.fontFile} KB`);
 	if (kb(largest) > imageLimit) failures.push(`image ${kb(largest).toFixed(1)} > ${imageLimit} KB`);
@@ -245,6 +271,10 @@ function measure(file) {
 ```
 
 - `failures`: una lista donde se apunta cada límite superado, con su número.
+- `const budget = isAdminRoute(route) ? ADMIN_BUDGET : BUDGET;`: elige el presupuesto de esta
+  página: el de la administración para `/admin/`, el público para todas las demás. Las dos líneas
+  siguientes (HTML+CSS y JS) usan `budget`, en minúscula; el resto sigue usando `BUDGET`, porque
+  fuentes e imágenes tienen los mismos límites en las dos.
 - Cada `if` compara una medida con su límite y, si se pasa, añade un texto como
   `HTML+CSS 84.2 > 50 KB` ([template literal](../glosario.md#template-literal)).
   `.toFixed(1)` deja un decimal.
@@ -277,6 +307,7 @@ function measure(file) {
 ```js
 const rows = findPages(dist).sort().map(measure);
 console.log(`Weight budget (KB): HTML+CSS ≤ ${BUDGET.htmlCss} gz · JS ≤ ${BUDGET.js} gz · font ≤ ${BUDGET.fontFile} · thumbnail ≤ ${BUDGET.thumbnail} · detail photo ≤ ${BUDGET.detailPhoto} · first view ≤ ${BUDGET.firstView}`);
+console.log(`Admin (/admin/): HTML+CSS ≤ ${ADMIN_BUDGET.htmlCss} gz · JS ≤ ${ADMIN_BUDGET.js} gz`);
 console.table(rows);
 
 const failed = rows.filter((row) => row.result !== 'ok');
@@ -290,11 +321,12 @@ console.log(`All ${rows.length} pages within budget.`);
 - `findPages(dist).sort().map(measure)`: encuentra las páginas, las ordena alfabéticamente y
   mide cada una. Resultado: una fila por página.
 - El primer `console.log`: una línea con los límites, para leer la tabla sin abrir la spec.
+- El segundo: los límites de la administración, `Admin (/admin/): HTML+CSS ≤ 50 gz · JS ≤ 15 gz`.
 - `console.table(rows)`: imprime la lista de objetos como una tabla con bordes
   ([console.table](../glosario.md#console-table)).
 - `failed`: las filas que no dicen `ok`.
 - Si hay alguna: avisa cuántas y termina con `process.exit(1)` → el comando falla.
-- Si no: `All 26 pages within budget.` y Node termina solo con código 0 → el comando pasa.
+- Si no: `All 27 pages within budget.` y Node termina solo con código 0 → el comando pasa.
 
 ## Cómo se conecta
 
@@ -303,20 +335,31 @@ console.log(`All ${rows.length} pages within budget.`);
   si algo se pasa o si no hay `dist/`.
 - **Los límites** salen de la tabla "Weight budget" de la
   [spec 0001](../../../docs/specs/0001-stack.md); qué imagen cuenta como miniatura, foto de
-  detalle o primera vista sale de las specs 0005 y 0006.
+  detalle o primera vista sale de las specs 0005 y 0006. El presupuesto de `/admin/` sale de la
+  sección Design → Weight de la [spec 0014](../../../docs/specs/0014-owner-login.md).
+- **Mide también** la página [`/admin/`](../src/pages/admin/index.astro.md), con
+  `ADMIN_BUDGET`.
 - **No forma parte del build:** hoy se ejecuta a mano después de `pnpm build`.
 
 ## Prueba tú
 
 1. En la terminal de VS Code: `pnpm build` y luego `pnpm check:weight`.
-2. **Qué deberías ver:** la tabla con 26 filas, todas `ok`, y `All 26 pages within budget.`.
-   Medido el 2026-10-12: HTML + CSS ≤ 6,7 KB por página, JS 0, la fuente 17,7 KB, la miniatura
-   más pesada 22,8 KB y la foto de detalle más pesada 58,5 KB.
-3. Ahora haz que falle bajando un límite: abre `scripts/check-weight.mjs` y cambia
-   `htmlCss: 50,` por `htmlCss: 5,`. Ejecuta `pnpm check:weight` otra vez: todas las filas dicen
-   `FAIL: HTML+CSS … > 5 KB` (la página más ligera pesa 5,1 KB), sale `… page(s) over budget.` y, si escribes
-   `echo $?` (Git Bash) o `$LASTEXITCODE` (PowerShell), verás `1`.
-4. **Deshacer:** vuelve a poner `htmlCss: 50,` y guarda.
+2. **Qué deberías ver:** las dos líneas de límites, la tabla con 27 filas, todas `ok`, y
+   `All 27 pages within budget.`. Medido el 2026-10-23: HTML + CSS entre 5,7 y 7,8 KB por
+   página, JS 0 en todas salvo `/admin/` (2,6 KB), la fuente 17,7 KB, la miniatura más pesada
+   22,8 KB y la foto de detalle más pesada 58,5 KB. `/admin/` es la primera fila, porque la tabla
+   va en orden alfabético.
+3. Ahora haz que falle solo la administración: abre `scripts/check-weight.mjs` y cambia
+   `{ ...BUDGET, js: 15 }` por `{ ...BUDGET, js: 2 }`. Ejecuta `pnpm check:weight` otra vez: la
+   fila `/admin/` dice `FAIL: JS 2.6 > 2 KB`, las otras 26 siguen `ok`, sale
+   `1 page(s) over budget.` y, si escribes `echo $?` (Git Bash) o `$LASTEXITCODE` (PowerShell),
+   verás `1`. Las páginas de clientes no se enteran: tienen 0 KB de JavaScript y su límite es
+   otro.
+4. **Deshacer:** vuelve a poner `js: 15` y guarda.
+5. Si quieres ver fallar todas: cambia `htmlCss: 50,` por `htmlCss: 5,` en `BUDGET`. Las 27 filas
+   dicen `FAIL: HTML+CSS … > 5 KB` (la más ligera pesa 5,7 KB), también `/admin/`, porque
+   `ADMIN_BUDGET` copia ese límite, y sale `27 page(s) over budget.`. **Deshacer:** vuelve a
+   poner `htmlCss: 50,` y guarda.
 
 ## Términos
 

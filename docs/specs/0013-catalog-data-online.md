@@ -1,6 +1,6 @@
 # 0013 · Catalog data online
 
-**Status:** In Progress
+**Status:** Accepted
 **Date:** 2026-10-20
 **Scope:** `docs/scope/scope.md` → feature 10
 **Supersedes:** — (changes where spec 0004's data lives and the type of its `photo` field; the
@@ -203,7 +203,7 @@ static files (AC7).
 - [x] **T7** (AC4, AC5, AC7, AC8) Run typecheck, build and check:weight. Diff the new build
   against the T1 baseline, run the four AC5 failure cases, and grep `dist/` for `supabase.co`,
   `sb_publishable_` and `<script`.
-- [ ] **T8** (AC6, AC8) Guide the owner through setting both vars in Vercel and deploying.
+- [x] **T8** (AC6, AC8) Guide the owner through setting both vars in Vercel and deploying.
   Then run the wrong-key test, restore the value, redeploy and recheck AC4 on the live URL.
 - [x] **T9** Update the `learning/code/` walkthroughs of every changed file and remove those
   of deleted files.
