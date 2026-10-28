@@ -5,8 +5,9 @@
 > [spec 0014](../../../docs/specs/0014-owner-login.md) (Decision y Design → "Supabase settings" y
 > `supabase/auth.sql`) · **Lo usan:** el dueño, **una vez** por tienda, en el
 > [editor SQL](../glosario.md#editor-sql) de Supabase, después de [`schema.sql`](schema.sql.md);
-> la función `is_owner()` la usarán las políticas de escritura (feature 12) y la función de
-> publicar (feature 13) · **Usa:** `auth.jwt()` y la tabla `auth.users`, que trae Supabase
+> la función `is_owner()` la usan las políticas de escritura de
+> [`products-write.sql`](products-write.sql.md) (feature 12) y la usará la función de publicar
+> (feature 13) · **Usa:** `auth.jwt()` y la tabla `auth.users`, que trae Supabase
 
 ## Para qué sirve
 
@@ -127,8 +128,9 @@ create or replace function public.is_owner() returns boolean
 - Por qué fiarse del JWT: Supabase lo firmó y el usuario no puede cambiar su `app_metadata`. Si
   alguien edita el JWT en su navegador para ponerse `owner`, la firma deja de cuadrar y Supabase
   rechaza la petición antes de llegar aquí.
-- Hoy ninguna política la usa todavía: la feature 12 la pondrá dentro de las políticas de
-  escritura, en su `using (public.is_owner())` ([política](../glosario.md#politica)).
+- Desde la feature 12 la usan las tres políticas de escritura de
+  [`products-write.sql`](products-write.sql.md), en su `using (public.is_owner())` y su
+  `with check (public.is_owner())` ([política de escritura](../glosario.md#politica-de-escritura)).
 
 ### 3. Marcar al dueño
 
@@ -163,7 +165,8 @@ create or replace function public.is_owner() returns boolean
 
 - **Orden de montaje de una tienda nueva:** [`schema.sql`](schema.sql.md) →
   [`seed.sql`](seed.sql.md) y fotos → los ajustes del panel de este archivo → crear el usuario →
-  este archivo (la función) → la orden de marcar al dueño.
+  este archivo (la función) → la orden de marcar al dueño →
+  [`products-write.sql`](products-write.sql.md) (las políticas de escritura que usan la función).
 - **El rol** viaja dentro del JWT. [`auth.ts`](../src/lib/auth.ts.md) lo lee con `isOwner()`
   para decidir qué enseña la página (solo interfaz); `is_owner()` lo lee en la base de datos
   para decidir qué se puede hacer (protección de verdad, feature 12).

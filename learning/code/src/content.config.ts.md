@@ -1,6 +1,6 @@
 # `src/content.config.ts`
 
-> **Qué es:** la definición de las dos colecciones de datos (`categories` y `products`): de dónde salen (Supabase) y la forma obligatoria de cada elemento · **Lo decidió:** [spec 0004](../../../docs/specs/0004-sample-product-data.md) (forma de los datos), [spec 0013](../../../docs/specs/0013-catalog-data-online.md) (leerlos de Supabase) y [spec 0001](../../../docs/specs/0001-stack.md) (usar colecciones) · **Lo usan:** Astro (lo lee solo, por su nombre), y a través de él `src/lib/catalog.ts`, `src/pages/producto/[id].astro`, `src/pages/estilo.astro` y `src/components/ProductCard.astro` · **Usa:** `astro:content`, `astro/zod` y tres funciones de [`src/lib/supabase.ts`](lib/supabase.ts.md)
+> **Qué es:** la definición de las dos colecciones de datos (`categories` y `products`): de dónde salen (Supabase) y la forma obligatoria de cada elemento · **Lo decidió:** [spec 0004](../../../docs/specs/0004-sample-product-data.md) (forma de los datos), [spec 0013](../../../docs/specs/0013-catalog-data-online.md) (leerlos de Supabase), [spec 0015](../../../docs/specs/0015-manage-products.md) (foto opcional) y [spec 0001](../../../docs/specs/0001-stack.md) (usar colecciones) · **Lo usan:** Astro (lo lee solo, por su nombre), y a través de él `src/lib/catalog.ts`, `src/pages/producto/[id].astro`, `src/pages/estilo.astro` y `src/components/ProductCard.astro` · **Usa:** `astro:content`, `astro/zod` y tres funciones de [`src/lib/supabase.ts`](lib/supabase.ts.md)
 
 ## Para qué sirve
 
@@ -124,7 +124,7 @@ const products = defineCollection({
 			unit: row.unit,
 			inStock: row.in_stock,
 			description: row.description,
-			photo: photoUrl(row.photo_path),
+			photo: row.photo_path ? photoUrl(row.photo_path) : undefined,
 		})),
 ```
 
@@ -135,12 +135,17 @@ const products = defineCollection({
   - `category: row.category_id`: el id de la categoría (`'granos-y-pastas'`).
   - `inStock: row.in_stock`: `true` o `false`.
 - `id`, `name`, `price`, `unit` y `description` se copian igual.
-- `photo: photoUrl(row.photo_path)`: la tabla solo guarda el nombre del archivo
-  (`'arroz-blanco.jpg'`), no la URL entera. `photoUrl()` le pone delante la dirección del
-  bucket de fotos y da
+- `photo: row.photo_path ? photoUrl(row.photo_path) : undefined`: la tabla solo guarda el nombre
+  del archivo (`'arroz-blanco.jpg'`), no la URL entera. `photoUrl()` le pone delante la
+  dirección del bucket de fotos y da
   `https://<ref>.supabase.co/storage/v1/object/public/product-photos/arroz-blanco.jpg`
   ([Storage y bucket](../glosario.md#storage-y-bucket)). Así el mismo `seed.sql` sirve para el
   proyecto de Supabase de cualquier tienda.
+  - Desde la spec 0015, `photo_path` puede ser `null`: un producto añadido desde `/admin/` no
+    tiene foto hasta la feature 14. `row.photo_path ? … : undefined` se lee "si hay nombre de
+    archivo, su URL; si no, `undefined`" (el campo queda sin valor). Así `photoUrl()` nunca
+    recibe `null`, y las páginas enseñan la caja "Sin foto" de
+    [`NoPhoto.astro`](components/NoPhoto.astro.md).
 
 ### La colección `products`: el esquema
 
@@ -179,7 +184,8 @@ no existe. Ese error sí para el build.
 		inStock: z.boolean(),
 		description: z.string().min(1).max(300),
 		// Remote photo, optimized at build by astro:assets (allowed in astro.config.mjs).
-		photo: z.url(),
+		// Optional since spec 0015: a product without one shows the NoPhoto box.
+		photo: z.url().optional(),
 	}),
 });
 ```
@@ -191,15 +197,21 @@ no existe. Ese error sí para el build.
   como mucho.
 - El comentario: "Foto remota, optimizada en el build por `astro:assets` (permitida en
   `astro.config.mjs`)."
-- `photo: z.url(),`: la foto es ahora un **texto con forma de URL** ([zod](../glosario.md#zod)).
-  Es el único campo cuyo tipo cambió en la spec 0013: antes era `image()`, una ruta a una foto de
-  `src/assets/`. Ahora es una [imagen remota](../glosario.md#imagen-remota): el componente
-  `<Image>` la descarga y la optimiza en el build, siempre que su dirección esté permitida en
-  [`astro.config.mjs`](../astro.config.mjs.md) ([remotePatterns](../glosario.md#remote-patterns)).
+- El segundo comentario: "Opcional desde la spec 0015: un producto sin foto enseña la caja
+  `NoPhoto`."
+- `photo: z.url().optional(),`: la foto es un **texto con forma de URL** ([zod](../glosario.md#zod)),
+  y `.optional()` deja además que falte (`undefined`). Cambió dos veces:
+  - En la spec 0013, de `image()` (una ruta a una foto de `src/assets/`) a una
+    [imagen remota](../glosario.md#imagen-remota): el componente `<Image>` la descarga y la
+    optimiza en el build, siempre que su dirección esté permitida en
+    [`astro.config.mjs`](../astro.config.mjs.md) ([remotePatterns](../glosario.md#remote-patterns)).
+  - En la spec 0015, de obligatoria a opcional. Por eso el tipo de `product.data.photo` es ahora
+    `string | undefined`, y el [typecheck](../glosario.md#typecheck) obliga a cada página a
+    comprobar si hay foto antes de pasarla a `<Image>`.
 - `}),`: cierra el `z.object`.
 - `});`: cierra la llamada a `defineCollection`.
 
-Ningún campo lleva `.optional()`: los 8 son obligatorios (spec 0004).
+Solo `photo` lleva `.optional()`; los otros 7 campos son obligatorios (spec 0004).
 
 ### La exportación
 
@@ -240,6 +252,8 @@ con `image()`. Todo eso se quitó; los datos de esos JSON están ahora en
     `getCollection`.
   - `src/components/ProductCard.astro`: recibe un producto ya validado y usa
     `CollectionEntry<'products'>` como tipo de su prop.
+  - Esas tres (tarjeta, página de producto y `/estilo`) dibujan
+    [`NoPhoto.astro`](components/NoPhoto.astro.md) cuando `photo` falta.
 
 ## Prueba tú
 

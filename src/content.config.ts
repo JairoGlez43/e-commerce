@@ -26,7 +26,7 @@ const products = defineCollection({
 			unit: row.unit,
 			inStock: row.in_stock,
 			description: row.description,
-			photo: photoUrl(row.photo_path),
+			photo: row.photo_path ? photoUrl(row.photo_path) : undefined,
 		})),
 	schema: z.object({
 		id: slug,
@@ -38,7 +38,8 @@ const products = defineCollection({
 		inStock: z.boolean(),
 		description: z.string().min(1).max(300),
 		// Remote photo, optimized at build by astro:assets (allowed in astro.config.mjs).
-		photo: z.url(),
+		// Optional since spec 0015: a product without one shows the NoPhoto box.
+		photo: z.url().optional(),
 	}),
 });
 

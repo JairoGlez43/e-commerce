@@ -1,0 +1,20 @@
+---
+// The single home of the "Sin foto" box, shown where a product without a photo would show its
+// photo (spec 0015). The visible text names the state, so it needs no alt. No opacity-50: the
+// "Agotado" badge already shows the stock.
+interface Props {
+	/** The product page frames it like its photo; cards do not. */
+	framed?: boolean;
+}
+
+const { framed = false } = Astro.props;
+---
+
+<div
+	class:list={[
+		'flex aspect-square w-full items-center justify-center bg-cream text-sm text-muted',
+		{ 'rounded-card border border-border': framed },
+	]}
+>
+	Sin foto
+</div>

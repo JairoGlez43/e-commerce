@@ -4,6 +4,7 @@ import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ShopInfo from '../components/ShopInfo.astro';
 import Faq from '../components/Faq.astro';
+import NoPhoto from '../components/NoPhoto.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import WhatsAppIcon from '../components/WhatsAppIcon.astro';
 import { formatPrice } from '../lib/price';
@@ -162,14 +163,18 @@ const products = (await getCollection('products'))
 					products.map((product) => (
 						<li>
 							<article class="flex h-full flex-col overflow-hidden rounded-card border border-border bg-surface shadow-card">
-								<Image
-									src={product.data.photo}
-									alt={product.data.name}
-									inferSize
-									widths={[200, 400]}
-									sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
-									class:list={['aspect-square w-full object-cover', { 'opacity-50': !product.data.inStock }]}
-								/>
+								{product.data.photo ? (
+									<Image
+										src={product.data.photo}
+										alt={product.data.name}
+										inferSize
+										widths={[200, 400]}
+										sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
+										class:list={['aspect-square w-full object-cover', { 'opacity-50': !product.data.inStock }]}
+									/>
+								) : (
+									<NoPhoto />
+								)}
 								<div class="flex flex-1 flex-col gap-1 p-3">
 									<h3 class="font-sans text-base font-medium">{product.data.name}</h3>
 									<p class="text-sm text-muted">{product.data.unit}</p>

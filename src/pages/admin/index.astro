@@ -133,25 +133,187 @@ const { url, key } = supabaseConfig();
 			</form>
 		</section>
 
-		<section data-view="signed-in" hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
-			<p>Sesión iniciada como <strong data-email></strong></p>
-			<p data-status role="status" class="text-sm text-muted empty:hidden"></p>
-			<p data-alert role="alert" class="font-medium text-accent empty:hidden"></p>
-			<button
-				type="button"
-				data-sign-out
-				data-label="Cerrar sesión"
-				class="inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent disabled:opacity-50"
-			>
-				Cerrar sesión
+		<div data-view="signed-in" hidden class="flex flex-col gap-6">
+			<section class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+				<p>Sesión iniciada como <strong data-email></strong></p>
+				<p data-status role="status" class="text-sm text-muted empty:hidden"></p>
+				<p data-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="button"
+					data-sign-out
+					data-label="Cerrar sesión"
+					class="inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent disabled:opacity-50"
+				>
+					Cerrar sesión
+				</button>
+				<p class="text-sm text-muted">Los cambios se guardan al momento. La web pública los mostrará después de publicar.</p>
+			</section>
+
+			<!-- Products (spec 0015): rows are cloned from the templates below and filled with textContent. -->
+			<section class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<h2 data-list-title tabindex="-1">Productos</h2>
+					<button
+						type="button"
+						data-add
+						class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+					>
+						Añadir producto
+					</button>
+				</div>
+				<p data-list-status role="status" class="text-sm text-muted empty:hidden"></p>
+				<p data-list-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="button"
+					data-retry
+					hidden
+					class="inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent disabled:opacity-50"
+				>
+					Reintentar
+				</button>
+				<p data-empty hidden class="text-muted">Todavía no hay productos.</p>
+				<div data-list class="flex flex-col gap-6"></div>
+			</section>
+		</div>
+
+		<section data-view="product" hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+			<h2 data-product-title tabindex="-1">Añadir producto</h2>
+			<p data-product-link class="text-sm text-muted empty:hidden"></p>
+			<form data-form="product" method="post" novalidate class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<label for="product-name" class="font-medium">Nombre</label>
+					<input
+						id="product-name"
+						name="name"
+						type="text"
+						maxlength="60"
+						autocomplete="off"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label for="product-category" class="font-medium">Categoría</label>
+					<select
+						id="product-category"
+						name="category_id"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					>
+						<option value="">Elige una categoría</option>
+					</select>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label for="product-price" class="font-medium">Precio en CUP</label>
+					<input
+						id="product-price"
+						name="price"
+						type="text"
+						inputmode="numeric"
+						autocomplete="off"
+						required
+						aria-describedby="product-price-hint"
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+					<p id="product-price-hint" class="text-sm text-muted">Solo el número, sin decimales. Ej.: 12500</p>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label for="product-unit" class="font-medium">Unidad</label>
+					<input
+						id="product-unit"
+						name="unit"
+						type="text"
+						maxlength="30"
+						autocomplete="off"
+						required
+						aria-describedby="product-unit-hint"
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+					<p id="product-unit-hint" class="text-sm text-muted">Ej.: paquete de 1 kg</p>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label for="product-description" class="font-medium">Descripción</label>
+					<textarea
+						id="product-description"
+						name="description"
+						maxlength="300"
+						rows="4"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 py-2 text-ink"></textarea>
+				</div>
+				<label class="inline-flex min-h-11 w-fit items-center gap-2 font-medium">
+					<input name="in_stock" type="checkbox" checked class="size-5 accent-accent" />
+					Disponible
+				</label>
+				<p data-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="submit"
+					data-label="Guardar"
+					class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+				>
+					Guardar
+				</button>
+			</form>
+			<button type="button" data-cancel class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4">
+				Cancelar
 			</button>
+			<div data-delete-area class="flex flex-col gap-4 border-t border-border pt-4">
+				<button type="button" data-delete class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4">
+					Borrar producto
+				</button>
+				<p data-last-product class="text-sm text-muted">No puedes borrar el último producto: la tienda quedaría vacía.</p>
+				<div data-confirm hidden class="flex flex-col gap-3">
+					<p data-confirm-text class="font-medium"></p>
+					<div class="flex flex-wrap gap-3">
+						<button
+							type="button"
+							data-confirm-yes
+							data-label="Sí, borrar"
+							class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+						>
+							Sí, borrar
+						</button>
+						<button
+							type="button"
+							data-confirm-no
+							class="inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent disabled:opacity-50"
+						>
+							No, volver
+						</button>
+					</div>
+				</div>
+			</div>
 		</section>
+
+		<template data-template="group">
+			<div class="flex flex-col gap-2">
+				<h3 data-group-name></h3>
+				<ul class="flex flex-col divide-y divide-border"></ul>
+			</div>
+		</template>
+		<template data-template="row">
+			<li class="flex items-center justify-between gap-3 py-2">
+				<div class="flex min-w-0 flex-col">
+					<button
+						type="button"
+						data-edit
+						class="inline-flex min-h-11 w-fit items-center text-left text-accent underline underline-offset-4"
+					></button>
+					<p data-detail class="text-sm text-muted"></p>
+				</div>
+				<label class="inline-flex min-h-11 shrink-0 items-center gap-2">
+					<input data-stock type="checkbox" class="size-5 accent-accent" />
+					<span data-stock-name class="sr-only"></span>Disponible
+				</label>
+			</li>
+		</template>
 	</main>
 </BaseLayout>
 
 <script>
-	// The admin's views (spec 0014). Every Auth rule lives in src/lib/auth.ts; this script only
-	// reads the forms, shows one view at a time and turns errors into Spanish messages.
+	// The admin's views (specs 0014, 0015). Every Auth rule lives in src/lib/auth.ts and every
+	// product rule in src/lib/products.ts; this script only reads the forms, shows one view at a
+	// time, draws the list and turns errors into Spanish messages.
 	import {
 		AuthError,
 		type AuthErrorKind,
@@ -167,8 +329,25 @@ const { url, key } = supabaseConfig();
 		signOut,
 		storedUser,
 	} from '../../lib/auth';
+	import { formatPrice } from '../../lib/price';
+	import {
+		ProductError,
+		type FieldName,
+		type ProductErrorKind,
+		type ProductFields,
+		addProduct,
+		changedFields,
+		checkFields,
+		deleteProduct,
+		groupProducts,
+		listCategories,
+		listProducts,
+		setStock,
+		updateProduct,
+	} from '../../lib/products';
+	import type { CategoryRow, ProductRow } from '../../lib/supabase';
 
-	type View = 'sign-in' | 'recover' | 'new-password' | 'signed-in';
+	type View = 'sign-in' | 'recover' | 'new-password' | 'signed-in' | 'product';
 
 	const MESSAGES: Record<AuthErrorKind, string> = {
 		credentials: 'Email o contraseña incorrectos.',
@@ -183,6 +362,19 @@ const { url, key } = supabaseConfig();
 	const NO_ACCESS = 'Esta cuenta no tiene acceso a la administración.';
 	const MISMATCH = 'Las contraseñas no coinciden.';
 	const PASSWORD_CHANGED = 'Contraseña cambiada.';
+	const PRODUCT_MESSAGES: Record<ProductErrorKind, string> = {
+		exists: 'Ya existe un producto con ese enlace. La lista se ha actualizado.',
+		noCategory: 'Esa categoría ya no existe. La lista se ha actualizado.',
+		invalid: 'Algún dato no es válido. Revisa el formulario.',
+		forbidden: 'Esta cuenta no puede cambiar el catálogo.',
+		gone: 'Este producto ya no existe. La lista se ha actualizado.',
+		unknown: 'Algo salió mal. Inténtalo otra vez.',
+	};
+	// These errors mean the loaded list is out of date, so it loads again.
+	const RELOAD_KINDS = new Set<ProductErrorKind>(['exists', 'noCategory', 'gone']);
+	const LOADING = 'Cargando productos…';
+	const SAVED = 'Producto guardado.';
+	const DELETED = 'Producto borrado.';
 	// The project's minimum password length, set in the Supabase dashboard (spec 0014).
 	const MIN_PASSWORD = 8;
 
@@ -210,10 +402,12 @@ const { url, key } = supabaseConfig();
 		}
 	}
 
+	// Opening the signed-in view always loads the products (spec 0015).
 	function showSignedIn(user: AuthUser, status = '', alert = '') {
 		root.querySelector('[data-email]')!.textContent = user.email;
 		root.querySelector('[data-status]')!.textContent = status;
 		show('signed-in', alert);
+		void loadCatalog();
 	}
 
 	// Disables the button and ends its label in "…" while the request runs.
@@ -296,6 +490,285 @@ const { url, key } = supabaseConfig();
 			await signOut();
 			show('sign-in');
 		});
+	});
+
+	// --- Products (spec 0015) ----------------------------------------------------------------
+
+	const FIELD_NAMES: FieldName[] = ['name', 'category_id', 'price', 'unit', 'description'];
+
+	let categories: CategoryRow[] = [];
+	let products: ProductRow[] = [];
+	// False until a load succeeds: the list is never drawn from partial data.
+	let loaded = false;
+	// Only the latest load may draw the list.
+	let loadRun = 0;
+	// The product open in the form; null while adding one.
+	let editing: ProductRow | null = null;
+
+	const listTitle = root.querySelector<HTMLElement>('[data-list-title]')!;
+	const listStatus = root.querySelector<HTMLElement>('[data-list-status]')!;
+	const listAlert = root.querySelector<HTMLElement>('[data-list-alert]')!;
+	const retryButton = root.querySelector<HTMLButtonElement>('[data-retry]')!;
+	const emptyNote = root.querySelector<HTMLElement>('[data-empty]')!;
+	const list = root.querySelector<HTMLElement>('[data-list]')!;
+	const productForm = form('product');
+	const productAlert = productForm.querySelector<HTMLElement>('[data-alert]')!;
+	const saveButton = productForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+	const stockBox = productForm.querySelector<HTMLInputElement>('[name="in_stock"]')!;
+	const productTitle = root.querySelector<HTMLElement>('[data-product-title]')!;
+	const productLink = root.querySelector<HTMLElement>('[data-product-link]')!;
+	const deleteArea = root.querySelector<HTMLElement>('[data-delete-area]')!;
+	const deleteButton = root.querySelector<HTMLButtonElement>('[data-delete]')!;
+	const lastProductNote = root.querySelector<HTMLElement>('[data-last-product]')!;
+	const confirmBlock = root.querySelector<HTMLElement>('[data-confirm]')!;
+	const confirmYes = root.querySelector<HTMLButtonElement>('[data-confirm-yes]')!;
+	const confirmNo = root.querySelector<HTMLButtonElement>('[data-confirm-no]')!;
+
+	function field(name: FieldName) {
+		return productForm.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+	}
+
+	function fromTemplate(name: 'group' | 'row'): HTMLElement {
+		const template = root.querySelector<HTMLTemplateElement>(`[data-template="${name}"]`)!;
+		return template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+	}
+
+	function isSignedOut(error: unknown): boolean {
+		return error instanceof AuthError && error.kind === 'signedOut';
+	}
+
+	function needsReload(error: unknown): boolean {
+		return error instanceof ProductError && RELOAD_KINDS.has(error.kind);
+	}
+
+	function messageOf(error: unknown): string {
+		return error instanceof ProductError ? PRODUCT_MESSAGES[error.kind] : MESSAGES[kindOf(error)];
+	}
+
+	// Owner text reaches the page through textContent only, never innerHTML.
+	function drawRow(product: ProductRow): HTMLElement {
+		const row = fromTemplate('row');
+		row.dataset.id = product.id;
+		row.querySelector('[data-edit]')!.textContent = product.name;
+		row.querySelector('[data-detail]')!.textContent = `${product.unit} · ${formatPrice(product.price)}`;
+		row.querySelector('[data-stock-name]')!.textContent = `${product.name}: `;
+		row.querySelector<HTMLInputElement>('[data-stock]')!.checked = product.in_stock;
+		return row;
+	}
+
+	function drawList() {
+		const groups = groupProducts(categories, products);
+		list.replaceChildren(
+			...groups.map((group) => {
+				const element = fromTemplate('group');
+				element.querySelector('[data-group-name]')!.textContent = group.category.name;
+				element.querySelector('ul')!.replaceChildren(...group.products.map(drawRow));
+				return element;
+			}),
+		);
+		// Only possible if the table was emptied in the dashboard.
+		emptyNote.hidden = groups.length > 0;
+	}
+
+	// The category select keeps its choice while that category still exists.
+	function fillCategories(selected: string) {
+		const select = field('category_id');
+		select.replaceChildren(
+			new Option('Elige una categoría', ''),
+			...categories.map((category) => new Option(category.name, category.id)),
+		);
+		select.value = categories.some((category) => category.id === selected) ? selected : '';
+	}
+
+	// Loads categories and products, then draws the list. `alert` says why it loaded again.
+	async function loadCatalog(alert = '') {
+		const run = ++loadRun;
+		loaded = false;
+		listStatus.textContent = LOADING;
+		listAlert.textContent = '';
+		retryButton.hidden = true;
+		emptyNote.hidden = true;
+		list.replaceChildren();
+		try {
+			const [loadedCategories, loadedProducts] = await Promise.all([listCategories(), listProducts()]);
+			if (run !== loadRun) return;
+			categories = loadedCategories;
+			products = loadedProducts;
+			loaded = true;
+			listStatus.textContent = '';
+			listAlert.textContent = alert;
+			fillCategories(field('category_id').value);
+			drawList();
+		} catch (error) {
+			if (run !== loadRun) return;
+			listStatus.textContent = '';
+			if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+			listAlert.textContent = messageOf(error);
+			retryButton.hidden = false;
+		}
+	}
+
+	// After a successful write the list updates from the row PostgREST returned, without
+	// loading everything again.
+	function putProduct(row: ProductRow) {
+		products = [...products.filter((product) => product.id !== row.id), row];
+	}
+
+	// Back from the form to the list, with an optional status line.
+	function showList(status = '') {
+		show('signed-in');
+		listTitle.focus();
+		if (!loaded) return void loadCatalog();
+		drawList();
+		listStatus.textContent = status;
+		listAlert.textContent = '';
+	}
+
+	function openForm(product: ProductRow | null) {
+		editing = product;
+		productForm.reset();
+		for (const name of FIELD_NAMES) field(name).setCustomValidity('');
+		fillCategories(product?.category_id ?? '');
+		productTitle.textContent = product ? 'Editar producto' : 'Añadir producto';
+		productLink.textContent = product ? `Enlace: /producto/${product.id}` : '';
+		if (product) {
+			field('name').value = product.name;
+			field('price').value = String(product.price);
+			field('unit').value = product.unit;
+			field('description').value = product.description;
+			stockBox.checked = product.in_stock;
+		}
+		// The build refuses an empty table (spec 0013), so the last product stays.
+		deleteArea.hidden = !product;
+		deleteButton.hidden = products.length <= 1;
+		lastProductNote.hidden = products.length > 1;
+		confirmBlock.hidden = true;
+		show('product');
+		productTitle.focus();
+	}
+
+	// A failed write keeps the form and every value, except when the product no longer exists.
+	function failForm(error: unknown) {
+		if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+		const message = messageOf(error);
+		if (error instanceof ProductError && error.kind === 'gone') {
+			show('signed-in');
+			listTitle.focus();
+			return void loadCatalog(message);
+		}
+		productAlert.textContent = message;
+		if (needsReload(error)) void loadCatalog();
+	}
+
+	async function save(fields: ProductFields) {
+		try {
+			if (editing) {
+				const changes = changedFields(editing, fields);
+				putProduct(Object.keys(changes).length > 0 ? await updateProduct(editing.id, changes) : editing);
+			} else {
+				putProduct(await addProduct(fields, products.map((product) => product.id)));
+			}
+			showList(SAVED);
+		} catch (error) {
+			failForm(error);
+		}
+	}
+
+	// The checks run here, before any request is sent; the database checks again.
+	productForm.addEventListener('submit', (event) => {
+		event.preventDefault();
+		const result = checkFields(
+			{
+				name: field('name').value,
+				category_id: field('category_id').value,
+				price: field('price').value,
+				unit: field('unit').value,
+				description: field('description').value,
+				in_stock: stockBox.checked,
+			},
+			categories.map((category) => category.id),
+		);
+		const problems = 'problems' in result ? result.problems : [];
+		for (const name of FIELD_NAMES) {
+			field(name).setCustomValidity(problems.find((problem) => problem.field === name)?.message ?? '');
+		}
+		productAlert.textContent = '';
+		if ('problems' in result) {
+			productForm.reportValidity();
+			return;
+		}
+		void whileBusy(saveButton, () => save(result.fields));
+	});
+
+	// A field's message goes as soon as the owner changes that field.
+	productForm.addEventListener('input', (event) => {
+		const target = event.target;
+		if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
+			target.setCustomValidity('');
+		}
+	});
+
+	// Delete asks inside the page: some in-app browsers block confirm().
+	deleteButton.addEventListener('click', () => {
+		if (!editing || products.length <= 1) return;
+		root.querySelector('[data-confirm-text]')!.textContent = `¿Borrar «${editing.name}»? No se puede deshacer.`;
+		deleteButton.hidden = true;
+		confirmBlock.hidden = false;
+		confirmNo.focus();
+	});
+
+	confirmNo.addEventListener('click', () => {
+		confirmBlock.hidden = true;
+		deleteButton.hidden = false;
+		deleteButton.focus();
+	});
+
+	confirmYes.addEventListener('click', () => {
+		const product = editing;
+		if (!product) return;
+		void whileBusy(confirmYes, async () => {
+			try {
+				await deleteProduct(product.id);
+				products = products.filter((item) => item.id !== product.id);
+				showList(DELETED);
+			} catch (error) {
+				failForm(error);
+			}
+		});
+	});
+
+	root.querySelector('[data-cancel]')!.addEventListener('click', () => showList());
+	root.querySelector('[data-add]')!.addEventListener('click', () => openForm(null));
+	retryButton.addEventListener('click', () => void loadCatalog());
+
+	list.addEventListener('click', (event) => {
+		const button = (event.target as Element).closest('[data-edit]');
+		if (!button) return;
+		const product = products.find((item) => item.id === button.closest('li')!.dataset.id);
+		if (product) openForm(product);
+	});
+
+	// One tap saves the stock state. The box is locked until the answer, and undone on failure.
+	async function switchStock(box: HTMLInputElement) {
+		const id = box.closest('li')!.dataset.id!;
+		box.disabled = true;
+		listStatus.textContent = '';
+		listAlert.textContent = '';
+		try {
+			putProduct(await setStock(id, box.checked));
+		} catch (error) {
+			box.checked = !box.checked;
+			if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+			if (needsReload(error)) return void loadCatalog(messageOf(error));
+			listAlert.textContent = messageOf(error);
+		} finally {
+			box.disabled = false;
+		}
+	}
+
+	list.addEventListener('change', (event) => {
+		const box = event.target;
+		if (box instanceof HTMLInputElement && box.matches('[data-stock]')) void switchStock(box);
 	});
 
 	async function start() {

@@ -128,6 +128,13 @@ _Added by /develop as they ship: name · path · exact classes · variants._
   out of stock) → `<div class="flex flex-col gap-3">` with `h1` (base style), unit
   `<p class="text-muted">`, `price`, the Availability badge **without** `mt-auto`, description `<p>`.
 
+- **NoPhoto** · `src/components/NoPhoto.astro` · prop `framed` (default `false`) · stands where a
+  product without a photo would show it (spec 0015):
+  `<div class="flex aspect-square w-full items-center justify-center bg-cream text-sm text-muted">Sin foto</div>`,
+  plus `rounded-card border border-border` when `framed` (the product page). The visible words
+  carry the meaning, so no `alt`; never `opacity-50` (the "Agotado" badge shows the stock). Used by
+  ProductCard, the product page and `/estilo`.
+
 - **WhatsApp order button** · `src/pages/producto/[id].astro` · the Primary button as a link, full
   width on mobile: `<a href={orderHref} class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover md:w-fit">`
   → `<WhatsAppIcon variant="white" />` → "Pedir por WhatsApp" (in stock) or "Preguntar por
@@ -158,6 +165,34 @@ _Admin (`/admin/`, spec 0014): the only route with forms and client JS._
   color only supports it); notices `<p role="status" class="text-sm text-muted empty:hidden">`.
   `empty:hidden` keeps an empty message from adding a gap.
 
+_Admin products (spec 0015). Repeated markup lives in `<template>` elements with classes in full;
+the script fills them with `textContent` only._
+- **Admin notice** · last line of the account card · `<p class="text-sm text-muted">`.
+- **Product group** · `<template data-template="group">` · `<div class="flex flex-col gap-2">` → `h3`
+  (base style) → `<ul class="flex flex-col divide-y divide-border">`. The list holds the groups in
+  `<div class="flex flex-col gap-6">`; empty categories get no group.
+- **Product row** · `<template data-template="row">` ·
+  `<li class="flex items-center justify-between gap-3 py-2">` → `<div class="flex min-w-0 flex-col">`
+  with the name as a Text button plus `text-left` (opens the form) and the line `<unit> · <price>`
+  `<p class="text-sm text-muted">` → the row's Checkbox, whose label adds `shrink-0` and a
+  `<span class="sr-only"><name>: </span>` before "Disponible".
+- **Checkbox** · label wraps the box: `<label class="inline-flex min-h-11 w-fit items-center gap-2">`
+  → `<input type="checkbox" class="size-5 accent-accent">` → the words (the label is the 44 px
+  target). In a form the label adds `font-medium`.
+- **Select** · the Text field's input classes on a `<select>`; the first option has an empty value
+  ("Elige una categoría").
+- **Textarea** · the Text field's input classes plus `py-2`.
+- **Field hint** · `<p id="…-hint" class="text-sm text-muted">` under the input, which points to it
+  with `aria-describedby`.
+- **Danger text button** · the Text button ("Borrar producto"), already `text-accent`, inside
+  `<div class="flex flex-col gap-4 border-t border-border pt-4">` at the end of the form card.
+- **Confirm block** · replaces the danger button in place: `<div class="flex flex-col gap-3">` →
+  question `<p class="font-medium">` → `<div class="flex flex-wrap gap-3">` with the Primary button
+  (form) "Sí, borrar" and the Secondary button "No, volver". Focus goes to "No, volver". Never
+  `confirm()`: some in-app browsers block it.
+- **Headings that receive focus** · `h2` with `tabindex="-1"` (the list's "Productos" and the
+  form's title), focused when the view changes so the page scrolls to it and screen readers follow.
+
 ## Contrast added by spec 0011
 The base table is in `docs/specs/0002-design-base.md`. New pairs (WCAG ratios, 2026-10-16):
 | Text | Background | Ratio |
@@ -171,6 +206,11 @@ Graphics: WhatsApp green glyph on `ink` 7.92, white glyph on `accent` 6.04.
 ## States
 - Out of stock: "Agotado" badge plus photo at `opacity-50`; the word carries the meaning, never
   the color alone.
+- No photo (spec 0015): the NoPhoto box in the photo's place; out of stock still shows only the
+  badge.
+- Admin list: "Cargando productos…" (status), the error (alert) plus a "Reintentar" Secondary
+  button, "Todavía no hay productos." (only if the table was emptied in the dashboard), and after a
+  write "Producto guardado." / "Producto borrado." (status).
 - Empty, loading and error states for pages are designed by the feature that owns the page
   (05–07), with these tokens. The site is static, so there is no loading state by default.
 

@@ -3,8 +3,9 @@
 > **Qué es:** el login del dueño, entero: entrar, guardar la sesión en el móvil, renovarla,
 > cerrarla y recuperar la contraseña, hablando con Supabase Auth con `fetch` · **Lo decidió:**
 > [spec 0014](../../../../docs/specs/0014-owner-login.md) (Decision y Design →
-> `src/lib/auth.ts`) · **Lo usan:** solo el `<script>` de
-> [`src/pages/admin/index.astro`](../pages/admin/index.astro.md) · **Usa:**
+> `src/lib/auth.ts`) · **Lo usan:** el `<script>` de
+> [`src/pages/admin/index.astro`](../pages/admin/index.astro.md) y, solo `authFetch()`,
+> [`src/lib/products.ts`](products.ts.md) (spec 0015) · **Usa:**
 > la API de [Supabase Auth](../../glosario.md#supabase-auth) con
 > [`fetch`](../../glosario.md#fetch) y el [localStorage](../../glosario.md#localstorage) del
 > navegador
@@ -18,9 +19,10 @@ Express nuestro que guarde sesiones. Por eso el login lo hace **el navegador** h
 directamente con [Supabase Auth](../../glosario.md#supabase-auth) (spec 0012), y este archivo es
 el único sitio que sabe cómo.
 
-**A diferencia de todo lo demás en `src/lib/`, este archivo corre en el navegador del dueño, no
-en el build.** Usa `localStorage`, `location` e `history`, que solo existen en un navegador. Por
-eso solo lo importa el `<script>` de la página de administración.
+**A diferencia de casi todo lo demás en `src/lib/` (la otra excepción es `products.ts`), este
+archivo corre en el navegador del dueño, no en el build.** Usa `localStorage`, `location` e
+`history`, que solo existen en un navegador. Por eso solo lo importan el `<script>` de la página de administración y [`products.ts`](products.ts.md),
+que también corre en el navegador.
 
 Antes de leer el código, la idea en cinco líneas (cada término enlaza al glosario):
 
@@ -323,9 +325,10 @@ export function isOwner(user: AuthUser): boolean {
 - `isOwner(user)`: `true` si el `app_metadata` del usuario dice `role: 'owner'`.
 - ¿Por qué "solo para la interfaz"? Este código corre en el navegador, y cualquiera puede cambiar
   el JavaScript de su propio navegador. Sirve para enseñar el mensaje correcto, no para
-  proteger datos. Lo que protegerá el catálogo es la función
+  proteger datos. Lo que protege el catálogo es la función
   [`is_owner()`](../../supabase/auth.sql.md), que Supabase comprueba en su servidor con el JWT
-  firmado (feature 12).
+  firmado, dentro de las políticas de [`products-write.sql`](../../supabase/products-write.sql.md)
+  (feature 12).
 
 ### 11. Mandar una petición
 
@@ -450,7 +453,7 @@ async function isRejectedToken(response: Response): Promise<boolean> {
 - `401` → sí. `403` → solo si el código es uno de esos dos (bloque 5). Cualquier otro estado →
   no.
 - ¿Por qué no todos los 403? Porque un 403 normal es "no te dejo", por ejemplo cuando una
-  [política](../../glosario.md#politica) de la feature 12 rechace una escritura. Renovar el token
+  [política](../../glosario.md#politica) de la feature 12 rechaza una escritura. Renovar el token
   no arreglaría eso, así que no se reintenta.
 
 ### 15. Renovar la sesión
@@ -769,9 +772,11 @@ export async function setPassword(password: string): Promise<AuthUser> {
   `{ access_token, refresh_token, expires_at, user: { email, app_metadata } }`.
 - **Sale:** usuarios y `AuthError` hacia el script de
   [`admin/index.astro`](../pages/admin/index.astro.md), que los convierte en vistas y mensajes en
-  español. Más adelante, `authFetch()` hacia las features 12–14.
+  español. Y `authFetch()` hacia [`products.ts`](products.ts.md), que manda con él las
+  lecturas y escrituras de productos (feature 12); más adelante, también las features 13–14.
 - **La protección de verdad no está aquí:** está en Supabase, con
-  [`is_owner()`](../../supabase/auth.sql.md) y las políticas de la feature 12. Este archivo solo
+  [`is_owner()`](../../supabase/auth.sql.md) y las políticas de la feature 12
+  ([`products-write.sql`](../../supabase/products-write.sql.md)). Este archivo solo
   consigue y cuida el token.
 
 ## Prueba tú

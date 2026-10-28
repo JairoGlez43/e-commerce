@@ -8,7 +8,7 @@
 > [ruta por archivo](../../glosario.md#ruta-por-archivo). Las features 05–07 copian de aquí
 > las clases exactas, y `design.md` la nombra como "vista en vivo" ·
 > **Usa:** `astro:content` (`getCollection`), `astro:assets` (`<Image>`), `BaseLayout`,
-> `ShopInfo`, `Faq`, `SiteFooter`, `WhatsAppIcon`, `src/lib/price.ts`
+> `ShopInfo`, `Faq`, `NoPhoto`, `SiteFooter`, `WhatsAppIcon`, `src/lib/price.ts`
 
 ## Para qué sirve
 
@@ -35,6 +35,7 @@ import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ShopInfo from '../components/ShopInfo.astro';
 import Faq from '../components/Faq.astro';
+import NoPhoto from '../components/NoPhoto.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import WhatsAppIcon from '../components/WhatsAppIcon.astro';
 import { formatPrice } from '../lib/price';
@@ -54,6 +55,9 @@ import { formatPrice } from '../lib/price';
   [`Faq`](../components/Faq.astro.md), [`SiteFooter`](../components/SiteFooter.astro.md)). A
   diferencia del resto de la página, que copia las clases a mano, estos se muestran tal cual
   (bloque 14).
+- `import NoPhoto ...`: la caja "Sin foto" real (spec 0015,
+  [explicación](../components/NoPhoto.astro.md)). Ocupa el sitio de la foto en una tarjeta de
+  muestra cuyo producto no tenga foto (bloque 13).
 - `import WhatsAppIcon ...`: el icono oficial de WhatsApp, también el componente real
   ([explicación](../components/WhatsAppIcon.astro.md)). Se usa en la muestra del enlace de
   contacto (bloque 12).
@@ -460,14 +464,18 @@ const products = (await getCollection('products'))
 					products.map((product) => (
 						<li>
 							<article class="flex h-full flex-col overflow-hidden rounded-card border border-border bg-surface shadow-card">
-								<Image
-									src={product.data.photo}
-									alt={product.data.name}
-									inferSize
-									widths={[200, 400]}
-									sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
-									class:list={['aspect-square w-full object-cover', { 'opacity-50': !product.data.inStock }]}
-								/>
+								{product.data.photo ? (
+									<Image
+										src={product.data.photo}
+										alt={product.data.name}
+										inferSize
+										widths={[200, 400]}
+										sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
+										class:list={['aspect-square w-full object-cover', { 'opacity-50': !product.data.inStock }]}
+									/>
+								) : (
+									<NoPhoto />
+								)}
 ```
 
 - `products.map((product) => (`: una tarjeta por cada uno de los 4 productos de muestra.
@@ -477,6 +485,11 @@ const products = (await getCollection('products'))
   **Faltan** `relative` y `hover:border-accent`: esta tarjeta no es un enlace, así que no
   necesita el [stretched link](../../glosario.md#stretched-link) ni el cambio de borde.
   Detalle de cada clase en [`ProductCard.astro.md`](../components/ProductCard.astro.md).
+- `{product.data.photo ? ( <Image … /> ) : ( <NoPhoto /> )}`: igual que en `ProductCard`
+  (spec 0015): la foto si el producto tiene una y, si no, la caja "Sin foto"
+  ([`NoPhoto.astro.md`](../components/NoPhoto.astro.md)). Con los datos de ejemplo los 4
+  productos de muestra tienen foto, así que la caja solo sale si alguno de esos 4 la pierde.
+  Lo que importa aquí es que la página siga compilando cuando `photo` falta (AC9).
 - `<Image`: la foto, con los mismos atributos que en `ProductCard`:
   - `src={product.data.photo}` y `alt={product.data.name}`: la foto y su texto alternativo (el
     nombre). Aquí se lee `product.data.x` directamente en vez de desestructurar antes. Desde la

@@ -5,7 +5,8 @@
 > [spec 0013](../../../../docs/specs/0013-catalog-data-online.md) (sección Design → Reading) ·
 > **Lo usan:** [`src/content.config.ts`](../content.config.ts.md) (sus dos loaders) y, solo
 > `supabaseConfig()`, [`src/pages/admin/index.astro`](../pages/admin/index.astro.md) (spec
-> [0014](../../../../docs/specs/0014-owner-login.md)) ·
+> [0014](../../../../docs/specs/0014-owner-login.md)); solo los tipos `CategoryRow` y
+> `ProductRow`, [`src/lib/products.ts`](products.ts.md) (spec 0015) ·
 > **Usa:** las variables de entorno `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`, y la
 > [API REST](../../glosario.md#api-rest) de Supabase con `fetch`
 
@@ -56,7 +57,8 @@ export interface ProductRow {
 	unit: string;
 	in_stock: boolean;
 	description: string;
-	photo_path: string;
+	// null until feature 14 uploads a photo (spec 0015).
+	photo_path: string | null;
 }
 ```
 
@@ -71,6 +73,16 @@ export interface ProductRow {
   [typecheck](../../glosario.md#typecheck); no generan código.
 - Los [tipos](../../glosario.md#tipo) siguen a los de SQL: `text` → `string`, `integer` →
   `number`, `boolean` → `boolean`.
+- El comentario de `photo_path`: "`null` hasta que la feature 14 suba una foto (spec 0015)".
+  `string | null` es una [unión](../../glosario.md#union): el nombre del archivo, o `null` si el
+  producto no tiene foto. Desde la spec 0015 la columna admite `null`
+  ([`products-write.sql`](../../supabase/products-write.sql.md)), porque un producto añadido
+  desde `/admin/` no tiene foto todavía. Gracias a esta unión, TypeScript obliga a quien use
+  `photo_path` a comprobar antes que no es `null` (lo hace
+  [`content.config.ts`](../content.config.ts.md)).
+- Estas dos interfaces también las usa [`products.ts`](products.ts.md), el código del
+  navegador que lee y escribe productos desde `/admin/`. Las importa con `import type`, así que
+  nada de este archivo (que es código del build) llega al navegador.
 - Ojo: estas interfaces son una **promesa**, no una comprobación. TypeScript no puede ver qué
   manda Supabase de verdad. Quien comprueba los datos de verdad es el esquema de zod en
   `content.config.ts`.
@@ -338,7 +350,9 @@ export function photoUrl(path: string): string {
 - El comentario: "URL pública de una foto del bucket; `astro:assets` la descarga y la optimiza en
   el build."
 - `export function photoUrl(path: string): string`: recibe el nombre del archivo
-  (`'arroz-blanco.jpg'`, la columna `photo_path`) y devuelve su URL completa.
+  (`'arroz-blanco.jpg'`, la columna `photo_path`) y devuelve su URL completa. Recibe un `string`,
+  nunca `null`: un producto sin foto no llega a llamarla (lo comprueba el loader de
+  [`content.config.ts`](../content.config.ts.md)).
 - El resultado es `https://<ref>.supabase.co/storage/v1/object/public/product-photos/arroz-blanco.jpg`.
   `public` en la ruta significa "bucket público": se descarga sin clave
   ([Storage y bucket](../../glosario.md#storage-y-bucket)).

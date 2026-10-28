@@ -15,7 +15,8 @@ export interface ProductRow {
 	unit: string;
 	in_stock: boolean;
 	description: string;
-	photo_path: string;
+	// null until feature 14 uploads a photo (spec 0015).
+	photo_path: string | null;
 }
 
 const PHOTO_BUCKET = 'product-photos';

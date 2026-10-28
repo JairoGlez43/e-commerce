@@ -8,7 +8,7 @@
 > **Lo usan:** nadie lo importa; Astro genera `dist/producto/<id>/index.html` por cada producto
 > ([ruta dinámica](../../../glosario.md#ruta-por-archivo)). Las tarjetas del catálogo enlazan
 > aquí ([`ProductCard.astro`](../../components/ProductCard.astro.md)) ·
-> **Usa:** `BaseLayout`, `SiteHeader`, `SiteFooter`, `WhatsAppIcon`, `formatPrice()` (`src/lib/price.ts`), `site`
+> **Usa:** `BaseLayout`, `NoPhoto` (spec 0015), `SiteHeader`, `SiteFooter`, `WhatsAppIcon`, `formatPrice()` (`src/lib/price.ts`), `site`
 > (`src/lib/site.ts`), `orderLink()` (`src/lib/whatsapp.ts`), las colecciones `products` y
 > `categories`
 
@@ -31,6 +31,7 @@ import type { GetStaticPaths } from 'astro';
 import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
 import { Image, getImage } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import NoPhoto from '../../components/NoPhoto.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
 import SiteFooter from '../../components/SiteFooter.astro';
 import WhatsAppIcon from '../../components/WhatsAppIcon.astro';
@@ -63,6 +64,8 @@ import { orderLink } from '../../lib/whatsapp';
   los mismos que usa el catálogo ([`BaseLayout.astro.md`](../../layouts/BaseLayout.astro.md),
   [`SiteHeader.astro.md`](../../components/SiteHeader.astro.md),
   [`SiteFooter.astro.md`](../../components/SiteFooter.astro.md)).
+- `NoPhoto`: la caja "Sin foto" que ocupa el sitio de la foto cuando el producto no tiene una
+  (spec 0015, [`NoPhoto.astro.md`](../../components/NoPhoto.astro.md)). Se usa en el bloque 7.
 - `WhatsAppIcon`: el icono oficial de WhatsApp, que va dentro del botón de pedido
   ([`WhatsAppIcon.astro.md`](../../components/WhatsAppIcon.astro.md)). Se usa en el bloque 9.
 - `formatPrice` y `site`: el formato `280 CUP` ([`price.ts.md`](../../lib/price.ts.md)) y el
@@ -125,7 +128,8 @@ const category = await getEntry(product.data.category);
 - `const { name, unit, price, inStock, description, photo } = product.data;`: saca los seis
   campos del producto en variables cortas, para no escribir `product.data.` cada vez. `photo` es,
   desde la spec 0013, la URL de la foto en Supabase
-  ([imagen remota](../../../glosario.md#imagen-remota)).
+  ([imagen remota](../../../glosario.md#imagen-remota)), y desde la spec 0015 puede ser
+  `undefined`: un producto añadido desde `/admin/` no tiene foto hasta la feature 14.
 - `const category = await getEntry(product.data.category);`: busca la categoría del producto.
   `product.data.category` no es el nombre de la categoría sino una
   [referencia](../../../glosario.md#reference), `{ collection: 'categories', id: 'granos-y-pastas' }`
@@ -137,11 +141,12 @@ const category = await getEntry(product.data.category);
 
 ```astro
 // WhatsApp link preview: the price leads the description (owner's choice), and the image is a
-// JPG because WebP previews are not guaranteed.
+// JPG because WebP previews are not guaranteed. Without a photo, BaseLayout's default
+// og-default.png is used (spec 0015).
 const availability = inStock ? 'Disponible' : 'Agotado';
 const title = `${name} · ${site.name}`;
 const metaDescription = `${formatPrice(price)} · ${unit} · ${availability}. ${description}`;
-const previewImage = await getImage({ src: photo, inferSize: true, width: 600, format: 'jpg' });
+const previewImage = photo ? await getImage({ src: photo, inferSize: true, width: 600, format: 'jpg' }) : undefined;
 
 // The same absolute page URL as og:url, so the shop sees which product the message is about.
 const pageUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
@@ -151,7 +156,8 @@ const orderHref = orderLink(product, pageUrl);
 
 - El comentario: "Vista previa del enlace en WhatsApp: el precio va al principio de la
   descripción (elección del dueño), y la imagen es un JPG porque no está garantizado que
-  WhatsApp muestre WebP."
+  WhatsApp muestre WebP. Sin foto, se usa la imagen por defecto de `BaseLayout`,
+  `og-default.png` (spec 0015)."
 - `const availability = inStock ? 'Disponible' : 'Agotado';`: un ternario. Si `inStock` es
   `true`, vale "Disponible"; si no, "Agotado".
 - `const title = \`${name} · ${site.name}\`;`: el título de la pestaña y de la vista previa,
@@ -160,7 +166,8 @@ const orderHref = orderLink(product, pageUrl);
 - `const metaDescription = ...`: la descripción para la vista previa. Para el arroz da
   "280 CUP · 1 lb · Disponible. Arroz blanco de grano largo, vendido por libra. …". El precio va
   primero para que se lea aunque WhatsApp corte el texto.
-- `const previewImage = await getImage({ src: photo, inferSize: true, width: 600, format: 'jpg' });`:
+- `const previewImage = photo ? await getImage({ … }) : undefined;`: un ternario. Sin foto
+  (spec 0015), `previewImage` vale `undefined` y no se procesa nada. Con foto, `getImage(…)`,
   en el build, descarga la foto de Supabase, crea una copia de 600 px de ancho en formato JPG y
   devuelve, entre otras cosas, su ruta en `previewImage.src` (por ejemplo
   `/_astro/arroz-blanco_182Kbk.jpg`). El nombre lleva letras que parecen al azar (un *hash*) para
@@ -191,7 +198,7 @@ const orderHref = orderLink(product, pageUrl);
 ### 5. El layout y la cabecera
 
 ```astro
-<BaseLayout title={title} description={metaDescription} image={previewImage.src}>
+<BaseLayout title={title} description={metaDescription} image={previewImage?.src}>
 	<SiteHeader />
 	<main class="mx-auto flex max-w-5xl flex-col gap-6 px-4 pt-8 pb-12">
 ```
@@ -199,7 +206,13 @@ const orderHref = orderLink(product, pageUrl);
 - `<BaseLayout title=… description=… image=…>`: el [layout](../../../glosario.md#layout) pone
   `<title>`, la meta descripción y las etiquetas [Open Graph](../../../glosario.md#open-graph)
   con estos tres valores. `BaseLayout` convierte la ruta de la imagen en una
-  [URL absoluta](../../../glosario.md#url-absoluta), que es lo que exige Open Graph. Todo lo que
+  [URL absoluta](../../../glosario.md#url-absoluta), que es lo que exige Open Graph.
+- `image={previewImage?.src}`: con foto, la ruta del JPG del bloque 4. Sin foto, `previewImage`
+  es `undefined` y el `?.` ([encadenamiento opcional](../../../glosario.md#encadenamiento-opcional))
+  da `undefined` en vez de un error. `BaseLayout` tiene `image = '/og-default.png'` como
+  [valor por defecto](../../../glosario.md#valor-por-defecto), que se aplica justo cuando llega
+  `undefined`: la vista previa de WhatsApp enseña entonces la imagen general de la tienda
+  (spec 0015, AC9). Todo lo que
   va dentro de `<BaseLayout>` cae en su [slot](../../../glosario.md#slot).
 - `<SiteHeader />`: la cabecera con el toldo, el nombre de la tienda, que enlaza a `/`, y el
   enlace "Escríbenos" a WhatsApp.
@@ -255,22 +268,28 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
   arma la URL con el id (`/categoria/granos-y-pastas`) y el texto es el nombre
   (`category.data.name`), ambos del bloque 3.
 
-### 7. La foto
+### 7. La foto, o la caja "Sin foto"
 
 ```astro
 		<article class="grid gap-6 md:grid-cols-2 md:items-start">
-			<Image
-				src={photo}
-				alt={name}
-				inferSize
-				widths={[400, 800]}
-				sizes="(min-width: 768px) 480px, 100vw"
-				loading="eager"
-				class:list={[
-					'aspect-square w-full rounded-card border border-border object-cover',
-					{ 'opacity-50': !inStock },
-				]}
-			/>
+			{
+				photo ? (
+					<Image
+						src={photo}
+						alt={name}
+						inferSize
+						widths={[400, 800]}
+						sizes="(min-width: 768px) 480px, 100vw"
+						loading="eager"
+						class:list={[
+							'aspect-square w-full rounded-card border border-border object-cover',
+							{ 'opacity-50': !inStock },
+						]}
+					/>
+				) : (
+					<NoPhoto framed />
+				)
+			}
 ```
 
 - `<article class="…">`: agrupa todo lo del producto. Clases:
@@ -279,6 +298,12 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
   - `md:grid-cols-2`: desde 768 px de ancho, dos columnas: foto a la izquierda, datos a la
     derecha. `md:` es la variante de 768 px (como `sm:` es la de 640 px).
   - `md:items-start`: en dos columnas, cada celda se pega arriba en vez de estirarse.
+- `{ photo ? ( <Image … /> ) : ( <NoPhoto framed /> ) }`: si hay foto, el `<Image>` de siempre;
+  si no (spec 0015), la caja "Sin foto" ([`NoPhoto.astro.md`](../../components/NoPhoto.astro.md))
+  ([expresión en plantilla](../../../glosario.md#expresion-en-plantilla)). `framed` (escrito sin
+  `={…}`, así que vale `true`) le pone a la caja el mismo borde y las mismas esquinas que la foto
+  de esta página; en las tarjetas del catálogo no lo lleva, porque allí el borde lo pone la
+  tarjeta. Sin foto, la página no tiene ningún `<img>` (AC9).
 - `<Image …>` ([image-component](../../../glosario.md#image-component)):
   - `src={photo}`: la URL de la foto original en Supabase. Astro la descarga en el build (lo
     permite `remotePatterns` en [`astro.config.mjs`](../../../astro.config.mjs.md)) y el `<img>`
@@ -400,9 +425,10 @@ aunque el cliente haya llegado directo desde WhatsApp y no tenga historial para 
 - **Entra:** la colección `products` y, para cada producto, su categoría de la colección
   `categories`, ambas definidas en [`content.config.ts`](../../content.config.ts.md) con datos
   leídos de Supabase en el build ([`supabase.ts`](../../lib/supabase.ts.md)). La foto viene del
-  bucket `product-photos` de Supabase.
-- **Sale:** 18 archivos `dist/producto/<id>/index.html`, sus fotos WebP de 400 y 800 px y un JPG
-  de 600 px por producto para la vista previa.
+  bucket `product-photos` de Supabase, si el producto tiene una.
+- **Sale:** un archivo `dist/producto/<id>/index.html` por producto (18 con los datos de
+  ejemplo) y, por cada producto con foto, sus fotos WebP de 400 y 800 px y un JPG de 600 px para
+  la vista previa. Un producto sin foto usa `/og-default.png` en la vista previa.
 - **Quién llega aquí:** las tarjetas de la portada y de las páginas de categoría (cada una
   enlaza a `/producto/<id>`) y cualquiera que abra un enlace compartido en WhatsApp.
 - **A dónde se va desde aquí:** a `/` (el nombre de la tienda en la cabecera, o "Productos") y a
@@ -442,7 +468,9 @@ Cambia el orden de la descripción de la vista previa y míralo en el HTML gener
   (nuevos)
 - [open-graph](../../../glosario.md#open-graph) · [url-absoluta](../../../glosario.md#url-absoluta) ·
   [constructor-url](../../../glosario.md#constructor-url) ·
-  [astro-url-y-site](../../../glosario.md#astro-url-y-site) · [nullish](../../../glosario.md#nullish)
+  [astro-url-y-site](../../../glosario.md#astro-url-y-site) · [nullish](../../../glosario.md#nullish) ·
+  [encadenamiento-opcional](../../../glosario.md#encadenamiento-opcional) ·
+  [valor-por-defecto](../../../glosario.md#valor-por-defecto)
 - [variable-de-entorno](../../../glosario.md#variable-de-entorno) ·
   [click-to-chat](../../../glosario.md#click-to-chat) ·
   [imagen-decorativa](../../../glosario.md#imagen-decorativa) (nuevo)

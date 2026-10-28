@@ -124,7 +124,9 @@ create table public.products (
 - `photo_path text not null check (char_length(photo_path) > 0)`: el **nombre del archivo** de la
   foto, no la URL entera. La URL depende del proyecto de Supabase (`https://<ref>.supabase.co/…`);
   guardando solo el nombre, el mismo `seed.sql` sirve para el proyecto de cualquier tienda. La URL
-  la arma `photoUrl()` en [`supabase.ts`](../src/lib/supabase.ts.md).
+  la arma `photoUrl()` en [`supabase.ts`](../src/lib/supabase.ts.md). Desde la spec 0015, el
+  `not null` se quita en [`products-write.sql`](products-write.sql.md): un producto puede no tener
+  foto (`null`) hasta la feature 14, y el `check` sigue rechazando un texto vacío.
 - `);`: cierra la tabla.
 
 Fíjate en lo que **no** hay: ni fecha de creación ni marca de "borrador". La spec 0013 lo deja
@@ -168,7 +170,10 @@ create policy "categories are public to read" on public.categories
   todas. Ocupa dos líneas, pero es una sola orden: termina en el `;`.
 - Lo que falta a propósito: no hay políticas `for insert`, `for update` ni `for delete`. Con RLS
   activo, una acción sin política está prohibida. Por eso un `POST`, `PATCH` o `DELETE` a la API
-  con la clave publishable se rechaza (spec 0013, AC1).
+  con la clave publishable se rechaza (spec 0013, AC1). Desde la spec 0015, la tabla `products`
+  sí tiene políticas de escritura, pero solo para el dueño con sesión; están en
+  [`products-write.sql`](products-write.sql.md). Con la clave publishable sola, escribir sigue
+  prohibido.
 
 Hacen falta las dos puertas: sin el `grant`, Postgres rechaza la lectura con el error `42501`;
 sin la política, la lectura funciona pero devuelve una lista vacía. Las dos cosas pararían el
@@ -210,7 +215,9 @@ values ('product-photos', 'product-photos', true);
 
 - **Orden de montaje** (spec 0013, tarea T2): 1) este archivo en el editor SQL; 2)
   [`seed.sql`](seed.sql.md), que llena las tablas; 3) subir las fotos de
-  `supabase/seed-photos/` al bucket `product-photos`, con el mismo nombre de archivo.
+  `supabase/seed-photos/` al bucket `product-photos`, con el mismo nombre de archivo. Después
+  vienen [`auth.sql`](auth.sql.md) (spec 0014) y [`products-write.sql`](products-write.sql.md)
+  (spec 0015).
 - **Lo lee** [`src/lib/supabase.ts`](../src/lib/supabase.ts.md) en cada build, a través de la API
   REST: `select` de las dos tablas con la clave publishable, y las URLs públicas del bucket.
 - **Las fotos** solo se pueden descargar y optimizar porque

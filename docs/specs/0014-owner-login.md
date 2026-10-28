@@ -1,6 +1,6 @@
 # 0014 · Owner login
 
-**Status:** In Progress
+**Status:** Accepted
 **Date:** 2026-10-22
 **Scope:** `docs/scope/scope.md` → feature 11
 **Supersedes:** — (narrows spec 0013 AC7 and the AGENTS.md "Client JS: none" rule to public
@@ -310,7 +310,7 @@ Every other route keeps spec 0001's budget, including JS ≤ 5 KB, which today i
 - [x] **T5** (AC2, AC3, AC4, AC7, AC8, AC9) `src/pages/admin/index.astro`: four views,
   `noindex`, data attributes, processed script.
 - [x] **T6** (AC11) `check-weight.mjs`: admin budget for `/admin/`, public budget unchanged.
-- [ ] **T7** (AC10, AC11) `pnpm typecheck`, build, `check:weight`. Then deploy and run the
+- [x] **T7** (AC10, AC11) `pnpm typecheck`, build, `check:weight`. Then deploy and run the
   flows on the live demo and on localhost.
 - [x] **T8** Update `learning/code/` walkthroughs for every new or changed file.
 

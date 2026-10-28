@@ -27,6 +27,7 @@ por último las páginas que ve el cliente.
 | 5 | `supabase/schema.sql` | Las tablas del catálogo en Supabase, quién puede leerlas y el bucket de fotos | [ver](supabase/schema.sql.md) |
 | 6 | `supabase/seed.sql` | Los datos de ejemplo: 6 categorías y 18 productos (viven en Supabase) | [ver](supabase/seed.sql.md) |
 | 6a | `supabase/auth.sql` | Quién es el dueño (`is_owner()`) y los ajustes del login en el panel de Supabase | [ver](supabase/auth.sql.md) |
+| 6a-bis | `supabase/products-write.sql` | Deja escribir productos solo al dueño (políticas con `is_owner()`) y permite un producto sin foto | [ver](supabase/products-write.sql.md) |
 | 6b | `src/lib/supabase.ts` | Lee las tablas y las fotos de Supabase durante el build | [ver](src/lib/supabase.ts.md) |
 | 7 | `src/content.config.ts` | Las colecciones: traen los datos de Supabase y validan su forma | [ver](src/content.config.ts.md) |
 | 8 | `src/lib/price.ts` | Formatea un precio: `12500` → `12.500 CUP` | [ver](src/lib/price.ts.md) |
@@ -35,10 +36,12 @@ por último las páginas que ve el cliente.
 | 10b | `src/lib/whatsapp.ts` | El número de WhatsApp y los enlaces con el mensaje (pedido y contacto) | [ver](src/lib/whatsapp.ts.md) |
 | 10c | `src/lib/date.ts` | Formatea una fecha con la hora de Cuba: `16 de octubre` | [ver](src/lib/date.ts.md) |
 | 10d | `src/lib/auth.ts` | El login del dueño en el navegador: entrar, mantener la sesión, cerrarla y recuperar la contraseña | [ver](src/lib/auth.ts.md) |
+| 10e | `src/lib/products.ts` | Los productos desde `/admin/`: leer, añadir, editar y borrar; las reglas del formulario y del id | [ver](src/lib/products.ts.md) |
 | 11 | `src/styles/global.css` | Colores, fuentes y estilos base | [ver](src/styles/global.css.md) |
 | 12 | `src/layouts/BaseLayout.astro` | El esqueleto `<html>` de todas las páginas | [ver](src/layouts/BaseLayout.astro.md) |
 | 13 | `src/components/SiteHeader.astro` | La cabecera con el toldo y el enlace "Escríbenos" con el icono de WhatsApp | [ver](src/components/SiteHeader.astro.md) |
 | 14 | `src/components/CategoryNav.astro` | La fila de chips de categorías | [ver](src/components/CategoryNav.astro.md) |
+| 14b | `src/components/NoPhoto.astro` | La caja "Sin foto" de un producto que aún no tiene foto | [ver](src/components/NoPhoto.astro.md) |
 | 15 | `src/components/ProductCard.astro` | La tarjeta de un producto | [ver](src/components/ProductCard.astro.md) |
 | 15b | `src/components/ShopInfo.astro` | "Cómo comprar", recogida y horario, debajo de los productos | [ver](src/components/ShopInfo.astro.md) |
 | 15c | `src/components/Faq.astro` | Las preguntas frecuentes, plegables sin JavaScript | [ver](src/components/Faq.astro.md) |
@@ -48,7 +51,7 @@ por último las páginas que ve el cliente.
 | 17 | `src/pages/categoria/[id].astro` | Las páginas `/categoria/<id>` | [ver](src/pages/categoria/%5Bid%5D.astro.md) |
 | 18 | `src/pages/producto/[id].astro` | Las páginas `/producto/<id>` y su vista previa en WhatsApp | [ver](src/pages/producto/%5Bid%5D.astro.md) |
 | 19 | `src/pages/estilo.astro` | La guía de estilo interna `/estilo` | [ver](src/pages/estilo.astro.md) |
-| 20 | `src/pages/admin/index.astro` | La administración del dueño `/admin/`, la única página con JavaScript | [ver](src/pages/admin/index.astro.md) |
+| 20 | `src/pages/admin/index.astro` | La administración del dueño `/admin/` (login y productos), la única página con JavaScript | [ver](src/pages/admin/index.astro.md) |
 
 Archivos que no son código y no tienen explicación: `src/assets/` (la fuente y, en
 `src/assets/icons/`, los dos iconos oficiales de WhatsApp con su `SOURCE.md`: de dónde salen y

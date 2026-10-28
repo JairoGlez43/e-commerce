@@ -356,6 +356,14 @@ cuyas claves son los valores de `Clave` y que guarda un `Valor` en cada una.
 una [unión](#union), como en `Record<AuthErrorKind, string>`, el objeto tiene que tener **todas**
 las claves: si falta una, el [typecheck](#typecheck) avisa.
 
+### tipos-utilitarios
+TypeScript trae tipos que fabrican otro [tipo](#tipo) a partir de uno que ya existe, para no
+escribir dos veces la misma forma. `keyof Producto` es la [unión](#union) de los nombres de sus
+campos (`'id' | 'name' | …`). `Pick<Producto, 'name' | 'price'>` se queda solo con esos campos.
+`Partial<T>` hace opcionales todos los campos de `T`: un objeto que puede traer solo algunos.
+`Exclude<'a' | 'b' | 'c', 'c'>` quita miembros de una unión (da `'a' | 'b'`). Como los demás
+tipos, solo existen para el [typecheck](#typecheck).
+
 ### clase
 `class AuthError extends Error { … }` crea un tipo de objeto propio a partir de otro: `extends
 Error` = "es un `Error` de JavaScript, con algo más". Dentro, el `constructor(…)` se ejecuta al
@@ -453,7 +461,22 @@ del mes; lo que no se pide (año, hora) no sale. `timeZone: 'America/Havana'` el
 
 ### expresion-regular
 Un patrón para validar texto. `/^[a-z0-9]+(-[a-z0-9]+)*$/` acepta palabras en minúsculas y
-números separados por guiones (`arroz-blanco`) y rechaza `Arroz_Blanco`.
+números separados por guiones (`arroz-blanco`) y rechaza `Arroz_Blanco`. Piezas que salen en
+el código: `^` y `$` = principio y final del texto; `+` = una o más veces; `[…]` = uno de estos
+caracteres y `[^…]` = cualquiera **menos** estos; `\d` = un dígito; `\s` = un espacio en blanco;
+`|` = "o". Detrás de la barra final van las banderas: `g` = todas las apariciones (en
+`.replace`, no solo la primera) y `u` = modo Unicode, que permite `\p{L}` (cualquier letra, de
+cualquier idioma, con o sin tilde), `\p{N}` (cualquier número) y `\p{M}` (las marcas que se
+combinan con una letra, como una tilde suelta; ver [normalización NFD](#normalizacion-nfd)).
+`patron.test(texto)` da `true` si el patrón aparece en el texto.
+
+### normalizacion-nfd
+Un mismo texto con tilde se puede guardar de dos formas: `á` como **un** carácter, o como `a`
+seguida de una tilde suelta que se pinta encima (una *marca combinante*). En pantalla se ven
+igual. `texto.normalize('NFD')` lo pasa todo a la segunda forma: separa cada letra de su marca
+(`á` → `a` + tilde, `ñ` → `n` + virgulilla). Después, `.replace(/\p{M}/gu, '')` borra todas las
+marcas ([expresión regular](#expresion-regular)) y queda el texto sin tildes: `'Café'` →
+`'Cafe'`. Es la forma habitual de empezar a convertir un nombre en un [slug](#slug).
 
 ---
 
@@ -486,7 +509,8 @@ La descripción de la forma de cada dato: qué campos tiene y qué reglas cumple
 La librería de esquemas que usa Astro. Se importa de `astro/zod`. Ejemplos:
 `z.string().min(1)` = texto no vacío; `z.number().int().positive()` = entero mayor que 0;
 `z.boolean()` = verdadero/falso; `z.object({...})` = objeto con esos campos; `z.url()` = texto
-con forma de URL (`https://…`).
+con forma de URL (`https://…`); `.optional()` detrás de cualquiera deja además que el campo falte
+(`undefined`).
 `.refine(fn, { message })` añade una regla propia; `.pipe(otro)` pasa el valor ya validado a
 otro esquema.
 
@@ -590,6 +614,28 @@ suya llamada PostgREST). Por ejemplo,
 esas dos columnas de cada fila. Cada petición lleva una [clave](#clave-publishable) en la
 cabecera `apikey`. Por defecto, una petición devuelve como mucho 1000 filas (spec 0013).
 
+### postgrest
+La pieza de [Supabase](#supabase) que crea la [API REST](#api-rest) a partir de las tablas. Así
+lee la dirección: `/rest/v1/products` es la tabla; `?select=id,name`, las columnas que quieres;
+`&order=name.asc`, el orden (`asc` = de menor a mayor, A–Z); y un **filtro** como
+`?id=eq.arroz-blanco` elige filas (`eq` = "igual a": "las filas cuyo `id` es `arroz-blanco`").
+Con `POST` (crear), el cuerpo JSON es la fila nueva y, si va bien, contesta `201`. Con `PATCH`
+(cambiar solo los campos que mandas) y `DELETE` (borrar), el cambio se aplica a **todas** las
+filas que cumplen el filtro; por eso se filtra siempre por `id`. Si el filtro no encuentra
+ninguna fila, no es un error: no cambia nada y, según la spec 0015 (que lo da por confirmar en
+una prueba real), contesta `200` con una lista vacía `[]`. Con el
+[access token](#access-token) del usuario en la cabecera `Authorization`, la petición se hace
+con el [rol](#rol) `authenticated`, y las [políticas](#politica) pueden mirar su [JWT](#jwt).
+Cuando Postgres rechaza algo, el JSON del error trae un `code`: el
+[código de error de Postgres](#codigo-de-error-postgres).
+
+### prefer-return-representation
+Una cabecera HTTP que se manda a [PostgREST](#postgrest): `Prefer: return=representation` pide
+"después de crear, cambiar o borrar, devuélveme las filas tal como quedaron". Sin ella, un
+`POST`, `PATCH` o `DELETE` que va bien contesta sin cuerpo. Con ella, la respuesta trae una lista
+JSON con las filas afectadas: así se conoce el resultado exacto sin otra petición, y cuántas
+filas se tocaron (una lista vacía = ninguna).
+
 ### clave-publishable
 La clave que identifica tu proyecto ante la [API REST](#api-rest) de Supabase; empieza por
 `sb_publishable_`. Es **pública por diseño**: se puede ver sin peligro, porque solo permite lo
@@ -601,13 +647,16 @@ Sustituye a la antigua clave `anon`, que Supabase está retirando.
 En Postgres, un rol es un "usuario" de la base de datos con sus permisos. Supabase elige el rol
 de cada petición a la API: `anon` si llega solo con la [clave publishable](#clave-publishable)
 (un visitante sin sesión, como nuestro build) y `authenticated` si además lleva la sesión de un
-usuario que ha iniciado sesión (lo usará la administración del dueño desde la feature 12, cuando
-lea y escriba el catálogo con su [access token](#access-token)).
+usuario que ha iniciado sesión (lo usa la administración del dueño desde la feature 12, al leer y
+escribir el catálogo con su [access token](#access-token)).
 
 ### grant
 `grant select on table public.products to anon, authenticated;` da a esos [roles](#rol) permiso
 para **leer** (`select`) esa tabla. Es la primera puerta: sin `grant`, Postgres rechaza la
-lectura con el error `42501`. La segunda puerta es [RLS](#rls), que decide qué filas.
+lectura con el error `42501`. La segunda puerta es [RLS](#rls), que decide qué filas. Para
+escribir hacen falta otros: `grant insert, update, delete on table public.products to
+authenticated;` deja crear, cambiar y borrar a los usuarios con sesión, y solo a ellos (`anon`
+sigue sin poder). Igual que al leer, después decide RLS.
 
 ### rls
 *Row Level Security*, seguridad por fila. Con `alter table … enable row level security`,
@@ -623,6 +672,16 @@ leer (`for select`), a estos [roles](#rol), deja ver las filas en las que la con
 `using` sea verdadera". `using (true)` = todas las filas. Cada acción (`select`, `insert`,
 `update`, `delete`) necesita su propia política; una acción sin política queda prohibida.
 
+### politica-de-escritura
+Una [política](#politica) para crear, cambiar o borrar filas. Usa dos condiciones distintas:
+`using (…)` decide **qué filas que ya existen** puede tocar la petición (una fila que no la
+cumple es invisible para esa acción: un `update` o `delete` sobre ella no da error, simplemente
+no cambia nada), y `with check (…)` decide si **la fila nueva**, la que se va a guardar, es
+aceptable (si no la cumple, Postgres rechaza la orden con el error `42501`; ver
+[código de error de Postgres](#codigo-de-error-postgres)). `for insert` solo lleva `with check`
+(antes no había fila); `for delete` solo `using` (después no queda fila); `for update` lleva las
+dos. Antes de cualquier política hace falta el [grant](#grant) de esa acción.
+
 ### funcion-sql
 Postgres también tiene funciones, como JavaScript. `create function public.nombre() returns
 boolean language sql as $$ select … $$` crea una, en el [esquema](#esquema-sql) `public`, que no
@@ -631,6 +690,25 @@ escrito en SQL; el cuerpo va entre los dos `$$`, que hacen de comillas (así den
 comillas simples sin problema). `create or replace` la crea, o la sustituye si ya existe, así que
 el archivo se puede ejecutar otra vez sin error. Se llama igual que en JavaScript:
 `select public.nombre();`. Una [política](#politica) puede usarla dentro de su `using (…)`.
+
+### transaccion-sql
+Un grupo de órdenes SQL que cuenta como una sola: o se guardan todas o ninguna. `begin;` la
+abre; `commit;` guarda lo hecho y `rollback;` lo **deshace todo**, como si nunca hubiera pasado.
+Sirve para probar algo en la base de datos de verdad sin dejar rastro: `begin;`, la prueba, mirar
+el resultado y `rollback;`. Dentro, `set local …` cambia un ajuste solo hasta que la transacción
+termina.
+
+### codigo-de-error-postgres
+Cuando Postgres rechaza una orden, da un código de 5 caracteres que dice por qué (más fiable que
+el texto del mensaje, que puede cambiar). Los que aparecen en el proyecto: `42501` = sin permiso
+(falta el [grant](#grant), o una [política](#politica-de-escritura) lo rechaza); `23505` = valor
+repetido donde no se admite (por ejemplo, una [clave primaria](#clave-primaria) que ya existe);
+`23503` = la [clave foránea](#clave-foranea) apunta a algo que no existe; `23514` = no cumple un
+[check](#restriccion-check); `23502` = falta un valor `not null`; `22P02` = un valor con forma
+imposible para su tipo (letras donde va un número). [PostgREST](#postgrest) lo devuelve en el
+campo `code` del JSON de error y elige con él el
+[código de estado HTTP](#codigo-de-estado-http). Según la spec 0015: `23505` y `23503` → `409`;
+`42501` → `403` si la petición llevaba sesión; casi todos los demás → `400`.
 
 ### storage-y-bucket
 Supabase Storage es el almacén de archivos de Supabase, como la carpeta de subidas que montarías
@@ -916,6 +994,51 @@ escribe en ella, el lector de pantalla lo lee en voz alta sin que el usuario ten
 allí: `alert` interrumpe en el momento (para errores), `status` espera a que termine lo que está
 leyendo (para avisos tranquilos).
 
+### template-html
+`<template>…</template>` guarda un trozo de HTML que el navegador **no** pinta ni ejecuta: es un
+molde. Desde JavaScript, `template.content` es ese trozo, y
+`template.content.firstElementChild.cloneNode(true)` hace una copia de su primer elemento con
+todo lo que lleva dentro (`true` = copiar también los hijos). La copia se rellena y se mete en la
+página. Así el HTML que se repite (una fila de una lista) se escribe una vez, en el HTML y con
+sus clases enteras, en vez de construirlo pieza a pieza en JavaScript.
+
+### textcontent-e-innerhtml
+Dos formas de poner contenido en un elemento desde JavaScript. `el.textContent = texto` lo
+escribe como **texto**, letra por letra: si el texto es `<b>hola</b>`, en pantalla se ve
+`<b>hola</b>` tal cual. `el.innerHTML = texto` lo interpreta como **HTML**: crea etiquetas y
+puede acabar ejecutando código. Por eso, con un texto que escribe una persona (el nombre de un
+producto), `innerHTML` abre la puerta a un ataque *XSS* (*cross-site scripting*): alguien guarda
+como nombre un trozo de HTML con código, y ese código se ejecuta en el navegador de quien abre la
+página, con su sesión. Con `textContent` eso no puede pasar.
+
+### setcustomvalidity
+`campo.setCustomValidity('mensaje')` marca un campo como **no válido** con un mensaje tuyo;
+`campo.setCustomValidity('')` lo vuelve a dar por bueno. Después, `form.reportValidity()`
+([validación de formularios](#validacion-de-formularios)) enseña ese mensaje junto al primer
+campo marcado, con el aviso propio del navegador, y devuelve `false`. Sirve para reglas que HTML
+no sabe comprobar solo (un precio sin decimales, un nombre con al menos una letra). La marca no
+se quita sola: hay que borrarla cuando el usuario corrige el campo.
+
+### delegacion-de-eventos
+En vez de poner un `addEventListener` en cada botón de una lista, se pone **uno** en el
+contenedor. Los eventos "suben" desde el elemento tocado hasta todos sus padres, así que el
+contenedor los recibe todos. `event.target` es el elemento donde empezó el evento;
+`elemento.closest('[data-edit]')` busca, desde ese elemento hacia arriba, el primero que cumpla
+el selector (o da `null`), y `elemento.matches('[data-stock]')` dice si el propio elemento lo
+cumple. Ventaja: sirve también para los elementos que se añaden después, al redibujar la lista.
+
+### tabindex-menos-uno
+`tabindex="-1"` en un elemento que normalmente no recibe el foco (un título) deja dárselo desde
+JavaScript con `elemento.focus()`, sin añadirlo al recorrido de la tecla Tab. Sirve para llevar
+al teclado y al lector de pantalla al principio de lo que acaba de aparecer: al cambiar de
+vista, el lector de pantalla lee el título nuevo. (El foco es el elemento que recibe el teclado;
+ver [focus-visible](#focus-visible).)
+
+### aria-describedby
+`aria-describedby="id-de-la-pista"` en un campo lo une con otro elemento de texto, por ejemplo
+una pista como "Solo el número, sin decimales". Al llegar al campo, el lector de pantalla lee la
+pista después de la etiqueta. A diferencia del `<label>`, no le da nombre al campo: lo describe.
+
 ---
 
 ## Web y rendimiento
@@ -951,9 +1074,9 @@ de 5.
 ### codigo-de-estado-http
 El número con el que un servidor dice cómo fue una petición (en Express lo eliges con
 `res.status(404)`). [fetch](#fetch) lo da en `response.status`. Los que aparecen en este
-proyecto: `200` = todo bien; `400` = la petición no vale (por ejemplo, una contraseña incorrecta);
+proyecto: `200` = todo bien; `201` = creado (una fila nueva); `400` = la petición no vale (por ejemplo, una contraseña incorrecta);
 `401` = "no sé quién eres" (falta la identificación o no sirve); `403` = "no te dejo" (sé lo que
-pides y lo rechazo); `422` = "te entiendo, pero el dato no vale" (una contraseña demasiado
+pides y lo rechazo); `409` = "choca con lo que ya hay" (por ejemplo, un `id` repetido); `422` = "te entiendo, pero el dato no vale" (una contraseña demasiado
 corta); `429` = "demasiadas peticiones, espera un poco"; `5xx` (`500`, `503`…) = falló el
 propio servidor. Supabase añade a sus respuestas de error un **código de error** en texto
 (`invalid_credentials`, `bad_jwt`…) que precisa qué pasó, y no siempre usa el número que

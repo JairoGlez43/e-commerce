@@ -4,12 +4,13 @@
 > **Lo decidió:** [spec 0005](../../../../docs/specs/0005-catalog-page.md) (sobre el patrón de
 > tarjeta de la [spec 0002](../../../../docs/specs/0002-design-base.md)) ·
 > **Lo usan:** `src/pages/index.astro` y `src/pages/categoria/[id].astro` ·
-> **Usa:** `astro:content` (solo el tipo), `astro:assets` (`<Image>`), `src/lib/price.ts`
+> **Usa:** `astro:content` (solo el tipo), `astro:assets` (`<Image>`), `src/lib/price.ts` y
+> [`NoPhoto.astro`](NoPhoto.astro.md) (spec 0015)
 
 ## Para qué sirve
 
-Dibuja una tarjeta de producto: foto cuadrada, nombre, formato ("Paquete 500 g"), precio y una
-etiqueta "Disponible" o "Agotado". Toda la tarjeta es un enlace a `/producto/<id>`. Se escribe
+Dibuja una tarjeta de producto: foto cuadrada (o la caja "Sin foto" si el producto aún no tiene
+foto), nombre, formato ("Paquete 500 g"), precio y una etiqueta "Disponible" o "Agotado". Toda la tarjeta es un enlace a `/producto/<id>`. Se escribe
 una vez aquí y la portada y las páginas de categoría la reutilizan, así las 18 tarjetas son
 idénticas en todas partes.
 
@@ -22,6 +23,7 @@ idénticas en todas partes.
 import type { CollectionEntry } from 'astro:content';
 import { Image } from 'astro:assets';
 import { formatPrice } from '../lib/price';
+import NoPhoto from './NoPhoto.astro';
 ```
 
 - `---`: abre el [frontmatter](../../glosario.md#frontmatter), el código que corre solo
@@ -36,6 +38,8 @@ import { formatPrice } from '../lib/price';
 - `import { formatPrice } from '../lib/price';`: la función que convierte `12500` en
   `12.500 CUP` (ver [`price.ts.md`](../lib/price.ts.md)). La spec 0005 exige que el precio se
   formatee **solo** con esta función, para que todo el sitio lo muestre igual.
+- `import NoPhoto from './NoPhoto.astro';`: la caja "Sin foto" que se dibuja en lugar de la foto
+  cuando el producto no tiene una (spec 0015; ver [`NoPhoto.astro.md`](NoPhoto.astro.md)).
 
 ### 2. Las props que recibe
 
@@ -82,7 +86,9 @@ const href = `/producto/${product.id}`;
 - `const { name, unit, price, inStock, photo } = product.data;`: lo mismo con los campos del
   producto: nombre, formato, precio (número entero), si hay existencias (`true`/`false`) y la
   foto. Desde la spec 0013, `photo` es un texto: la URL de la foto en Supabase
-  ([imagen remota](../../glosario.md#imagen-remota)), no una foto de `src/assets/`.
+  ([imagen remota](../../glosario.md#imagen-remota)), no una foto de `src/assets/`. Desde la spec
+  0015 puede faltar: un producto añadido desde `/admin/` no tiene foto hasta la feature 14, y
+  entonces `photo` es `undefined`.
 - ``const href = `/producto/${product.id}`;``: arma la URL del producto con un
   [template literal](../../glosario.md#template-literal): `/producto/arroz-blanco`. Esa página
   la genera [`src/pages/producto/[id].astro`](../pages/producto/%5Bid%5D.astro.md) (feature 06).
@@ -118,20 +124,32 @@ const href = `/producto/${product.id}`;
     el borde se vuelve del rojo `accent`. Es la pista visual de que la tarjeta entera es
     clicable.
 
-### 5. La foto
+### 5. La foto, o la caja "Sin foto"
 
 ```astro
-	<Image
-		src={photo}
-		alt={name}
-		inferSize
-		widths={[200, 400]}
-		sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
-		loading={eager ? 'eager' : 'lazy'}
-		class:list={['aspect-square w-full object-cover', { 'opacity-50': !inStock }]}
-	/>
+	{
+		photo ? (
+			<Image
+				src={photo}
+				alt={name}
+				inferSize
+				widths={[200, 400]}
+				sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
+				loading={eager ? 'eager' : 'lazy'}
+				class:list={['aspect-square w-full object-cover', { 'opacity-50': !inStock }]}
+			/>
+		) : (
+			<NoPhoto />
+		)
+	}
 ```
 
+- `{ photo ? ( … ) : ( <NoPhoto /> ) }`: una
+  [expresión en la plantilla](../../glosario.md#expresion-en-plantilla) que elige entre dos trozos
+  de HTML, igual que la del bloque 6. Si el producto tiene foto, el `<Image>` de siempre; si no
+  (spec 0015), la caja [`<NoPhoto />`](NoPhoto.astro.md): un cuadrado crema con el texto "Sin
+  foto", del mismo tamaño que la foto, así la tarjeta no cambia de forma. La caja no lleva
+  `opacity-50` aunque el producto esté agotado: ya lo dice la etiqueta "Agotado" (bloque 8).
 - `<Image`: el componente de `astro:assets`. En el build escribe una etiqueta `<img>` normal.
 - `src={photo}`: la URL de la foto del producto en Supabase. En el build, Astro la descarga y
   genera las versiones optimizadas en `dist/_astro/`; el `<img>` final apunta a esas copias, no a
@@ -165,6 +183,8 @@ const href = `/producto/${product.id}`;
   - `{ 'opacity-50': !inStock }` → añade `opacity: 0.5` (foto descolorida) **solo** si el
     producto no tiene existencias (`!inStock` = "no hay stock").
 - `/>`: cierra el componente (no tiene contenido dentro).
+- Sin foto no se llama a `<Image>`, así que no se descarga nada en el build y la tarjeta no lleva
+  ningún `<img>` (spec 0015, AC9).
 
 ### 6. El nombre, con el enlace estirado
 
@@ -294,6 +314,7 @@ const href = `/producto/${product.id}`;
     4 primeras tarjetas contando todas las secciones.
   - [`src/pages/categoria/[id].astro`](../pages/categoria/%5Bid%5D.astro.md): `headingLevel={2}`,
     y `eager` para sus 4 primeras.
+- **Sin foto:** dibuja [`NoPhoto.astro`](NoPhoto.astro.md) en lugar del `<Image>`.
 - **Estilo:** los tokens (`surface`, `border`, `accent`, `olive`…) y la clase `price` salen de
   `src/styles/global.css`. Las clases vienen copiadas del patrón de tarjeta de `design.md`,
   que se ve en vivo en [`/estilo`](../pages/estilo.astro.md).
@@ -309,7 +330,8 @@ Comprueba qué hace el enlace estirado quitándolo un momento.
 3. Pasa el ratón por la foto o el precio de una tarjeta: el puntero ya no es una mano y el clic
    no hace nada. Solo el nombre es clicable.
 4. Deshaz: vuelve a escribir `class="after:absolute after:inset-0"` en los dos enlaces (o
-   `Ctrl+Z` en VS Code). `src/` aún no está en git, así que `git checkout` no sirve aquí.
+   `Ctrl+Z` en VS Code). No uses `git checkout` para deshacerlo: borraría también cualquier otro
+   cambio de este archivo que aún no esté guardado en git.
 
 ## Términos
 

@@ -221,7 +221,7 @@ function measure(file) {
   `[\s\S]*?` es "cualquier cosa, incluidos saltos de línea, lo mínimo posible".
 - `js`: la suma de los dos, comprimidos. Da 0 en todas las páginas de clientes, que no mandan
   JavaScript (spec 0001). Solo `/admin/` tiene: su `<script type="module" src="…">` pesaba 2,6 KB
-  comprimido el 2026-10-23.
+  comprimido el 2026-10-23, y 5,2 KB el 2026-10-27, con la gestión de productos de la spec 0015.
 
 ### 8. Medir una página: fuentes e imágenes
 
@@ -346,7 +346,7 @@ console.log(`All ${rows.length} pages within budget.`);
 1. En la terminal de VS Code: `pnpm build` y luego `pnpm check:weight`.
 2. **Qué deberías ver:** las dos líneas de límites, la tabla con 27 filas, todas `ok`, y
    `All 27 pages within budget.`. Medido el 2026-10-23: HTML + CSS entre 5,7 y 7,8 KB por
-   página, JS 0 en todas salvo `/admin/` (2,6 KB), la fuente 17,7 KB, la miniatura más pesada
+   página, JS 0 en todas salvo `/admin/` (2,6 KB; 5,2 KB desde la spec 0015), la fuente 17,7 KB, la miniatura más pesada
    22,8 KB y la foto de detalle más pesada 58,5 KB. `/admin/` es la primera fila, porque la tabla
    va en orden alfabético.
 3. Ahora haz que falle solo la administración: abre `scripts/check-weight.mjs` y cambia

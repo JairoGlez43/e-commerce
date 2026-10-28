@@ -3,6 +3,7 @@ import type { GetStaticPaths } from 'astro';
 import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
 import { Image, getImage } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import NoPhoto from '../../components/NoPhoto.astro';
 import SiteHeader from '../../components/SiteHeader.astro';
 import SiteFooter from '../../components/SiteFooter.astro';
 import WhatsAppIcon from '../../components/WhatsAppIcon.astro';
@@ -28,18 +29,19 @@ const { name, unit, price, inStock, description, photo } = product.data;
 const category = await getEntry(product.data.category);
 
 // WhatsApp link preview: the price leads the description (owner's choice), and the image is a
-// JPG because WebP previews are not guaranteed.
+// JPG because WebP previews are not guaranteed. Without a photo, BaseLayout's default
+// og-default.png is used (spec 0015).
 const availability = inStock ? 'Disponible' : 'Agotado';
 const title = `${name} · ${site.name}`;
 const metaDescription = `${formatPrice(price)} · ${unit} · ${availability}. ${description}`;
-const previewImage = await getImage({ src: photo, inferSize: true, width: 600, format: 'jpg' });
+const previewImage = photo ? await getImage({ src: photo, inferSize: true, width: 600, format: 'jpg' }) : undefined;
 
 // The same absolute page URL as og:url, so the shop sees which product the message is about.
 const pageUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
 const orderHref = orderLink(product, pageUrl);
 ---
 
-<BaseLayout title={title} description={metaDescription} image={previewImage.src}>
+<BaseLayout title={title} description={metaDescription} image={previewImage?.src}>
 	<SiteHeader />
 	<main class="mx-auto flex max-w-5xl flex-col gap-6 px-4 pt-8 pb-12">
 		<nav aria-label="Ruta">
@@ -54,18 +56,24 @@ const orderHref = orderLink(product, pageUrl);
 			</ol>
 		</nav>
 		<article class="grid gap-6 md:grid-cols-2 md:items-start">
-			<Image
-				src={photo}
-				alt={name}
-				inferSize
-				widths={[400, 800]}
-				sizes="(min-width: 768px) 480px, 100vw"
-				loading="eager"
-				class:list={[
-					'aspect-square w-full rounded-card border border-border object-cover',
-					{ 'opacity-50': !inStock },
-				]}
-			/>
+			{
+				photo ? (
+					<Image
+						src={photo}
+						alt={name}
+						inferSize
+						widths={[400, 800]}
+						sizes="(min-width: 768px) 480px, 100vw"
+						loading="eager"
+						class:list={[
+							'aspect-square w-full rounded-card border border-border object-cover',
+							{ 'opacity-50': !inStock },
+						]}
+					/>
+				) : (
+					<NoPhoto framed />
+				)
+			}
 			<div class="flex flex-col gap-3">
 				<h1>{name}</h1>
 				<p class="text-muted">{unit}</p>

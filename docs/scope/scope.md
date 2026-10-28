@@ -19,8 +19,8 @@
 | 17 | Visual polish                    | done              | default | docs/specs/0011-visual-polish.md |
 | 09 | Admin backend and publishing     | done              | default | docs/specs/0012-admin-backend.md |
 | 10 | Catalog data online              | done              | default | docs/specs/0013-catalog-data-online.md |
-| 11 | Owner login                      | in-progress       | default | docs/specs/0014-owner-login.md |
-| 12 | Manage products                  | needs-a-decision  | default | —    |
+| 11 | Owner login                      | done              | default | docs/specs/0014-owner-login.md |
+| 12 | Manage products                  | done              | default | docs/specs/0015-manage-products.md |
 | 13 | Publish changes                  | needs-a-decision  | default | —    |
 | 14 | Product photos upload            | needs-a-decision  | default | —    |
 | 15 | Manage categories                | needs-a-decision  | default | —    |
@@ -246,7 +246,7 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 **Notes:** Depends on 09. Data must keep the product shape of spec 0004.
 
 ## 11 · Owner login
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0014-owner-login.md
 **Code:** `src/lib/auth.ts`, `src/pages/admin/index.astro`, `supabase/auth.sql`, `scripts/check-weight.mjs`
 **Depth:** default
@@ -255,15 +255,15 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 - Without signing in, nobody can open the admin or change the catalog.
 - The owner can sign out, and can recover a forgotten password without the developer.
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [x] Build it — /develop
-- [ ] Verify it — /check verify
+- [x] Verify it — /check verify
 **Notes:** Depends on 09. Changes auth: use plan mode before building (CLAUDE.md).
 
 ## 12 · Manage products
-**Status:** needs-a-decision
-**Spec:** —
-**Code:** —
+**Status:** done
+**Spec:** docs/specs/0015-manage-products.md
+**Code:** `src/lib/products.ts`, `src/pages/admin/index.astro`, `supabase/products-write.sql`, `src/components/NoPhoto.astro`
 **Depth:** default
 **Done when:**
 - The signed-in owner sees all products, in stock or not, on a phone.
@@ -273,8 +273,8 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 - Invalid input (empty name, negative price) is refused with a clear message in Spanish.
 **Tasks:**
 - [ ] Decide it — /architect
-- [ ] Build it — /develop
-- [ ] Verify it — /check verify
+- [x] Build it — /develop
+- [x] Verify it — /check verify
 **Notes:** Depends on 10 and 11. The admin UI is not bound by the public pages' no-client-JS
 rule unless /architect says so.
 

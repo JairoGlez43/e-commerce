@@ -2,6 +2,7 @@
 import type { CollectionEntry } from 'astro:content';
 import { Image } from 'astro:assets';
 import { formatPrice } from '../lib/price';
+import NoPhoto from './NoPhoto.astro';
 
 interface Props {
 	product: CollectionEntry<'products'>;
@@ -19,15 +20,21 @@ const href = `/producto/${product.id}`;
 <article
 	class="relative flex h-full flex-col overflow-hidden rounded-card border border-border bg-surface shadow-card hover:border-accent"
 >
-	<Image
-		src={photo}
-		alt={name}
-		inferSize
-		widths={[200, 400]}
-		sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
-		loading={eager ? 'eager' : 'lazy'}
-		class:list={['aspect-square w-full object-cover', { 'opacity-50': !inStock }]}
-	/>
+	{
+		photo ? (
+			<Image
+				src={photo}
+				alt={name}
+				inferSize
+				widths={[200, 400]}
+				sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
+				loading={eager ? 'eager' : 'lazy'}
+				class:list={['aspect-square w-full object-cover', { 'opacity-50': !inStock }]}
+			/>
+		) : (
+			<NoPhoto />
+		)
+	}
 	<div class="flex flex-1 flex-col gap-1 p-3">
 		{
 			headingLevel === 2 ? (
