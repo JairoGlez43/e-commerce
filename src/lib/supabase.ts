@@ -66,16 +66,30 @@ async function readTable<Row>(table: string, columns: string): Promise<Row[]> {
 	return rows;
 }
 
+// When the catalog last changed, stamped by a trigger in Supabase (spec 0016). Kept exactly as
+// PostgREST returned it: the admin compares it as a string with the one in /build.json.
+// Read once per build, and always before the tables below, so the stamp is never newer than the
+// data in the build. An edit made during a build then still shows as pending.
+let catalogChangedAt: Promise<string> | undefined;
+export function readCatalogChangedAt(): Promise<string> {
+	// readTable() already refused an empty answer, so the one row is there.
+	catalogChangedAt ??= readTable<{ changed_at: string }>('catalog_state', 'changed_at').then(
+		([row]) => row!.changed_at,
+	);
+	return catalogChangedAt;
+}
+
 // Shared by both loaders, so categories are fetched once per build.
 let categoryRows: Promise<CategoryRow[]> | undefined;
 export function readCategories(): Promise<CategoryRow[]> {
-	categoryRows ??= readTable<CategoryRow>('categories', 'id,name,sort_order');
+	categoryRows ??= readCatalogChangedAt().then(() => readTable<CategoryRow>('categories', 'id,name,sort_order'));
 	return categoryRows;
 }
 
 // reference() alone only logs an unknown category and the build still exits 0 (spec 0004),
 // so every product's category is checked here, where a throw fails the build.
 export async function readProducts(): Promise<ProductRow[]> {
+	await readCatalogChangedAt();
 	const [categories, products] = await Promise.all([
 		readCategories(),
 		readTable<ProductRow>('products', 'id,name,category_id,price,unit,in_stock,description,photo_path'),

@@ -149,6 +149,21 @@ const { url, key } = supabaseConfig();
 				<p class="text-sm text-muted">Los cambios se guardan al momento. La web pública los mostrará después de publicar.</p>
 			</section>
 
+			<!-- Publish (spec 0016): one tap starts one build of the public site. -->
+			<section class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+				<h2>Publicar</h2>
+				<p data-publish-status role="status" class="text-ink empty:hidden"></p>
+				<p data-publish-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="button"
+					data-publish
+					data-label="Publicar cambios"
+					class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+				>
+					Publicar cambios
+				</button>
+			</section>
+
 			<!-- Products (spec 0015): rows are cloned from the templates below and filled with textContent. -->
 			<section class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
 				<div class="flex flex-wrap items-center justify-between gap-2">
@@ -311,9 +326,10 @@ const { url, key } = supabaseConfig();
 </BaseLayout>
 
 <script>
-	// The admin's views (specs 0014, 0015). Every Auth rule lives in src/lib/auth.ts and every
-	// product rule in src/lib/products.ts; this script only reads the forms, shows one view at a
-	// time, draws the list and turns errors into Spanish messages.
+	// The admin's views (specs 0014, 0015, 0016). Every Auth rule lives in src/lib/auth.ts, every
+	// product rule in src/lib/products.ts and every publish rule in src/lib/publish.ts; this script
+	// only reads the forms, shows one view at a time, draws the list and turns errors into Spanish
+	// messages.
 	import {
 		AuthError,
 		type AuthErrorKind,
@@ -345,6 +361,17 @@ const { url, key } = supabaseConfig();
 		setStock,
 		updateProduct,
 	} from '../../lib/products';
+	import {
+		PublishError,
+		type Build,
+		type PublishErrorKind,
+		type PublishState,
+		catalogChangedAt,
+		lastPublish,
+		publishState,
+		readBuild,
+		requestPublish,
+	} from '../../lib/publish';
 	import type { CategoryRow, ProductRow } from '../../lib/supabase';
 
 	type View = 'sign-in' | 'recover' | 'new-password' | 'signed-in' | 'product';
@@ -377,6 +404,23 @@ const { url, key } = supabaseConfig();
 	const DELETED = 'Producto borrado.';
 	// The project's minimum password length, set in the Supabase dashboard (spec 0014).
 	const MIN_PASSWORD = 8;
+	const PUBLISH_MESSAGES: Record<PublishErrorKind, string> = {
+		tooSoon: 'Acabas de publicar. Espera un minuto y vuelve a intentarlo.',
+		forbidden: 'Esta cuenta no puede publicar.',
+		unknown: 'No se pudo publicar. Tus cambios siguen guardados. Inténtalo otra vez.',
+	};
+	const CHECKING = 'Comprobando…';
+	const PUBLISHING = 'Publicando… La web se actualiza en unos minutos.';
+	const PENDING = 'Hay cambios sin publicar.';
+	const UP_TO_DATE = 'La web está al día.';
+	const PUBLISHED = 'Publicado. La web ya muestra los cambios.';
+	const PUBLISH_FAILED =
+		'La publicación no terminó. Tus cambios siguen guardados. Vuelve a publicar y, si vuelve a pasar, avisa a quien te hizo la web.';
+	// How often a watched publish reads /build.json, and when it gives up (spec 0016).
+	const POLL_MS = 15_000;
+	const WATCH_LIMIT_MS = 10 * 60_000;
+	// How long "Publicado…" stays before the state line.
+	const PUBLISHED_MS = 5_000;
 
 	const root = document.getElementById('admin')!;
 	initAuth({ url: root.dataset.supabaseUrl!, key: root.dataset.supabaseKey! });
@@ -391,6 +435,8 @@ const { url, key } = supabaseConfig();
 
 	// Shows one view, with an optional error message in its alert area.
 	function show(view: View, alert = '') {
+		// Leaving the signed-in views (sign-out, a refused session) stops the publish watch.
+		if (view !== 'signed-in' && view !== 'product') stopPublish();
 		for (const element of root.querySelectorAll<HTMLElement>('[data-view]')) {
 			element.hidden = element.dataset.view !== view;
 			element.querySelector('[data-alert]')!.textContent = '';
@@ -402,12 +448,14 @@ const { url, key } = supabaseConfig();
 		}
 	}
 
-	// Opening the signed-in view always loads the products (spec 0015).
+	// Opening the signed-in view always loads the products (spec 0015) and the publish state
+	// (spec 0016).
 	function showSignedIn(user: AuthUser, status = '', alert = '') {
 		root.querySelector('[data-email]')!.textContent = user.email;
 		root.querySelector('[data-status]')!.textContent = status;
 		show('signed-in', alert);
 		void loadCatalog();
+		void loadPublish();
 	}
 
 	// Disables the button and ends its label in "…" while the request runs.
@@ -668,6 +716,7 @@ const { url, key } = supabaseConfig();
 			} else {
 				putProduct(await addProduct(fields, products.map((product) => product.id)));
 			}
+			markPending();
 			showList(SAVED);
 		} catch (error) {
 			failForm(error);
@@ -730,6 +779,7 @@ const { url, key } = supabaseConfig();
 			try {
 				await deleteProduct(product.id);
 				products = products.filter((item) => item.id !== product.id);
+				markPending();
 				showList(DELETED);
 			} catch (error) {
 				failForm(error);
@@ -756,6 +806,7 @@ const { url, key } = supabaseConfig();
 		listAlert.textContent = '';
 		try {
 			putProduct(await setStock(id, box.checked));
+			markPending();
 		} catch (error) {
 			box.checked = !box.checked;
 			if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
@@ -769,6 +820,129 @@ const { url, key } = supabaseConfig();
 	list.addEventListener('change', (event) => {
 		const box = event.target;
 		if (box instanceof HTMLInputElement && box.matches('[data-stock]')) void switchStock(box);
+	});
+
+	// --- Publish (spec 0016) -----------------------------------------------------------------
+
+	const publishStatus = root.querySelector<HTMLElement>('[data-publish-status]')!;
+	const publishAlert = root.querySelector<HTMLElement>('[data-publish-alert]')!;
+	const publishButton = root.querySelector<HTMLButtonElement>('[data-publish]')!;
+
+	// Only the latest load or watch may write the card; stopPublish() moves it on.
+	let publishRun = 0;
+	// True while a publish is being watched: the card then keeps "Publicando…".
+	let watching = false;
+	let publishTimer: number | undefined;
+
+	function publishMessage(error: unknown): string {
+		return error instanceof PublishError ? PUBLISH_MESSAGES[error.kind] : MESSAGES[kindOf(error)];
+	}
+
+	function stateLine(state: PublishState): string {
+		if (state.publishing) return PUBLISHING;
+		return state.pending ? PENDING : UP_TO_DATE;
+	}
+
+	function stopPublish() {
+		publishRun++;
+		watching = false;
+		window.clearTimeout(publishTimer);
+	}
+
+	// A load that fails shows its message, an empty status line and a usable button.
+	function failPublish(run: number, error: unknown) {
+		if (run !== publishRun) return;
+		watching = false;
+		publishStatus.textContent = '';
+		if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+		publishAlert.textContent = publishMessage(error);
+	}
+
+	// After a product write the catalog differs from the live site, with no request needed.
+	function markPending() {
+		if (!watching) publishStatus.textContent = PENDING;
+	}
+
+	// The three values load together when the signed-in view opens. A publish whose build is not
+	// live yet (after a reload, or from another device) is watched from here.
+	async function loadPublish() {
+		stopPublish();
+		const run = publishRun;
+		publishStatus.textContent = CHECKING;
+		publishAlert.textContent = '';
+		try {
+			const [build, changedAt, requestedAt] = await Promise.all([readBuild(), catalogChangedAt(), lastPublish()]);
+			if (run !== publishRun) return;
+			const state = publishState(build, changedAt, requestedAt);
+			if (state.publishing && requestedAt !== null) watch(requestedAt);
+			else publishStatus.textContent = stateLine(state);
+		} catch (error) {
+			failPublish(run, error);
+		}
+	}
+
+	// The watched build is live: "Publicado…" once, then the state with the database's latest
+	// stamp, so an edit made during the build still shows as pending.
+	async function finishWatch(run: number, build: Build, requestedAt: string) {
+		try {
+			const changedAt = await catalogChangedAt();
+			if (run !== publishRun) return;
+			watching = false;
+			publishStatus.textContent = PUBLISHED;
+			const line = stateLine(publishState(build, changedAt, requestedAt));
+			publishTimer = window.setTimeout(() => {
+				// A product write in the meantime already set its own line.
+				if (run === publishRun && publishStatus.textContent === PUBLISHED) publishStatus.textContent = line;
+			}, PUBLISHED_MS);
+		} catch (error) {
+			failPublish(run, error);
+		}
+	}
+
+	// No new build after the time limit: the failure message, and the state as the live site
+	// shows it. The publish itself is not "still running" any more.
+	async function giveUp(run: number) {
+		watching = false;
+		publishAlert.textContent = PUBLISH_FAILED;
+		publishStatus.textContent = '';
+		try {
+			const [build, changedAt] = await Promise.all([readBuild(), catalogChangedAt()]);
+			if (run !== publishRun) return;
+			publishStatus.textContent = stateLine(publishState(build, changedAt, null));
+		} catch (error) {
+			if (run === publishRun && isSignedOut(error)) show('sign-in', MESSAGES.signedOut);
+		}
+	}
+
+	// Reads /build.json every 15 s until a build newer than the request is live. The limit is
+	// counted with performance.now(), never the phone's clock. A failed poll (offline) is skipped.
+	function watch(requestedAt: string) {
+		stopPublish();
+		const run = publishRun;
+		const started = performance.now();
+		watching = true;
+		publishStatus.textContent = PUBLISHING;
+		const poll = async () => {
+			const build = await readBuild().catch(() => null);
+			if (run !== publishRun) return;
+			if (build && Date.parse(build.builtAt) > Date.parse(requestedAt)) return void finishWatch(run, build, requestedAt);
+			if (performance.now() - started >= WATCH_LIMIT_MS) return void giveUp(run);
+			publishTimer = window.setTimeout(poll, POLL_MS);
+		};
+		publishTimer = window.setTimeout(poll, POLL_MS);
+	}
+
+	// Always usable except while its own request runs: the server's 60 s gap handles repeats.
+	publishButton.addEventListener('click', () => {
+		publishAlert.textContent = '';
+		void whileBusy(publishButton, async () => {
+			try {
+				watch(await requestPublish());
+			} catch (error) {
+				if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+				publishAlert.textContent = publishMessage(error);
+			}
+		});
 	});
 
 	async function start() {

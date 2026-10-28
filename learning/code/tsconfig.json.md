@@ -2,7 +2,8 @@
 
 > **Qué es:** la configuración de [TypeScript](glosario.md#typescript): qué reglas aplica y qué
 > archivos revisa · **Lo decidió:** [spec 0001 · Stack](../../docs/specs/0001-stack.md)
-> ("TypeScript (strict template)") · **Lo usan:** `pnpm typecheck` (`astro check`) y VS Code,
+> ("TypeScript (strict template)"), y la excepción de `supabase/functions`,
+> [spec 0016](../../docs/specs/0016-publish-changes.md) · **Lo usan:** `pnpm typecheck` (`astro check`) y VS Code,
 > que subraya los errores mientras escribes · **Usa:** el archivo de ajustes que trae Astro,
 > `node_modules/astro/tsconfigs/strict.json`, y los tipos que Astro genera en
 > `.astro/types.d.ts`.
@@ -60,13 +61,23 @@ más estricta, y solo añade la lista de archivos.
   pero deja a la vista qué se revisa.
 
 ```json
-  "exclude": ["dist"]
+  "exclude": ["dist", "supabase/functions"]
 }
 ```
 
-- `"exclude": ["dist"]`: de lo que incluyó `**/*`, quita la carpeta [`dist/`](glosario.md#dist).
-  Es el resultado del build, no código tuyo, así que no tiene sentido revisarlo.
+- `"exclude"`: de lo que incluyó `**/*`, quita dos carpetas.
   (`node_modules/` no hace falta nombrarlo: TypeScript lo excluye por su cuenta.)
+- `"dist"`: la carpeta [`dist/`](glosario.md#dist). Es el resultado del build, no código tuyo,
+  así que no tiene sentido revisarlo.
+- `"supabase/functions"`: añadida con la spec 0016. Ahí vive el código de la
+  [Edge Function](glosario.md#edge-function) `publish`
+  ([`index.ts.md`](supabase/functions/publish/index.ts.md)), que no corre con Astro ni con Node
+  sino con [Deno](glosario.md#deno), en los servidores de Supabase. Usa cosas que solo existen
+  allí, como `Deno.env.get(…)` y `Deno.serve(…)`. Si TypeScript lo revisara con las reglas de
+  Astro, no sabría qué es `Deno` y `pnpm typecheck` fallaría con un error del tipo
+  `Cannot find name 'Deno'` ("no encuentro el nombre `Deno`"). La contrapartida: el typecheck del
+  proyecto ya no revisa ese archivo, así que un error suyo solo saldría al desplegarlo en
+  Supabase o al probarlo (spec 0016, T3).
 - `}` cierra el objeto.
 
 ## Cómo se conecta
@@ -112,3 +123,5 @@ Vas a ver la configuración completa que resulta de la herencia, y cómo cambia.
 - [módulo virtual](glosario.md#modulo-virtual)
 - [archivo de declaración](glosario.md#archivo-de-declaracion)
 - [patrón glob](glosario.md#patron-glob)
+- [edge function](glosario.md#edge-function) (nuevo, spec 0016)
+- [deno](glosario.md#deno) (nuevo, spec 0016)

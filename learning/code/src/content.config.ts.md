@@ -1,6 +1,6 @@
 # `src/content.config.ts`
 
-> **Qué es:** la definición de las dos colecciones de datos (`categories` y `products`): de dónde salen (Supabase) y la forma obligatoria de cada elemento · **Lo decidió:** [spec 0004](../../../docs/specs/0004-sample-product-data.md) (forma de los datos), [spec 0013](../../../docs/specs/0013-catalog-data-online.md) (leerlos de Supabase), [spec 0015](../../../docs/specs/0015-manage-products.md) (foto opcional) y [spec 0001](../../../docs/specs/0001-stack.md) (usar colecciones) · **Lo usan:** Astro (lo lee solo, por su nombre), y a través de él `src/lib/catalog.ts`, `src/pages/producto/[id].astro`, `src/pages/estilo.astro` y `src/components/ProductCard.astro` · **Usa:** `astro:content`, `astro/zod` y tres funciones de [`src/lib/supabase.ts`](lib/supabase.ts.md)
+> **Qué es:** la definición de las tres colecciones de datos (`categories`, `products` y `catalogState`): de dónde salen (Supabase) y la forma obligatoria de cada elemento · **Lo decidió:** [spec 0004](../../../docs/specs/0004-sample-product-data.md) (forma de los datos), [spec 0013](../../../docs/specs/0013-catalog-data-online.md) (leerlos de Supabase), [spec 0015](../../../docs/specs/0015-manage-products.md) (foto opcional), [spec 0016](../../../docs/specs/0016-publish-changes.md) (`catalogState`) y [spec 0001](../../../docs/specs/0001-stack.md) (usar colecciones) · **Lo usan:** Astro (lo lee solo, por su nombre), y a través de él `src/lib/catalog.ts`, `src/pages/producto/[id].astro`, `src/pages/estilo.astro`, `src/components/ProductCard.astro` y [`src/pages/build.json.ts`](pages/build.json.ts.md) · **Usa:** `astro:content`, `astro/zod` y cuatro funciones de [`src/lib/supabase.ts`](lib/supabase.ts.md)
 
 ## Para qué sirve
 
@@ -24,7 +24,7 @@ falta importarlo en ninguna parte.
 ```ts
 import { defineCollection, reference } from 'astro:content';
 import { z } from 'astro/zod';
-import { photoUrl, readCategories, readProducts } from './lib/supabase';
+import { photoUrl, readCatalogChangedAt, readCategories, readProducts } from './lib/supabase';
 ```
 
 Las tres líneas son [importaciones](../glosario.md#import-export): traen a este archivo cosas
@@ -38,12 +38,16 @@ definidas en otro (como `require` en Node).
 - Línea 2: trae `z`, el objeto con el que se escriben los [esquemas](../glosario.md#esquema)
   de [zod](../glosario.md#zod). Viene de `astro/zod`, la copia de zod que trae el propio Astro,
   así que no hay que instalarla aparte.
-- Línea 3: trae tres funciones de nuestro archivo [`src/lib/supabase.ts`](lib/supabase.ts.md),
+- Línea 3: trae cuatro funciones de nuestro archivo [`src/lib/supabase.ts`](lib/supabase.ts.md),
   el único que sabe hablar con Supabase:
+  - `photoUrl()`: convierte el nombre de una foto (`arroz-blanco.jpg`) en su URL pública.
+  - `readCatalogChangedAt()`: devuelve la hora del último cambio del catálogo, de la tabla
+    `catalog_state` (nueva con la spec 0016; ver la colección `catalogState`, más abajo).
   - `readCategories()`: devuelve las filas de la tabla `categories`.
   - `readProducts()`: devuelve las filas de la tabla `products`, ya comprobado que cada una
     apunta a una categoría que existe.
-  - `photoUrl()`: convierte el nombre de una foto (`arroz-blanco.jpg`) en su URL pública.
+  - Van en orden alfabético, una costumbre para encontrarlas rápido; el orden de un `import` no
+    cambia nada.
 
 ### El comentario y la regla del slug
 
@@ -213,17 +217,52 @@ no existe. Ese error sí para el build.
 
 Solo `photo` lleva `.optional()`; los otros 7 campos son obligatorios (spec 0004).
 
+### La colección `catalogState`
+
+Nueva con la spec 0016 (feature 13, publicar). No es parte del catálogo que ven los clientes:
+guarda **una sola hora**, la del último cambio de productos o categorías en Supabase, para que el
+[endpoint](../glosario.md#endpoint) (una ruta que devuelve datos en vez de una página)
+[`/build.json`](pages/build.json.ts.md) la copie. La administración compara después esa
+hora con la que hay en Supabase para saber si hay "cambios sin publicar".
+
+```ts
+// One entry: when the catalog last changed (spec 0016). /build.json copies it, and the admin
+// compares it with the database's to show "Hay cambios sin publicar".
+const catalogState = defineCollection({
+	loader: async () => [{ id: 'current', changedAt: await readCatalogChangedAt() }],
+	schema: z.object({
+		changedAt: z.string().min(1),
+	}),
+});
+```
+
+- El comentario: "Una entrada: cuándo cambió el catálogo por última vez (spec 0016).
+  `/build.json` la copia, y la administración la compara con la de la base de datos para enseñar
+  'Hay cambios sin publicar'."
+- `loader: async () => [ … ]`: otro [loader](../glosario.md#loader) en línea, pero esta vez la
+  lista que devuelve tiene **un solo** elemento, escrito a mano:
+  - `id: 'current'`: su id, "la actual". Con él la pide [`build.json.ts`](pages/build.json.ts.md):
+    `getEntry('catalogState', 'current')`.
+  - `changedAt: await readCatalogChangedAt()`: la hora de la tabla `catalog_state`, por ejemplo
+    `"2026-10-28T10:00:00.123456+00:00"`, tal como la devolvió Supabase. `readCatalogChangedAt()`
+    la lee una sola vez por build, y **antes** que las categorías y los productos
+    ([`supabase.ts.md`](lib/supabase.ts.md#5b-el-sello-del-catálogo-antes-que-nada)).
+- `schema: z.object({ changedAt: z.string().min(1) })`: un texto no vacío. A propósito, no es una
+  regla de fecha: el texto se guarda **tal cual**, sin convertirlo, porque la administración lo
+  compara carácter a carácter con el que lee de Supabase. Si se cambiara su formato, nunca serían
+  iguales.
+
 ### La exportación
 
 ```ts
-export const collections = { categories, products };
+export const collections = { categories, products, catalogState };
 ```
 
 - `export` hace que Astro pueda leer esta variable desde fuera del archivo. Astro busca
   exactamente el nombre `collections`.
-- `{ categories, products }` es una forma corta de escribir
-  `{ categories: categories, products: products }` (cuando la clave y la variable se llaman
-  igual, basta con escribirlo una vez).
+- `{ categories, products, catalogState }` es una forma corta de escribir
+  `{ categories: categories, products: products, catalogState: catalogState }` (cuando la clave
+  y la variable se llaman igual, basta con escribirlo una vez).
 - Las claves de este objeto son los nombres de las colecciones. Por eso en otros archivos se
   escribe `getCollection('products')` o el [genérico](../glosario.md#generico)
   `CollectionEntry<'categories'>`: ese texto tiene que coincidir con una de estas claves.
@@ -240,7 +279,8 @@ con `image()`. Todo eso se quitó; los datos de esos JSON están ahora en
 - **Entra:** las filas de las tablas `categories` y `products` de Supabase, a través de
   [`src/lib/supabase.ts`](lib/supabase.ts.md). Las tablas las crea
   [`supabase/schema.sql`](../supabase/schema.sql.md) y los datos de ejemplo los carga
-  [`supabase/seed.sql`](../supabase/seed.sql.md).
+  [`supabase/seed.sql`](../supabase/seed.sql.md). Y la hora de la tabla `catalog_state`, que crea
+  [`supabase/publish.sql`](../supabase/publish.sql.md).
 - **Lo usa Astro** en cada `pnpm dev`, `pnpm build` y `pnpm typecheck`: llama a los loaders,
   valida los datos y genera los [tipos](../glosario.md#tipo) de cada colección. Por eso esos
   comandos necesitan ahora internet y las dos variables de Supabase (ver
@@ -254,6 +294,8 @@ con `image()`. Todo eso se quitó; los datos de esos JSON están ahora en
     `CollectionEntry<'products'>` como tipo de su prop.
   - Esas tres (tarjeta, página de producto y `/estilo`) dibujan
     [`NoPhoto.astro`](components/NoPhoto.astro.md) cuando `photo` falta.
+  - [`src/pages/build.json.ts`](pages/build.json.ts.md): lee la entrada `current` de
+    `catalogState` con [getEntry](../glosario.md#getentry) y la escribe en `/build.json`.
 
 ## Prueba tú
 
@@ -296,3 +338,5 @@ Comprueba que el esquema sigue validando lo que llega de Supabase.
 - [generico](../glosario.md#generico)
 - [tipo](../glosario.md#tipo)
 - [build](../glosario.md#build)
+- [getentry](../glosario.md#getentry)
+- [endpoint](../glosario.md#endpoint) (nuevo, spec 0016)

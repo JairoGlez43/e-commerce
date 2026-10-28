@@ -1,31 +1,34 @@
 # `src/pages/admin/index.astro`
 
 > **Qué es:** la página de administración del dueño, `/admin/`: entrar, recuperar la contraseña,
-> cerrar sesión y gestionar los productos (listar, añadir, editar, borrar y cambiar la
-> disponibilidad) · **Lo decidió:** [spec 0014](../../../../../docs/specs/0014-owner-login.md)
-> (Design → `src/pages/admin/index.astro`) y
+> cerrar sesión, gestionar los productos (listar, añadir, editar, borrar y cambiar la
+> disponibilidad) y publicar los cambios en la web · **Lo decidió:**
+> [spec 0014](../../../../../docs/specs/0014-owner-login.md) (Design →
+> `src/pages/admin/index.astro`),
 > [spec 0015](../../../../../docs/specs/0015-manage-products.md) (Design →
-> `src/pages/admin/index.astro`), con la regla de la
+> `src/pages/admin/index.astro`) y [spec 0016](../../../../../docs/specs/0016-publish-changes.md)
+> (Design → `src/pages/admin/index.astro`), con la regla de la
 > [spec 0012](../../../../../docs/specs/0012-admin-backend.md) de que `/admin/` es la única ruta
 > con JavaScript · **Lo usan:** nadie lo importa; es una página propia por
 > [ruta por archivo](../../../glosario.md#ruta-por-archivo). Ninguna página de clientes enlaza
 > aquí · **Usa:** `BaseLayout`, `site` de `src/lib/site.ts`, `supabaseConfig()` de
 > [`src/lib/supabase.ts`](../../lib/supabase.ts.md) (en el build), y en el navegador
-> [`src/lib/auth.ts`](../../lib/auth.ts.md), [`src/lib/products.ts`](../../lib/products.ts.md)
-> y `formatPrice()` de [`src/lib/price.ts`](../../lib/price.ts.md)
+> [`src/lib/auth.ts`](../../lib/auth.ts.md), [`src/lib/products.ts`](../../lib/products.ts.md),
+> [`src/lib/publish.ts`](../../lib/publish.ts.md) y `formatPrice()` de
+> [`src/lib/price.ts`](../../lib/price.ts.md)
 
 ## Para qué sirve
 
-Es la administración del catálogo: hoy, el login (spec 0014) y los productos (spec 0015, feature
-12); las features 13–15 añadirán publicar, las fotos y las categorías. Enseña una de cinco
-**vistas**, según el momento:
+Es la administración del catálogo: hoy, el login (spec 0014), los productos (spec 0015, feature
+12) y publicar los cambios en la web (spec 0016, feature 13); las features 14 y 15 añadirán las
+fotos y las categorías. Enseña una de cinco **vistas**, según el momento:
 
 | Vista | Cuándo sale |
 |---|---|
 | Entrar (`sign-in`) | no hay sesión, o la sesión se acabó |
 | Recuperar la contraseña (`recover`) | el dueño pulsa "¿Olvidaste tu contraseña?", o el enlace del correo no vale |
 | Nueva contraseña (`new-password`) | el dueño llega desde el enlace del correo |
-| Sesión iniciada (`signed-in`) | el dueño ya entró: su cuenta y la lista de productos |
+| Sesión iniciada (`signed-in`) | el dueño ya entró: su cuenta, la tarjeta "Publicar" y la lista de productos |
 | Producto (`product`) | el dueño pulsa "Añadir producto" o el nombre de un producto de la lista |
 
 **Es la única página del sitio con JavaScript.** Las páginas de clientes no llevan ni una línea
@@ -42,8 +45,9 @@ La página tiene dos partes que corren en momentos distintos:
    (`<template>`) para las filas de la lista.
 2. El `<script>` del final: corre **en el navegador** del dueño. Decide qué vista enseñar y
    reacciona a los formularios. Toda la lógica de sesión vive en
-   [`auth.ts`](../../lib/auth.ts.md) y la de productos en
-   [`products.ts`](../../lib/products.ts.md); el script solo lee formularios, cambia de vista,
+   [`auth.ts`](../../lib/auth.ts.md), la de productos en
+   [`products.ts`](../../lib/products.ts.md) y la de publicar en
+   [`publish.ts`](../../lib/publish.ts.md); el script solo lee formularios, cambia de vista,
    dibuja la lista y pone mensajes en español.
 
 ## El código, por partes
@@ -383,10 +387,10 @@ const { url, key } = supabaseConfig();
 			</section>
 ```
 
-- Desde la spec 0015, esta vista ya no es una sola tarjeta sino un `<div>` con **dos**: la de
-  la cuenta (este bloque) y la de los productos (bloque 8). `data-view="signed-in"` y `hidden`
-  van en el `<div>`, así que el script las enseña o esconde juntas.
-  `flex flex-col gap-6`: las dos tarjetas en columna, a 24 px.
+- Desde la spec 0015, esta vista ya no es una sola tarjeta sino un `<div>` con varias; desde la
+  spec 0016, **tres**: la de la cuenta (este bloque), la de publicar (bloque 7b) y la de los
+  productos (bloque 8). `data-view="signed-in"` y `hidden` van en el `<div>`, así que el script
+  las enseña o esconde juntas. `flex flex-col gap-6`: las tarjetas en columna, a 24 px.
 - `<section class="… rounded-card border border-border bg-surface p-4">`: la tarjeta de la
   cuenta, con las mismas clases que las otras vistas.
 - `<strong data-email></strong>`: vacío en el HTML; el script escribe ahí el email del dueño.
@@ -399,7 +403,55 @@ const { url, key } = supabaseConfig();
 - La última línea, en gris: "Los cambios se guardan al momento. La web pública los mostrará
   después de publicar." Avisa de algo que el dueño no podría adivinar: lo que guarda llega a
   Supabase en el acto, pero las páginas de clientes se generan en el build, así que no cambian
-  hasta publicar (feature 13).
+  hasta publicar con la tarjeta de debajo (bloque 7b).
+
+### 7b. La vista "Sesión iniciada": la tarjeta "Publicar"
+
+Nueva con la spec 0016 (feature 13). Antes de leer este bloque y los del script que la manejan
+(39b a 39k), lee la historia completa de una publicación en
+[`publish.ts.md`](../../lib/publish.ts.md#el-viaje-completo-de-una-publicación): qué pasa entre el
+toque al botón y la web nueva.
+
+```astro
+
+			<!-- Publish (spec 0016): one tap starts one build of the public site. -->
+			<section class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+				<h2>Publicar</h2>
+				<p data-publish-status role="status" class="text-ink empty:hidden"></p>
+				<p data-publish-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="button"
+					data-publish
+					data-label="Publicar cambios"
+					class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+				>
+					Publicar cambios
+				</button>
+			</section>
+```
+
+- `<!-- … -->`: "Publicar (spec 0016): un toque empieza un build de la web pública." Uno solo,
+  aunque el dueño haya cambiado diez productos: por eso publicar es un botón y no algo que pase
+  solo después de cada cambio.
+- `<section class="…">`: una tarjeta más, con las mismas clases que la de la cuenta. Va **entre**
+  la cuenta y los productos (AC4).
+- `<h2>Publicar</h2>`: el título de la tarjeta.
+- `<p data-publish-status role="status" class="text-ink empty:hidden">`: **la línea de estado**,
+  el mensaje principal de la tarjeta. Empieza vacía; el script escribe en ella uno de estos
+  textos: "Comprobando…", "Hay cambios sin publicar.", "Publicando… La web se actualiza en unos
+  minutos.", "Publicado. La web ya muestra los cambios." o "La web está al día.".
+  - `role="status"`: el lector de pantalla la lee cuando cambia, sin interrumpir
+    ([role-alert-status](../../../glosario.md#role-alert-status)).
+  - `text-ink`: en el color normal del texto, no en gris pequeño como los avisos de las otras
+    tarjetas (`text-sm text-muted`), porque aquí es lo más importante de la tarjeta (spec 0016).
+  - `empty:hidden`: escondida mientras está vacía.
+- `<p data-publish-alert role="alert" …>`: los errores, en rojo, como en las otras tarjetas:
+  "Acabas de publicar. Espera un minuto…", "Sin conexión…" o el aviso de que una publicación no
+  terminó.
+- El botón "Publicar cambios": las clases del botón principal (rojo, como "Añadir producto") y
+  `min-h-11`, 44 px de alto ([área táctil](../../../glosario.md#area-tactil)). `data-publish` para
+  que el script lo encuentre, y `data-label` con su texto, para que `whileBusy()` (bloque 17) lo
+  cambie a "Publicar cambios…" mientras espera.
 
 ### 8. La vista "Sesión iniciada": la tarjeta de productos
 
@@ -731,21 +783,23 @@ const { url, key } = supabaseConfig();
 ```astro
 
 <script>
-	// The admin's views (specs 0014, 0015). Every Auth rule lives in src/lib/auth.ts and every
-	// product rule in src/lib/products.ts; this script only reads the forms, shows one view at a
-	// time, draws the list and turns errors into Spanish messages.
+	// The admin's views (specs 0014, 0015, 0016). Every Auth rule lives in src/lib/auth.ts, every
+	// product rule in src/lib/products.ts and every publish rule in src/lib/publish.ts; this script
+	// only reads the forms, shows one view at a time, draws the list and turns errors into Spanish
+	// messages.
 ```
 
 - `<script>`: sin ningún atributo, así que Astro lo **procesa**: entiende TypeScript y los
-  `import`, lo junta con `auth.ts`, `products.ts` y `price.ts` en un solo archivo de
-  `dist/_astro/` y escribe en la página un `<script type="module" src="/_astro/….js">`
+  `import`, lo junta con `auth.ts`, `products.ts`, `publish.ts` y `price.ts` en un solo archivo
+  de `dist/_astro/` y escribe en la página un `<script type="module" src="/_astro/….js">`
   ([script en Astro](../../../glosario.md#script-en-astro)). En el build del 2026-10-27, con la
-  feature 12 ya hecha, ese archivo pesaba 5,2 KB comprimido con gzip, medido como lo mide
-  `pnpm check:weight`: lejos del límite de 15 KB de esta página.
-- El comentario: "Las vistas de la administración (specs 0014, 0015). Todas las reglas de Auth
-  viven en `src/lib/auth.ts` y todas las de productos en `src/lib/products.ts`; este script solo
-  lee los formularios, enseña una vista cada vez, dibuja la lista y convierte los errores en
-  mensajes en español."
+  feature 12 ya hecha y antes de la 13, ese archivo pesaba 5,2 KB comprimido con gzip, medido
+  como lo mide `pnpm check:weight`: lejos del límite de 15 KB de esta página. La feature 13 le
+  añade el código de publicar, y la spec 0016 (AC10) exige que siga por debajo de ese límite.
+- El comentario: "Las vistas de la administración (specs 0014, 0015, 0016). Todas las reglas de
+  Auth viven en `src/lib/auth.ts`, todas las de productos en `src/lib/products.ts` y todas las de
+  publicar en `src/lib/publish.ts`; este script solo lee los formularios, enseña una vista cada
+  vez, dibuja la lista y convierte los errores en mensajes en español."
 
 ```astro
 	import {
@@ -786,6 +840,17 @@ const { url, key } = supabaseConfig();
 		setStock,
 		updateProduct,
 	} from '../../lib/products';
+	import {
+		PublishError,
+		type Build,
+		type PublishErrorKind,
+		type PublishState,
+		catalogChangedAt,
+		lastPublish,
+		publishState,
+		readBuild,
+		requestPublish,
+	} from '../../lib/publish';
 	import type { CategoryRow, ProductRow } from '../../lib/supabase';
 ```
 
@@ -794,6 +859,11 @@ const { url, key } = supabaseConfig();
 - De [`products.ts`](../../lib/products.ts.md): la clase `ProductError`, tres tipos y las
   funciones de productos (leer, añadir, cambiar, borrar, revisar el formulario y agrupar la
   lista). Cada una está explicada allí.
+- De [`publish.ts`](../../lib/publish.ts.md) (spec 0016): la clase `PublishError`, tres tipos
+  (`Build`, la forma de `/build.json`; `PublishErrorKind`, los tipos de error; `PublishState`, el
+  estado calculado) y cinco funciones: leer la hora del último cambio (`catalogChangedAt`), la
+  última publicación (`lastPublish`) y `/build.json` (`readBuild`), calcular el estado
+  (`publishState`) y pedir una publicación (`requestPublish`). Cada una está explicada allí.
 - `import type { CategoryRow, ProductRow } from '../../lib/supabase';`: solo los tipos de las
   filas. Con `import type` no llega al navegador nada de `supabase.ts`, que es código del build.
 
@@ -870,6 +940,54 @@ const { url, key } = supabaseConfig();
 - El comentario: "La longitud mínima de contraseña del proyecto, configurada en el panel de
   Supabase (spec 0014)." Tiene que coincidir con ese ajuste y con el `minlength="8"` del HTML.
 
+```astro
+	const PUBLISH_MESSAGES: Record<PublishErrorKind, string> = {
+		tooSoon: 'Acabas de publicar. Espera un minuto y vuelve a intentarlo.',
+		forbidden: 'Esta cuenta no puede publicar.',
+		unknown: 'No se pudo publicar. Tus cambios siguen guardados. Inténtalo otra vez.',
+	};
+```
+
+- `PUBLISH_MESSAGES` (spec 0016): un mensaje en español para cada tipo de `PublishError`. Como los
+  otros, un `Record`, así que no puede faltar ninguno. "Tus cambios siguen guardados" tranquiliza
+  al dueño: lo que falló es publicar, no guardar.
+
+```astro
+	const CHECKING = 'Comprobando…';
+	const PUBLISHING = 'Publicando… La web se actualiza en unos minutos.';
+	const PENDING = 'Hay cambios sin publicar.';
+	const UP_TO_DATE = 'La web está al día.';
+	const PUBLISHED = 'Publicado. La web ya muestra los cambios.';
+	const PUBLISH_FAILED =
+		'La publicación no terminó. Tus cambios siguen guardados. Vuelve a publicar y, si vuelve a pasar, avisa a quien te hizo la web.';
+```
+
+- Los textos de la tarjeta "Publicar" (bloque 7b), los de la spec 0016:
+  - `CHECKING`: mientras se cargan los datos al abrir la vista.
+  - `PUBLISHING`: hay una publicación en marcha.
+  - `PENDING`: hay cambios guardados que la web todavía no enseña.
+  - `UP_TO_DATE`: la web enseña lo último.
+  - `PUBLISHED`: sale una sola vez, cuando termina una publicación que se estaba vigilando.
+  - `PUBLISH_FAILED`: en la zona de errores, si en 10 minutos no llega el build nuevo (AC9).
+
+```astro
+	// How often a watched publish reads /build.json, and when it gives up (spec 0016).
+	const POLL_MS = 15_000;
+	const WATCH_LIMIT_MS = 10 * 60_000;
+	// How long "Publicado…" stays before the state line.
+	const PUBLISHED_MS = 5_000;
+```
+
+- El comentario: "Cada cuánto lee `/build.json` una publicación vigilada, y cuándo se rinde
+  (spec 0016)."
+  - `POLL_MS = 15_000`: cada 15 segundos ([polling](../../../glosario.md#polling)). Bastante para
+    enterarse pronto, sin gastar los datos del móvil: `/build.json` pesa unos 100 bytes.
+  - `WATCH_LIMIT_MS = 10 * 60_000`: 10 minutos. Un build normal tarda unos pocos; si en 10 no ha
+    llegado, casi seguro falló.
+- El comentario: "Cuánto se queda 'Publicado…' antes de la línea de estado."
+  `PUBLISHED_MS = 5_000`: 5 segundos.
+- Todos en milisegundos; el `_` solo separa cifras.
+
 ### 14. Encontrar las piezas de la página
 
 ```astro
@@ -917,6 +1035,8 @@ const { url, key } = supabaseConfig();
 
 	// Shows one view, with an optional error message in its alert area.
 	function show(view: View, alert = '') {
+		// Leaving the signed-in views (sign-out, a refused session) stops the publish watch.
+		if (view !== 'signed-in' && view !== 'product') stopPublish();
 		for (const element of root.querySelectorAll<HTMLElement>('[data-view]')) {
 			element.hidden = element.dataset.view !== view;
 			element.querySelector('[data-alert]')!.textContent = '';
@@ -931,6 +1051,11 @@ const { url, key } = supabaseConfig();
 
 - El comentario: "Enseña una vista, con un mensaje de error opcional en su zona de alertas."
 - `alert = ''`: segundo argumento opcional; por defecto, sin mensaje.
+- El comentario nuevo (spec 0016): "Salir de las vistas con sesión (cerrar sesión, una sesión
+  rechazada) para la vigilancia de la publicación." Si la vista pedida no es "Sesión iniciada" ni
+  "Producto", llama a `stopPublish()` (bloque 39d): si el dueño estaba esperando un build, la
+  página deja de preguntar por `/build.json`. Ir al formulario de un producto **no** la para: el
+  dueño puede editar mientras Vercel construye.
 - El `for`: recorre las cinco vistas. `element.hidden = element.dataset.view !== view;` esconde
   todas menos la pedida. Y vacía el mensaje de error (`[data-alert]`) de cada una, para que no
   quede uno viejo. Cada vista tiene uno; en "Sesión iniciada" es el de la tarjeta de la cuenta.
@@ -943,20 +1068,25 @@ const { url, key } = supabaseConfig();
 
 ```astro
 
-	// Opening the signed-in view always loads the products (spec 0015).
+	// Opening the signed-in view always loads the products (spec 0015) and the publish state
+	// (spec 0016).
 	function showSignedIn(user: AuthUser, status = '', alert = '') {
 		root.querySelector('[data-email]')!.textContent = user.email;
 		root.querySelector('[data-status]')!.textContent = status;
 		show('signed-in', alert);
 		void loadCatalog();
+		void loadPublish();
 	}
 ```
 
-- El comentario: "Abrir la vista de sesión iniciada siempre carga los productos (spec 0015)."
+- El comentario: "Abrir la vista de sesión iniciada siempre carga los productos (spec 0015) y el
+  estado de la publicación (spec 0016)."
 - `showSignedIn()`: rellena el email y el aviso (`status`, por ejemplo "Contraseña cambiada."),
   enseña la vista con un error opcional y lanza `loadCatalog()` (bloque 30) sin esperarla
   ([operador void](../../../glosario.md#operador-void)): la vista sale en seguida con
   "Cargando productos…" y la lista llega cuando contesta Supabase.
+- `void loadPublish();`: igual, sin esperar, carga el estado de la tarjeta "Publicar" (bloque
+  39g). Las dos cargas van a la vez y cada una escribe en su tarjeta.
 
 ### 17. El botón mientras espera
 
@@ -982,7 +1112,7 @@ const { url, key } = supabaseConfig();
   tardar) y no puede pulsar dos veces.
 - `finally`: haya ido bien o mal, el botón vuelve a estar activo y con su texto
   ([finally](../../../glosario.md#finally)). Lo usan "Entrar", "Enviarme un enlace", "Cambiar
-  contraseña", "Cerrar sesión", "Guardar" y "Sí, borrar".
+  contraseña", "Cerrar sesión", "Guardar", "Sí, borrar" y "Publicar cambios".
 
 ### 18. Solo el dueño puede pasar
 
@@ -1533,6 +1663,7 @@ const { url, key } = supabaseConfig();
 			} else {
 				putProduct(await addProduct(fields, products.map((product) => product.id)));
 			}
+			markPending();
 			showList(SAVED);
 		} catch (error) {
 			failForm(error);
@@ -1548,7 +1679,9 @@ const { url, key } = supabaseConfig();
   cual.
 - Si se está añadiendo: `addProduct()` con los ids de todos los productos cargados, para que el
   id nuevo no choque con ninguno (`-2`, `-3`…).
-- Si va bien: vuelta a la lista con "Producto guardado.". Si falla: `failForm()`.
+- Si va bien: `markPending()` (spec 0016, bloque 39f) pone en la tarjeta "Publicar" "Hay cambios
+  sin publicar." sin hacer ninguna petición, y vuelta a la lista con "Producto guardado.". (Si no
+  cambió nada, también lo dice: es una línea de más, no un error.) Si falla: `failForm()`.
 
 ### 35. Enviar el formulario de producto
 
@@ -1666,6 +1799,7 @@ const { url, key } = supabaseConfig();
 			try {
 				await deleteProduct(product.id);
 				products = products.filter((item) => item.id !== product.id);
+				markPending();
 				showList(DELETED);
 			} catch (error) {
 				failForm(error);
@@ -1676,8 +1810,9 @@ const { url, key } = supabaseConfig();
 
 - "Sí, borrar": `const product = editing;` guarda el producto en una constante antes de esperar
   a la red, por si `editing` cambiara mientras tanto.
-- Con el botón ocupado, `deleteProduct(product.id)`. Si va bien, lo quita de `products` y vuelve
-  a la lista con "Producto borrado.". Si falla, `failForm()` (bloque 33).
+- Con el botón ocupado, `deleteProduct(product.id)`. Si va bien, lo quita de `products`, marca la
+  tarjeta "Publicar" con "Hay cambios sin publicar." (`markPending()`, bloque 39f) y vuelve a la
+  lista con "Producto borrado.". Si falla, `failForm()` (bloque 33).
 
 ### 38. Los demás botones y la lista
 
@@ -1722,6 +1857,7 @@ const { url, key } = supabaseConfig();
 		listAlert.textContent = '';
 		try {
 			putProduct(await setStock(id, box.checked));
+			markPending();
 		} catch (error) {
 			box.checked = !box.checked;
 			if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
@@ -1740,7 +1876,8 @@ const { url, key } = supabaseConfig();
 - Borra los avisos de la lista y llama a `setStock(id, box.checked)`: `box.checked` ya es el
   valor **nuevo**, porque el navegador cambia la casilla antes de avisar del cambio.
 - Si va bien: `putProduct` guarda la fila que devolvió Supabase. No hace falta redibujar: la
-  casilla ya enseña el valor correcto.
+  casilla ya enseña el valor correcto. Y `markPending()` (spec 0016, bloque 39f): "Hay cambios
+  sin publicar." en la tarjeta "Publicar".
 - Si falla: `box.checked = !box.checked` la devuelve a como estaba. Después: sesión acabada →
   "Entrar"; un error que pide recargar → recarga con su mensaje; cualquier otro → el mensaje en
   la zona de errores de la lista.

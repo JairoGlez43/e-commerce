@@ -193,6 +193,13 @@ the script fills them with `textContent` only._
 - **Headings that receive focus** · `h2` with `tabindex="-1"` (the list's "Productos" and the
   form's title), focused when the view changes so the page scrolls to it and screen readers follow.
 
+_Admin publish (spec 0016)._
+- **Publicar card** · `src/pages/admin/index.astro` · an Admin card between the account card and
+  "Productos": `h2` "Publicar" → the state line `<p role="status" class="text-ink empty:hidden">`
+  (Form messages notice, but `text-ink` without `text-sm`, because it is the card's main message)
+  → the error `<p role="alert" class="font-medium text-accent empty:hidden">` → the Primary button
+  (form) "Publicar cambios", full width of the card.
+
 ## Contrast added by spec 0011
 The base table is in `docs/specs/0002-design-base.md`. New pairs (WCAG ratios, 2026-10-16):
 | Text | Background | Ratio |
@@ -211,6 +218,10 @@ Graphics: WhatsApp green glyph on `ink` 7.92, white glyph on `accent` 6.04.
 - Admin list: "Cargando productos…" (status), the error (alert) plus a "Reintentar" Secondary
   button, "Todavía no hay productos." (only if the table was emptied in the dashboard), and after a
   write "Producto guardado." / "Producto borrado." (status).
+- Publicar card: "Comprobando…" while loading, then one of "Publicando… La web se actualiza en
+  unos minutos.", "Hay cambios sin publicar." or "La web está al día."; "Publicado. La web ya
+  muestra los cambios." for 5 s when a watched publish ends. Errors go in the alert; the button
+  stays usable.
 - Empty, loading and error states for pages are designed by the feature that owns the page
   (05–07), with these tokens. The site is static, so there is no loading state by default.
 

@@ -8,7 +8,7 @@ de repetir la definición. Si un término necesita una lección entera, lo indic
 [TypeScript y JavaScript moderno](#typescript-y-javascript-moderno) · [Datos](#datos) ·
 [Supabase y SQL](#supabase-y-sql) · [Imágenes](#imágenes) · [Tailwind y CSS](#tailwind-y-css) ·
 [HTML y accesibilidad](#html-y-accesibilidad) · [Web y rendimiento](#web-y-rendimiento) ·
-[Autenticación y sesiones](#autenticación-y-sesiones)
+[Autenticación y sesiones](#autenticación-y-sesiones) · [Servidor y publicación](#servidor-y-publicación)
 
 ---
 
@@ -409,6 +409,43 @@ Se suele leer con `const [a, b] = await Promise.all([…]);`: la misma
 [desestructuración](#desestructuracion), con corchetes porque es una lista (`a` = el primer
 elemento, `b` = el segundo).
 
+### promesa-then
+La otra forma de esperar una promesa, sin `await`: `promesa.then((valor) => otraCosa(valor))`
+dice "cuando llegue el valor, haz esto con él", y devuelve **otra promesa** con el resultado de
+esa función. Se pueden encadenar: `leerA().then(() => leerB())` espera a `leerA()` y solo
+entonces empieza `leerB()`; la promesa final da lo que dé `leerB()`. Si la primera falla, la
+segunda ni empieza y el error pasa a la promesa final. `promesa.catch((error) => valor)` es lo
+contrario: solo se ejecuta si la promesa falla, y lo que devuelve sustituye al error. Por ejemplo,
+`await leer().catch(() => null)` da `null` en vez de lanzar un error. Es lo mismo que
+[async-await](#async-await), escrito de otra manera.
+
+### settimeout
+`const id = setTimeout(tarea, 15000)` pide al navegador (o a Node) "ejecuta `tarea` dentro de
+15 000 milisegundos (15 s)" y sigue sin esperar. Devuelve un número que identifica ese aviso;
+`clearTimeout(id)` lo cancela si todavía no ha saltado (con un `id` que ya saltó o que es
+`undefined`, no hace nada). Para repetir algo cada cierto tiempo, la propia `tarea` puede volver
+a llamar a `setTimeout` al terminar. En el navegador también se escribe `window.setTimeout`.
+
+### fecha-iso
+La forma estándar de escribir un instante como texto (norma ISO 8601):
+`2026-10-28T10:02:30.123Z`. Primero la fecha, una `T`, la hora con milisegundos y al final la
+[zona](#zona-horaria): `Z` = UTC, o un desfase como `+00:00` (que también es UTC). Postgres y
+[PostgREST](#postgrest) escriben así sus fechas, con más decimales:
+`2026-10-28T10:00:00.123456+00:00`. En JavaScript: `new Date().toISOString()` da el instante
+actual en este formato (siempre en UTC, con `Z`); `Date.parse(texto)` convierte un texto así en
+**milisegundos** desde el 1 de enero de 1970, un número que ya se puede comparar con `<` y `>`;
+y `Date.now()` da el instante actual en esos mismos milisegundos. Ojo: `Date.now()` y
+`new Date()` leen el reloj **del aparato** donde corre el código; si es un móvil con la hora mal
+puesta, dan una hora equivocada.
+
+### performance-now
+`performance.now()` da los milisegundos que han pasado desde que se abrió la página. No es una
+hora del día: es un cronómetro. Restando dos lecturas sabes cuánto tiempo pasó entre ellas, y el
+resultado es fiable aunque alguien cambie la hora del móvil mientras tanto, porque no depende de
+ese reloj. `Date.now()` ([fecha ISO](#fecha-iso)) sí depende: si la hora del móvil se adelanta
+una hora, una resta con `Date.now()` diría que pasó una hora. Por eso, para medir "cuánto tiempo
+llevo esperando", se usa `performance.now()`; para saber "qué hora es", `Date.now()`.
+
 ### desestructuracion
 Sacar campos de un objeto en variables, en una línea:
 `const { name, price } = product.data;` equivale a
@@ -709,6 +746,54 @@ imposible para su tipo (letras donde va un número). [PostgREST](#postgrest) lo 
 campo `code` del JSON de error y elige con él el
 [código de estado HTTP](#codigo-de-estado-http). Según la spec 0015: `23505` y `23503` → `409`;
 `42501` → `403` si la petición llevaba sesión; casi todos los demás → `400`.
+
+### timestamptz
+Un tipo de columna de Postgres para guardar **un instante**: fecha y hora con su
+[zona horaria](#zona-horaria) (*timestamp with time zone*). Postgres lo guarda siempre como el
+mismo instante, se mire desde donde se mire. `now()` es una función de Postgres que da el
+instante actual **según el reloj del servidor de la base de datos**, no el del aparato de quien
+pide. Por eso `changed_at timestamptz not null default now()` = "si nadie da un valor, la hora
+del servidor en el momento de guardar". A través de [PostgREST](#postgrest) llega como texto en
+[formato ISO](#fecha-iso): `2026-10-28T10:00:00.123456+00:00`.
+
+### columna-identity
+`id bigint generated always as identity primary key`: una columna que Postgres **numera sola**:
+1 para la primera fila, 2 para la segunda… Es lo que en MySQL sería `AUTO_INCREMENT`.
+`bigint` = número entero grande (llega mucho más lejos que `integer`). `generated always` =
+siempre lo pone Postgres; si alguien intenta dar su propio número, da error.
+
+### auth-uid
+`auth.uid()` es una función que trae Supabase, hermana de `auth.jwt()` (que da todos los datos
+del [JWT](#jwt) de la petición, y que usa `is_owner()`): devuelve el **id del usuario** del [JWT](#jwt) de la petición que
+se está atendiendo, o `null` si no hay sesión. Ese id es el campo `sub` (*subject*, "de quién
+es") de los datos del JWT, y es un **uuid**: un identificador de 36 caracteres como
+`3f2a…-…-…`, generado al azar, que nunca se repite. `uuid` también es el tipo de columna de
+Postgres que lo guarda.
+
+### trigger
+En español, *disparador*: una orden que Postgres ejecuta **sola** cuando pasa algo en una tabla,
+sin que nadie la llame. `create trigger nombre after insert or update or delete on tabla for each
+statement execute function una_funcion();` se lee "después (`after`) de cada orden que cree,
+cambie o borre filas de `tabla`, ejecuta `una_funcion()`". `for each statement` = una vez por
+orden, aunque la orden toque 18 filas (o ninguna); la otra opción, `for each row`, sería una vez
+por fila. La función tiene que declararse `returns trigger` y escribirse en **PL/pgSQL**
+(`language plpgsql`), el lenguaje de programación de Postgres: SQL con un `begin … end;`
+alrededor y la posibilidad de usar `if`, variables y `return`, como un pequeño JavaScript dentro
+de la base de datos. En Express, sería como un *middleware* que se ejecuta después de cada
+escritura, pero vive dentro de Postgres: se ejecuta venga la escritura de donde venga (la API, el
+panel de Supabase, el editor SQL).
+
+### security-definer
+Por defecto, una [función SQL](#funcion-sql) se ejecuta con los permisos de **quien la llama**
+(su [rol](#rol)). Con `security definer`, se ejecuta con los permisos de **quien la creó**: si la
+creaste en el [editor SQL](#editor-sql), con los del administrador del proyecto, que puede
+escribir en cualquier tabla. Sirve para dejar hacer **una sola cosa concreta** que el rol de
+quien llama no puede hacer por sí mismo (como "apuntar la hora en `catalog_state`") sin darle
+permiso para todo lo demás. Va casi siempre con `set search_path = ''`: el *search path* es la
+lista de [esquemas](#esquema-sql) donde Postgres busca un nombre escrito sin esquema (`tabla` en
+vez de `public.tabla`). Vaciarla obliga a la función a escribir cada nombre completo, así nadie
+puede colarle otra tabla con el mismo nombre en otro esquema. Es la recomendación de Supabase para
+estas funciones.
 
 ### storage-y-bucket
 Supabase Storage es el almacén de archivos de Supabase, como la carpeta de subidas que montarías
@@ -1074,11 +1159,14 @@ de 5.
 ### codigo-de-estado-http
 El número con el que un servidor dice cómo fue una petición (en Express lo eliges con
 `res.status(404)`). [fetch](#fetch) lo da en `response.status`. Los que aparecen en este
-proyecto: `200` = todo bien; `201` = creado (una fila nueva); `400` = la petición no vale (por ejemplo, una contraseña incorrecta);
+proyecto: `200` = todo bien; `201` = creado (una fila nueva); `204` = todo bien, y la respuesta
+no trae cuerpo (*No Content*); `400` = la petición no vale (por ejemplo, una contraseña incorrecta);
 `401` = "no sé quién eres" (falta la identificación o no sirve); `403` = "no te dejo" (sé lo que
-pides y lo rechazo); `409` = "choca con lo que ya hay" (por ejemplo, un `id` repetido); `422` = "te entiendo, pero el dato no vale" (una contraseña demasiado
+pides y lo rechazo); `405` = "esa dirección existe, pero no acepta ese método" (por ejemplo, un
+`GET` donde solo se admite `POST`); `409` = "choca con lo que ya hay" (por ejemplo, un `id` repetido); `422` = "te entiendo, pero el dato no vale" (una contraseña demasiado
 corta); `429` = "demasiadas peticiones, espera un poco"; `5xx` (`500`, `503`…) = falló el
-propio servidor. Supabase añade a sus respuestas de error un **código de error** en texto
+propio servidor; dentro de ellos, `502` (*Bad Gateway*) = "yo estoy bien, pero el **otro**
+servidor al que tenía que llamar me falló". Supabase añade a sus respuestas de error un **código de error** en texto
 (`invalid_credentials`, `bad_jwt`…) que precisa qué pasó, y no siempre usa el número que
 esperarías: por ejemplo, contesta con `403` a un [token de sesión](#jwt) que no vale.
 
@@ -1180,3 +1268,96 @@ Tu página los lee de ahí. Si el enlace ya se usó o caducó, el fragmento trae
 (`#error=…&error_code=…`). La otra forma (*PKCE*) manda solo un código que hay que canjear desde
 el **mismo navegador** que pidió el correo; la spec 0014 eligió la implícita porque en el móvil
 la app de correo suele abrir el enlace en su propio navegador.
+
+---
+
+## Servidor y publicación
+
+### despliegue
+En inglés, *deployment*: poner una versión nueva del sitio en internet. Aquí lo hace **Vercel**,
+el *hosting* del proyecto (la empresa cuyos servidores entregan los archivos de
+[`dist/`](#dist) a quien abre la web). Cada despliegue es: descargar el código del repo, ejecutar
+`pnpm install` y `pnpm build` en una máquina de Vercel, y, si el [build](#build) termina bien,
+empezar a servir el `dist/` nuevo en lugar del viejo. Si el build falla, Vercel sigue sirviendo el
+anterior: los clientes nunca ven una web a medias. Vercel lanza uno solo cada vez que se sube un
+cambio a la rama `main` de git, y también cuando alguien llama a su [deploy hook](#deploy-hook).
+Un despliegue tarda unos minutos, y el plan gratuito hace uno cada vez (los demás esperan en
+cola).
+
+### deploy-hook
+Una dirección secreta que da Vercel, del tipo `https://api.vercel.com/v1/integrations/deploy/…`:
+quien le manda un `POST` (sin cuerpo, sin clave) empieza un [despliegue](#despliegue) del sitio.
+Sirve para que otro programa pueda decir "vuelve a construir la web" sin subir nada a git. Como no
+pide ninguna otra identificación, **la dirección misma es la llave**: cualquiera que la conozca
+puede lanzar builds. Por eso nunca puede estar en el código del navegador ni en el repo; aquí solo
+la conoce la [Edge Function](#edge-function) `publish`, como secreto. Vercel admite como mucho
+60 llamadas por hora a los hooks de un proyecto, y si llegan dos seguidas cancela el despliegue
+anterior que aún esperaba en cola (según la spec 0016).
+
+### edge-function
+Un trozo de código tuyo que [Supabase](#supabase) guarda y ejecuta **en sus servidores**, solo
+cuando alguien llama a su dirección: `https://<ref>.supabase.co/functions/v1/<nombre>`. Piensa
+en **una sola ruta de Express**, `app.post('/publish', …)`, pero sin tener que mantener un
+servidor encendido: Supabase lo arranca al llegar la petición y lo para después. Sirve para lo
+que un sitio estático no puede hacer: guardar un secreto (como el [deploy hook](#deploy-hook)) y
+usarlo sin que el navegador lo vea. Se escribe en TypeScript para [Deno](#deno). En este
+proyecto se crea a mano en el panel de Supabase (*Edge Functions* → *Deploy a new function* →
+*Via Editor*), pegando el código de `supabase/functions/<nombre>/index.ts`. Dos cosas del panel:
+los **secretos** (*Edge Functions* → *Secrets*), que son [variables de
+entorno](#variable-de-entorno) que solo ve la función, y la opción **Verify JWT**: si está
+activa, Supabase rechaza cualquier petición sin un [JWT](#jwt) válido **antes** de ejecutar tu
+código. Además, Supabase le da a cada función, sin que hagas nada, unas variables propias, como
+`SUPABASE_URL` (la dirección del proyecto) y `SUPABASE_PUBLISHABLE_KEYS` (las claves
+publishable).
+
+### deno
+Otro programa para ejecutar JavaScript y TypeScript fuera del navegador, como Node, hecho por el
+mismo autor. Es el que usan las [Edge Functions](#edge-function). Entiende TypeScript sin
+compilar y trae `fetch`, `Response` y `Request` como el navegador. Lo que cambia respecto a Node:
+`Deno.env.get('NOMBRE')` lee una [variable de entorno](#variable-de-entorno) (en Node,
+`process.env.NOMBRE`), y `Deno.serve(async (request) => respuesta)` arranca el servidor: la
+función que le pasas recibe cada petición (un `Request`, con `request.method` y
+`request.headers`) y devuelve un `Response`. Es como `app.all('*', (req, res) => …)` en Express,
+pero en vez de llamar a `res.status(…).json(…)`, **devuelves** la respuesta. Como Astro no conoce
+`Deno`, el [typecheck](#typecheck) del proyecto no revisa ese código.
+
+### cors
+*Cross-Origin Resource Sharing*. El **origen** de una página es su protocolo + dominio + puerto:
+`https://tienda-demo-cuba.vercel.app`. Por seguridad, cuando el JavaScript de una página llama con
+[fetch](#fetch) a **otro** origen (por ejemplo, `https://<ref>.supabase.co`), el navegador solo
+le deja leer la respuesta si ese servidor contesta con la cabecera
+`Access-Control-Allow-Origin` diciendo que ese origen puede (`*` = cualquiera). Y si la petición
+no es "simple" (un `POST` con la cabecera `Authorization`, por ejemplo), antes de mandarla el
+navegador manda sola una petición de prueba, el **preflight**: un `OPTIONS` a la misma dirección
+que pregunta "¿puedo mandarte un `POST` con estas cabeceras?". El servidor contesta con
+`Access-Control-Allow-Methods` y `Access-Control-Allow-Headers`; si lo que se quiere mandar no
+está ahí, el navegador ni siquiera envía la petición real. No protege al servidor (curl o
+Postman no lo miran); protege a los usuarios del navegador. En Express lo pondría el paquete
+`cors` (`app.use(cors())`). Las peticiones al **mismo** origen (la página `/admin/` pidiendo
+`/build.json`) no necesitan nada de esto. No confundir este preflight con el
+[preflight de Tailwind](#preflight).
+
+### polling
+En español, *sondeo*: preguntar algo **una y otra vez**, cada cierto tiempo, hasta que la
+respuesta cambie. Como un niño en el coche preguntando "¿ya llegamos?" cada 15 segundos. Se usa
+cuando el que sabe la respuesta no puede avisarte por su cuenta. Se programa con
+[setTimeout](#settimeout): pregunta, y si todavía no, programa la siguiente pregunta. Es sencillo
+y funciona con cualquier servidor; su precio es una petición cada vez, aunque no haya novedades.
+
+### endpoint
+Una ruta que devuelve **datos** en vez de una página HTML. En Astro, es un archivo `.ts` dentro de
+`src/pages/` que exporta una función con el nombre del método HTTP (`GET`). La URL sale del
+nombre del archivo sin el `.ts` ([ruta por archivo](#ruta-por-archivo)):
+`src/pages/build.json.ts` → `/build.json`. La función devuelve un `Response`;
+`Response.json(objeto)` crea uno cuyo cuerpo es ese objeto en JSON, con la cabecera
+`Content-Type: application/json`. En un sitio estático como este, Astro llama a esa función
+**una sola vez, en el build**, y guarda lo que devuelve como un archivo (`dist/build.json`); en
+`pnpm dev`, en cambio, la llama en cada petición. Su tipo es `APIRoute`, de `astro`. En Express
+sería `app.get('/build.json', (req, res) => res.json({ … }))`, pero ejecutado una vez y congelado
+en un archivo.
+
+### cache-no-store
+El navegador guarda copias de lo que descarga (su **caché**) para no pedirlo otra vez. Para un
+archivo que cambia, como `/build.json`, eso es un problema: podrías ver una copia vieja.
+`fetch(url, { cache: 'no-store' })` dice "esta vez no uses ninguna copia guardada ni guardes
+esta respuesta: pregunta al servidor".

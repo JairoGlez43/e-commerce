@@ -21,7 +21,7 @@
 | 10 | Catalog data online              | done              | default | docs/specs/0013-catalog-data-online.md |
 | 11 | Owner login                      | done              | default | docs/specs/0014-owner-login.md |
 | 12 | Manage products                  | done              | default | docs/specs/0015-manage-products.md |
-| 13 | Publish changes                  | needs-a-decision  | default | —    |
+| 13 | Publish changes                  | in-progress       | default | docs/specs/0016-publish-changes.md |
 | 14 | Product photos upload            | needs-a-decision  | default | —    |
 | 15 | Manage categories                | needs-a-decision  | default | —    |
 
@@ -279,9 +279,9 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 rule unless /architect says so.
 
 ## 13 · Publish changes
-**Status:** needs-a-decision
-**Spec:** —
-**Code:** —
+**Status:** in-progress
+**Spec:** docs/specs/0016-publish-changes.md
+**Code:** `supabase/publish.sql`, `supabase/functions/publish/index.ts`, `src/lib/publish.ts`, `src/pages/build.json.ts`, `src/pages/admin/index.astro`
 **Depth:** default
 **Done when:**
 - After saving changes, the owner can publish them, and customers see them within a few minutes.

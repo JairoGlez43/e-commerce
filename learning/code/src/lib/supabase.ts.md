@@ -1,9 +1,10 @@
 # `src/lib/supabase.ts`
 
-> **Qué es:** las funciones que leen el catálogo de Supabase durante el build: las categorías, los
-> productos y la URL de cada foto · **Lo decidió:**
-> [spec 0013](../../../../docs/specs/0013-catalog-data-online.md) (sección Design → Reading) ·
-> **Lo usan:** [`src/content.config.ts`](../content.config.ts.md) (sus dos loaders) y, solo
+> **Qué es:** las funciones que leen el catálogo de Supabase durante el build: la hora del último
+> cambio, las categorías, los productos y la URL de cada foto · **Lo decidió:**
+> [spec 0013](../../../../docs/specs/0013-catalog-data-online.md) (sección Design → Reading) y,
+> la hora del último cambio, [spec 0016](../../../../docs/specs/0016-publish-changes.md) ·
+> **Lo usan:** [`src/content.config.ts`](../content.config.ts.md) (sus tres loaders) y, solo
 > `supabaseConfig()`, [`src/pages/admin/index.astro`](../pages/admin/index.astro.md) (spec
 > [0014](../../../../docs/specs/0014-owner-login.md)); solo los tipos `CategoryRow` y
 > `ProductRow`, [`src/lib/products.ts`](products.ts.md) (spec 0015) ·
@@ -264,13 +265,80 @@ async function readTable<Row>(table: string, columns: string): Promise<Row[]> {
   spec 0013).
 - `return rows;`: si pasa todo, devuelve las filas.
 
+### 5b. El sello del catálogo, antes que nada
+
+Nuevo con la spec 0016 (feature 13, publicar). En Supabase, la tabla `catalog_state` guarda una
+sola hora, `changed_at`: la del último cambio en `products` o `categories`, que apunta sola un
+[trigger](../../glosario.md#trigger) ([`publish.sql.md`](../../supabase/publish.sql.md)). El build
+la copia en [`/build.json`](../pages/build.json.ts.md), y la administración la compara con la que
+hay en Supabase para decir "Hay cambios sin publicar.".
+
+```ts
+// When the catalog last changed, stamped by a trigger in Supabase (spec 0016). Kept exactly as
+// PostgREST returned it: the admin compares it as a string with the one in /build.json.
+// Read once per build, and always before the tables below, so the stamp is never newer than the
+// data in the build. An edit made during a build then still shows as pending.
+let catalogChangedAt: Promise<string> | undefined;
+export function readCatalogChangedAt(): Promise<string> {
+	// readTable() already refused an empty answer, so the one row is there.
+	catalogChangedAt ??= readTable<{ changed_at: string }>('catalog_state', 'changed_at').then(
+		([row]) => row!.changed_at,
+	);
+	return catalogChangedAt;
+}
+```
+
+- El comentario: "Cuándo cambió el catálogo por última vez, sellado por un trigger en Supabase
+  (spec 0016). Se guarda exactamente como lo devolvió PostgREST: la administración lo compara como
+  texto con el de `/build.json`. Se lee una vez por build, y siempre antes que las tablas de abajo,
+  así el sello nunca es más nuevo que los datos del build. Un cambio hecho durante un build sigue
+  saliendo entonces como pendiente."
+- `let catalogChangedAt: Promise<string> | undefined;`: una variable del archivo (fuera de
+  cualquier función, así que conserva su valor entre llamadas) que guarda la **promesa** de la
+  lectura: la petición en marcha, no su resultado. Empieza vacía (`undefined`).
+- `catalogChangedAt ??= …`: [asignación nullish](../../glosario.md#asignacion-nullish). La primera
+  llamada la encuentra vacía, empieza la lectura y guarda su promesa; las siguientes ya la
+  encuentran llena y no piden nada: todas esperan la misma petición. Así la hora se lee **una sola
+  vez** por build aunque la pidan tres funciones. (El bloque 6 usa el mismo truco con las
+  categorías.)
+- `export function readCatalogChangedAt()`: la usan el loader de `catalogState` en
+  [`content.config.ts`](../content.config.ts.md) y, por dentro, `readCategories()` y
+  `readProducts()` (bloques 6 y 7).
+- `readTable<{ changed_at: string }>('catalog_state', 'changed_at')`: la lectura del bloque 5:
+  `GET /rest/v1/catalog_state?select=changed_at`. El tipo de la fila se escribe en el sitio, sin
+  ponerle nombre: un objeto con un `changed_at` de texto. Si la tabla no existe o llega vacía,
+  `readTable` lanza su error y el build se para (AC3).
+- `.then(([row]) => row!.changed_at)`: cuando lleguen las filas, se queda con la hora de la
+  primera ([promesa-then](../../glosario.md#promesa-then)). `([row])` saca el primer elemento de la
+  lista ([desestructuración](../../glosario.md#desestructuracion)). El `!` le dice a TypeScript que
+  `row` existe ([afirmación de no nulo](../../glosario.md#afirmacion-no-nulo)), y el comentario
+  explica por qué es cierto: "`readTable()` ya rechazó una respuesta vacía, así que la fila está".
+- Devuelve el texto tal cual, por ejemplo `"2026-10-28T10:00:00.123456+00:00"`
+  ([timestamptz](../../glosario.md#timestamptz), [fecha ISO](../../glosario.md#fecha-iso)). No se
+  convierte en fecha: la administración lo compara con el que lee después de Supabase, carácter a
+  carácter, y los dos tienen que tener el mismo formato.
+
+**¿Por qué "antes que las tablas"?** Imagina que el build leyera primero los productos y después
+la hora:
+
+1. 10:01:30: el build lee los productos (con el arroz a 280 CUP).
+2. 10:01:40: el dueño cambia el arroz a 300 CUP. El trigger apunta `changed_at = 10:01:40`.
+3. 10:01:50: el build lee la hora: 10:01:40, y la escribe en `/build.json`.
+
+La web diría "tengo el catálogo de las 10:01:40", pero enseñaría el arroz a 280. La administración
+vería la misma hora en los dos sitios y diría "La web está al día.": una mentira. Leyendo la hora
+**primero**, `/build.json` diría 10:00 (la hora anterior), el dueño vería "Hay cambios sin
+publicar." y podría publicar otra vez (spec 0016, AC7). Al revés no hay problema: si un cambio
+llega entre la hora y las tablas, el build lo incluye pero la hora es la vieja, y como mucho la
+tarjeta pide publicar algo que ya está.
+
 ### 6. Las categorías, una sola vez por build
 
 ```ts
 // Shared by both loaders, so categories are fetched once per build.
 let categoryRows: Promise<CategoryRow[]> | undefined;
 export function readCategories(): Promise<CategoryRow[]> {
-	categoryRows ??= readTable<CategoryRow>('categories', 'id,name,sort_order');
+	categoryRows ??= readCatalogChangedAt().then(() => readTable<CategoryRow>('categories', 'id,name,sort_order'));
 	return categoryRows;
 }
 ```
@@ -282,10 +350,15 @@ export function readCategories(): Promise<CategoryRow[]> {
   categorías, o nada (`undefined`, al principio) ([unión](../../glosario.md#union)).
 - `export function readCategories()`: la usa el loader de `categories` en `content.config.ts`, y
   también `readProducts()` (bloque 7) para comprobar las categorías de los productos.
-- `categoryRows ??= readTable<CategoryRow>(…);`: [asignación nullish](../../glosario.md#asignacion-nullish).
-  La primera vez, `categoryRows` está vacía, así que se llama a `readTable` y se guarda la
+- `categoryRows ??= …;`: [asignación nullish](../../glosario.md#asignacion-nullish).
+  La primera vez, `categoryRows` está vacía, así que se empieza la lectura y se guarda la
   **promesa** (la petición en marcha, no el resultado). La segunda vez ya tiene valor y no se
   pide nada: las dos llamadas esperan la misma petición.
+- `readCatalogChangedAt().then(() => readTable<CategoryRow>(…))`: desde la spec 0016, la lectura
+  de las categorías **espera** primero a la hora del último cambio (bloque 5b) y solo entonces
+  empieza ([promesa-then](../../glosario.md#promesa-then)). `() =>` no usa la hora: solo importa
+  que ya llegó. La promesa que se guarda da las categorías, como antes. Si la hora no se puede
+  leer, las categorías ni se piden y el error pasa a quien espera.
 - `return categoryRows;`: devuelve esa promesa compartida.
 
 ### 7. Los productos, con su categoría comprobada
@@ -294,6 +367,7 @@ export function readCategories(): Promise<CategoryRow[]> {
 // reference() alone only logs an unknown category and the build still exits 0 (spec 0004),
 // so every product's category is checked here, where a throw fails the build.
 export async function readProducts(): Promise<ProductRow[]> {
+	await readCatalogChangedAt();
 	const [categories, products] = await Promise.all([
 		readCategories(),
 		readTable<ProductRow>('products', 'id,name,category_id,price,unit,in_stock,description,photo_path'),
@@ -306,6 +380,10 @@ export async function readProducts(): Promise<ProductRow[]> {
   `content.config.ts`; la explicación completa está en
   [`content.config.ts.md`](../content.config.ts.md).
 - `export async function readProducts()`: la usa el loader de `products`.
+- `await readCatalogChangedAt();`: nuevo con la spec 0016. Antes de pedir los productos, espera a
+  la hora del último cambio (bloque 5b), por la misma razón que las categorías: la hora se lee
+  **antes** que el catálogo. Si ya se leyó, la promesa guardada ya está resuelta y no se espera
+  nada. El resultado no se guarda: solo importa el orden.
 - `await Promise.all([ … ])` ([promise-all](../../glosario.md#promise-all)): pide categorías y
   productos **a la vez**, y espera las dos respuestas.
   - `readCategories()`: si el loader de `categories` ya la llamó, reutiliza esa petición
@@ -367,10 +445,13 @@ export function photoUrl(path: string): string {
 - **Entra:** `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`, del archivo `.env` o de Vercel
   (plantilla en [`.env.example`](../../.env.example.md), tipos en [`src/env.d.ts`](../env.d.ts.md));
   y las filas de las tablas `categories` y `products`, que crean
-  [`schema.sql`](../../supabase/schema.sql.md) y llena [`seed.sql`](../../supabase/seed.sql.md).
-- **Sale:** `readCategories()`, `readProducts()` y `photoUrl()` hacia los loaders de
-  [`src/content.config.ts`](../content.config.ts.md). De ahí, a todas las páginas, que no saben
-  nada de Supabase. Y `supabaseConfig()` hacia
+  [`schema.sql`](../../supabase/schema.sql.md) y llena [`seed.sql`](../../supabase/seed.sql.md);
+  y la fila de `catalog_state`, que crea y mantiene al día
+  [`publish.sql`](../../supabase/publish.sql.md) (spec 0016).
+- **Sale:** `readCatalogChangedAt()`, `readCategories()`, `readProducts()` y `photoUrl()` hacia
+  los loaders de [`src/content.config.ts`](../content.config.ts.md). De ahí, a todas las páginas,
+  que no saben nada de Supabase, y la hora del último cambio a
+  [`/build.json`](../pages/build.json.ts.md). Y `supabaseConfig()` hacia
   [`src/pages/admin/index.astro`](../pages/admin/index.astro.md), que escribe los dos valores en
   su HTML para el login del dueño (spec 0014).
 - **No sale:** ni la clave ni la dirección de Supabase llegan a las páginas de clientes. La spec
@@ -413,3 +494,7 @@ Mira el error que protege contra la clave equivocada, sin tocar código ni tu `.
   [typecheck](../../glosario.md#typecheck) · [import-export](../../glosario.md#import-export)
 - [async-await](../../glosario.md#async-await) · [set](../../glosario.md#set) ·
   [imagen-remota](../../glosario.md#imagen-remota)
+- [promesa-then](../../glosario.md#promesa-then) · [trigger](../../glosario.md#trigger) ·
+  [timestamptz](../../glosario.md#timestamptz) · [fecha-iso](../../glosario.md#fecha-iso) (nuevos,
+  spec 0016) · [desestructuracion](../../glosario.md#desestructuracion) ·
+  [afirmacion-no-nulo](../../glosario.md#afirmacion-no-nulo)

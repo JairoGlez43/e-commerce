@@ -1,6 +1,6 @@
 import { defineCollection, reference } from 'astro:content';
 import { z } from 'astro/zod';
-import { photoUrl, readCategories, readProducts } from './lib/supabase';
+import { photoUrl, readCatalogChangedAt, readCategories, readProducts } from './lib/supabase';
 
 // Shapes decided in spec 0004; the data is read from Supabase at build (spec 0013).
 // The loaders map the table columns back to that shape, and the schemas still validate every row.
@@ -43,4 +43,13 @@ const products = defineCollection({
 	}),
 });
 
-export const collections = { categories, products };
+// One entry: when the catalog last changed (spec 0016). /build.json copies it, and the admin
+// compares it with the database's to show "Hay cambios sin publicar".
+const catalogState = defineCollection({
+	loader: async () => [{ id: 'current', changedAt: await readCatalogChangedAt() }],
+	schema: z.object({
+		changedAt: z.string().min(1),
+	}),
+});
+
+export const collections = { categories, products, catalogState };
