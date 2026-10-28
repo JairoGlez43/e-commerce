@@ -55,6 +55,8 @@ function readSession(): Session | null {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (raw) return JSON.parse(raw) as Session;
+		// Removed by a sign-out, maybe in another tab: forget the in-memory copy too (spec 0014).
+		memorySession = null;  
 	} catch {
 		// Storage unavailable or corrupt: fall back to the in-memory copy.
 	}
