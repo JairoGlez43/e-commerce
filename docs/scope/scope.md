@@ -289,7 +289,7 @@ rule unless /architect says so.
 - Many edits in a row cause one update of the public site, not one per edit.
 **Tasks:**
 - [x] Decide it — /architect
-- [ ] Build it — /develop
+- [x] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** Depends on 12.
 

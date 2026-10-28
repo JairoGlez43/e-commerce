@@ -244,16 +244,24 @@ The AC1 test is a commented block at the end of the file, like `products-write.s
 `/sync` records the exception after the build.
 
 ## Build plan
-- [ ] **T1** (AC1) Write `supabase/publish.sql`. Guide the owner to run it. Run the AC1 checks:
+- [x] **T1** (AC1) Write `supabase/publish.sql`. Guide the owner to run it. Run the AC1 checks:
   the commented SQL test, a dashboard edit that moves `changed_at`, and `curl` with only the
   publishable key.
 - [x] **T2** (AC3, AC7) `readCatalogChangedAt()` read first, the `catalogState` collection,
   `src/pages/build.json.ts`, and the `tsconfig.json` exclude. Build, then check `build.json`
   against the SQL editor's `changed_at`.
-- [ ] **T3** (AC2) Write `supabase/functions/publish/index.ts`. Guide the owner to create the
+- [x] **T3** (AC2) Write `supabase/functions/publish/index.ts`. Guide the owner to create the
   function and the `DEPLOY_HOOK_URL` secret in the dashboard. Run the AC2 calls (the owner's
   token from Local Storage, never written to a file). Record here the deploy hook's real
   status code and whether "Verify JWT" accepts the owner's token.
+  - Result (2026-10-28): `OPTIONS` → `204` with the three CORS headers; `POST` without
+    `Authorization` → `401` `{"error":"signedOut"}`; owner → `200` and one deployment; again
+    within 60 s → `429`; token without the role → `403`, no deployment (owner's run).
+  - Hook status: a 2xx (the owner's `200` proves it); the exact code was not logged.
+  - "Verify JWT": **off** on the deployed function. A `POST` with no `Authorization` reached the
+    function's own code (its `signedOut` body, not a gateway error). It was not tested with the
+    setting on. The owner check is the `publishes` insert, which the `403` run confirmed.
+    Flag for `/architect`: the Design above says it "stays on".
 - [x] **T4** (AC4, AC5, AC6, AC8, AC9) `src/lib/publish.ts` and the Publicar card in
   `src/pages/admin/index.astro`.
 - [ ] **T5** (AC10) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`. Then the flows on the

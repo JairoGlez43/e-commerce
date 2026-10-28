@@ -7,8 +7,8 @@ reads `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from `.env` by itself; never
 **Before any step:**
 - `supabase/publish.sql` has run once in the Supabase SQL editor (after `products-write.sql`).
 - The Edge Function `publish` exists (dashboard → Edge Functions → "Deploy a new function" →
-  "Via Editor", name `publish`, the code of `supabase/functions/publish/index.ts` pasted in,
-  "Verify JWT" on).
+  "Via Editor", name `publish`, the code of `supabase/functions/publish/index.ts` pasted in).
+  On the demo, "Verify JWT" is off (see the spec's T3 result).
 - The secret `DEPLOY_HOOK_URL` (Edge Functions → Secrets) holds the Vercel deploy hook
   `admin-publish` (spec 0012). Never paste the hook URL into a file, a commit or a chat.
 
@@ -47,10 +47,13 @@ between publishes.
     → `204`; with `-D -` the three `Access-Control-Allow-*` headers are there.
   - `curl -s -w "\n%{http_code}\n" -X POST "$F" -H "apikey: $KEY"` → `401` (from the gateway or
     `{"error":"signedOut"}`).
-  - Non-owner: remove `role` from the owner's `app_metadata` as in spec 0014 AC4, sign in again to
-    get a fresh `$TOKEN`, then
+  - Non-owner: remove `role` from the owner's `app_metadata` as in spec 0014 AC4. The admin
+    signs a user without the role out at once, so get the token from Auth directly:
+    `POST $URL/auth/v1/token?grant_type=password` with `{"email","password"}` (from the DevTools
+    console on `/admin/`, typed at a `prompt()`, never saved). Then
     `curl -s -w "\n%{http_code}\n" -X POST "$F" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN"`
-    → `403` `{"error":"forbidden"}`; Vercel → Deployments shows no new one. Restore the role and
+    (or the same `fetch` in the console) → `403` `{"error":"forbidden"}`; Vercel → Deployments
+    shows no new one. Restore the role with the commented `update` in `supabase/auth.sql` and
     sign in again.
   - Owner: the same `curl` with the owner's `$TOKEN` → `200` `{"requested_at":"…"}`;
     `select * from publishes order by id desc limit 1;` shows it; Vercel shows one new
