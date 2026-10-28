@@ -115,13 +115,19 @@ create policy "catalog state is public to read" on public.catalog_state
 ```sql
 
 -- security definer: the owner's role has no write grant on catalog_state.
+-- The where is required: Supabase's pg_safeupdate refuses an update without one when it comes
+-- through the REST API, triggers included (error 21000).
 create or replace function public.touch_catalog() returns trigger
   language plpgsql security definer set search_path = ''
-  as $$ begin update public.catalog_state set changed_at = now(); return null; end $$;
+  as $$ begin update public.catalog_state set changed_at = now() where id = true; return null; end $$;
 ```
 
-- El comentario: "`security definer`: el rol del dueño no tiene permiso de escritura en
+- El primer comentario: "`security definer`: el rol del dueño no tiene permiso de escritura en
   `catalog_state`."
+- El segundo: "El `where` es obligatorio: el `pg_safeupdate` de Supabase rechaza un update sin
+  él cuando llega por la API REST, también dentro de un trigger (error 21000)." Ver
+  [pg_safeupdate](../glosario.md#pg-safeupdate): por eso un `update` sin `where` funciona en el
+  editor SQL y falla desde `/admin/`.
 - `create or replace function public.touch_catalog()`: una [función SQL](../glosario.md#funcion-sql)
   nueva, "toca el catálogo", sin argumentos. `create or replace` la crea o la sustituye.
 - `returns trigger`: no devuelve un dato normal; es una función **para un trigger**
@@ -142,9 +148,10 @@ create or replace function public.touch_catalog() returns trigger
   `security definer`.
 - `as $$ … $$`: el cuerpo, entre los dos `$$`:
   - `begin … end`: el principio y el final del bloque de PL/pgSQL.
-  - `update public.catalog_state set changed_at = now();`: pone la hora del servidor
-    ([timestamptz](../glosario.md#timestamptz)) en `changed_at`. No lleva `where`, así que cambia
-    **todas** las filas de la tabla, que son una sola.
+  - `update public.catalog_state set changed_at = now() where id = true;`: pone la hora del
+    servidor ([timestamptz](../glosario.md#timestamptz)) en `changed_at`, solo en la fila cuyo
+    `id` es `true`, que es la única que puede existir (bloque 1). El `where` no cambia el
+    resultado, pero sin él `pg_safeupdate` rechaza la orden (ver el segundo comentario).
   - `return null;`: una función de trigger tiene que devolver algo. En un trigger `after … for
     each statement` (bloque 5), Postgres ignora lo que devuelve; `null` es lo habitual.
 
@@ -331,7 +338,7 @@ Comprueba que el archivo está aplicado y que el trigger funciona. Hazlo despué
 
 - [trigger](../glosario.md#trigger) · [security-definer](../glosario.md#security-definer) ·
   [timestamptz](../glosario.md#timestamptz) · [columna-identity](../glosario.md#columna-identity) ·
-  [auth-uid](../glosario.md#auth-uid) (nuevos)
+  [auth-uid](../glosario.md#auth-uid) · [pg-safeupdate](../glosario.md#pg-safeupdate) (nuevos)
 - [tabla-sql](../glosario.md#tabla-sql) · [restriccion-check](../glosario.md#restriccion-check) ·
   [clave-primaria](../glosario.md#clave-primaria) · [funcion-sql](../glosario.md#funcion-sql) ·
   [esquema-sql](../glosario.md#esquema-sql) · [editor-sql](../glosario.md#editor-sql) ·

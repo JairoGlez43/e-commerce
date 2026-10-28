@@ -26,7 +26,7 @@ export interface FieldProblem {
 	message: string;
 }
 
-export type ProductErrorKind = 'exists' | 'noCategory' | 'invalid' | 'forbidden' | 'gone' | 'unknown';
+export type ProductErrorKind = 'exists' | 'noCategory' | 'invalid' | 'forbidden' | 'gone' | 'system' | 'unknown';
 
 // Every function here throws only this or an AuthError from authFetch(), passed through
 // unchanged. The page turns `kind` into a Spanish message.
@@ -154,7 +154,11 @@ async function failure(method: string, path: string, response: Response): Promis
 	// A real refusal by RLS. authFetch() already refreshed and retried an expired token (401).
 	if (response.status === 403 && code === '42501') return new ProductError('forbidden');
 	console.error(`[products] ${method} ${path.split('?')[0]} failed with status ${response.status} (${code ?? 'no code'})`);
-	return new ProductError(response.status === 400 ? 'invalid' : 'unknown');
+	// Postgres classes 22 (data) and 23 (rules) mean the data sent was wrong. Any other 4xx is a
+	// fault the owner cannot fix from the form (spec 0015, amended 2026-10-28).
+	if (response.status === 400 && (code?.startsWith('22') || code?.startsWith('23'))) return new ProductError('invalid');
+	if (response.status >= 400 && response.status < 500) return new ProductError('system');
+	return new ProductError('unknown');
 }
 
 async function send<Row>(path: string, init: RequestInit = {}, expected = 200): Promise<Row[]> {

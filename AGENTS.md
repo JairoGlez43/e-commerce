@@ -86,6 +86,11 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
 - Auth: Supabase Auth, one owner user (email + password, sign-ups off). The admin `/admin/`
   calls the Auth REST API from the browser with plain `fetch` through `src/lib/auth.ts` only.
   This is the only browser-to-Supabase path; customers' pages still never call it (spec 0014).
+- Publishing: the admin's "Publicar cambios" calls the Edge Function `publish`
+  (`supabase/functions/publish/index.ts`, Deno, no SDK, pasted into the dashboard editor; no
+  Supabase CLI). It inserts a `publishes` row with the owner's JWT (RLS `is_owner()`), then POSTs
+  the Vercel deploy hook, whose URL is the function secret `DEPLOY_HOOK_URL`. The status comes
+  from the site's own `/build.json`, never from a host API (spec 0016).
 
 ## Commands
 - Dev: `pnpm dev` (http://localhost:4321)
@@ -133,6 +138,27 @@ Added by spec 0014:
 - `supabase/auth.sql`: `public.is_owner()`, plus the dashboard settings and the role update
   in comments.
 
+Added by spec 0015:
+- `src/lib/products.ts`: browser-only. The single home of the admin's product reads and writes
+  (PostgREST through `authFetch()`), the form's field rules (`checkFields()`), the id rule
+  (`productId()`) and the error mapping (`failure()`).
+- `supabase/products-write.sql`: the owner's insert, update and delete policies on `products`
+  (`is_owner()`), and `photo_path` made nullable.
+- `src/components/NoPhoto.astro`: the single home of the "Sin foto" box for a product without a
+  photo.
+
+Added by spec 0016:
+- `src/pages/build.json.ts`: `/build.json`, `{ builtAt, catalogChangedAt }` written at build. The
+  admin polls it. It holds no catalog data and no Supabase values.
+- `src/lib/publish.ts`: browser-only. The single home of the publish request and of the rule that
+  turns three server timestamps into a state; never the phone's clock.
+- `supabase/publish.sql`: `catalog_state` (one row, public read, stamped by the `touch_catalog()`
+  trigger on every change to `products` or `categories`) and `publishes` (owner insert only).
+- `supabase/functions/publish/index.ts`: the repo copy of the Edge Function; Deno code, so
+  `tsconfig.json` excludes `supabase/functions`.
+- SQL files run in this order in a new shop: `schema.sql` → `seed.sql` → `auth.sql` →
+  `products-write.sql` → `publish.sql`.
+
 ## Conventions
 - Naming: components and layouts PascalCase (`ProductCard.astro`); `src/lib/` files one lowercase
   word (`catalog.ts`); functions camelCase (`getCatalog`, `formatPrice`, `orderLink`). URL
@@ -146,17 +172,26 @@ Added by spec 0014:
   `getEntry`). Catalog pages go through `getCatalog()` in `src/lib/catalog.ts`. Unknown category
   ids are refused in `readProducts()` (spec 0013). Dynamic routes
   export `getStaticPaths = (async () => …) satisfies GetStaticPaths`.
+- Collection `catalogState` (one entry, `current`, from `readCatalogChangedAt()`, read before the
+  catalog) feeds only `/build.json` (spec 0016).
 - Results and errors: no server code. Bad data or config must fail the build: zod schema errors,
   and `throw new Error(…)` for a missing/invalid env var (`src/lib/whatsapp.ts`).
   `src/lib/supabase.ts` also throws on a bad URL or key, a secret key, a failed or non-2xx read,
   an empty table and ≥ 1000 rows; messages name the variable, never its value (spec 0013).
+- Admin errors: a refused PostgREST write maps by its Postgres code. Class `22`/`23` →
+  `invalid` ("revisa el formulario"); any other 4xx → `system` ("no es culpa tuya"); anything
+  else → `unknown` (`failure()` in `src/lib/products.ts`, spec 0015).
 - Product photos: remote URLs, allowed only by `image.remotePatterns` in `astro.config.mjs`
   (`*.supabase.co/storage/v1/object/public/product-photos/**`); `<Image>` gets `inferSize`
   and `getImage()` gets `inferSize: true`, so they are downloaded and optimized at build.
+- A product may have no photo (`photo_path` null, `photo` optional): pages render `<NoPhoto />`
+  instead of `<Image>`, and its `og:image` falls back to `/og-default.png` (spec 0015).
 - Client JS: none. No `<script>` tags and no `client:` directives in `src/` (budget: spec 0001).
 - Client JS exception: `src/pages/admin/index.astro` only (specs 0012, 0014).
   - It has one processed `<script>` with no attributes, which imports `src/lib/auth.ts`, and no
     UI framework.
+  - The same script also imports `src/lib/products.ts` (spec 0015) and `src/lib/publish.ts`
+    (spec 0016). Owner-typed values reach the DOM through `textContent` only, never `innerHTML`.
   - Its forms use `method="post"` and `novalidate`; the script calls `preventDefault` and
     `reportValidity`.
   - All its views start `hidden`, and a `<noscript>` explains why the admin needs JavaScript.
@@ -186,6 +221,8 @@ Added by spec 0014:
   `/admin/` also hands both values to its script, as `data-supabase-url` and
   `data-supabase-key`, through `supabaseConfig()`. So `dist/admin/` is the one place in `dist/`
   that contains them (spec 0014).
+- Secret `DEPLOY_HOOK_URL`: the Vercel deploy hook, set only as a Supabase Edge Function secret
+  and read there with `Deno.env`. Never in the repo, `.env`, `dist/` or a response (spec 0016).
 - Framework docs: Astro ships no bundled docs for agents. Use the `researcher` subagent
   (ask first) before using an Astro API you are not sure about; installed type definitions in
   `node_modules/astro/client.d.ts` are a local first check.
@@ -206,6 +243,11 @@ Added by spec 0014:
   - Password recovery uses the default email's link (implicit flow, `redirect_to` back to
     `/admin/`). Editing email templates needs custom SMTP.
   - Decision: `docs/specs/0014-owner-login.md`
+- Supabase from the admin: `src/lib/products.ts` (`/rest/v1/products`, `/rest/v1/categories`)
+  and `src/lib/publish.ts` (`/functions/v1/publish`, `/rest/v1/publishes`,
+  `/rest/v1/catalog_state`) call Supabase from the browser, always through `authFetch()`.
+  Product writes send `Prefer: return=representation`; a PATCH or DELETE that matches no row
+  answers `200 []`. Decisions: `docs/specs/0015-manage-products.md`, `docs/specs/0016-publish-changes.md`
 
 ## Known pitfalls
 _Added by /sync from /debug findings: symptom → cause → rule._
@@ -240,6 +282,10 @@ _Added by /sync from /debug findings: symptom → cause → rule._
 - A wrong-env-var test on Vercel ends Ready → "Redeploy" on an older deployment rebuilds that
   old commit, which may not read the variable → redeploy the deployment of the commit under test
   (spec 0013 verify).
+- A save from `/admin/` answers `400` `21000` while the same update works in the SQL editor →
+  Supabase's `pg_safeupdate` refuses an `update` or `delete` without `where` on API requests,
+  including what a trigger runs → every `update`/`delete` in a trigger or function the API can
+  reach has a `where` (`touch_catalog()`: `where id = true`, spec 0016).
 
 ## Git
 integration: off   <!-- on = /develop branches and commits as milestones land -->

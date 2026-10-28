@@ -70,9 +70,9 @@ import { getEntry } from 'astro:content';
   una publicación ya está en la web; solo contiene estas dos horas. En `pnpm dev` se contesta en
   cada petición, así que en local el estado siempre parece terminado."
 - La última frase avisa de una trampa: con `pnpm dev`, Astro ejecuta el endpoint **cada vez** que
-  se pide, así que `builtAt` es siempre "ahora" y `catalogChangedAt` siempre el último. En tu PC,
-  la tarjeta "Publicar" siempre dirá "La web está al día.". El estado de verdad solo se ve en la
-  web publicada.
+  se pide, así que `builtAt` es siempre "ahora", más nuevo que cualquier publicación. En tu PC, la
+  tarjeta "Publicar" nunca se queda en "Publicando…": una publicación siempre parece terminada.
+  El estado de verdad solo se ve en la web publicada.
 - "Solo contiene estas dos horas": nada del catálogo ni de Supabase (ni su dirección ni su
   clave), así que publicar este archivo no enseña nada privado (AC10).
 

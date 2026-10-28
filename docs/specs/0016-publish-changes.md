@@ -5,6 +5,8 @@
 **Date:** 2026-10-28
 **Scope:** `docs/scope/scope.md` → feature 13
 **Supersedes:** — (builds on spec 0012's publish path: Edge Function + secret deploy hook)
+**Amended:** 2026-10-28 — `touch_catalog()`'s update gains `where id = true` (see Sources).
+Already in `supabase/publish.sql` and run in Supabase.
 
 ## Context
 Since spec 0015 the owner's saves change Supabase at once, but the static public site shows them
@@ -109,9 +111,11 @@ create policy "catalog state is public to read" on public.catalog_state
   for select to anon, authenticated using (true);
 
 -- security definer: the owner's role has no write grant on catalog_state.
+-- The where is required: Supabase's pg_safeupdate refuses an update without one when it comes
+-- through the REST API, triggers included (error 21000).
 create or replace function public.touch_catalog() returns trigger
   language plpgsql security definer set search_path = ''
-  as $$ begin update public.catalog_state set changed_at = now(); return null; end $$;
+  as $$ begin update public.catalog_state set changed_at = now() where id = true; return null; end $$;
 create trigger products_touch_catalog after insert or update or delete on public.products
   for each statement execute function public.touch_catalog();
 create trigger categories_touch_catalog after insert or update or delete on public.categories
@@ -243,19 +247,19 @@ The AC1 test is a commented block at the end of the file, like `products-write.s
 - [ ] **T1** (AC1) Write `supabase/publish.sql`. Guide the owner to run it. Run the AC1 checks:
   the commented SQL test, a dashboard edit that moves `changed_at`, and `curl` with only the
   publishable key.
-- [ ] **T2** (AC3, AC7) `readCatalogChangedAt()` read first, the `catalogState` collection,
+- [x] **T2** (AC3, AC7) `readCatalogChangedAt()` read first, the `catalogState` collection,
   `src/pages/build.json.ts`, and the `tsconfig.json` exclude. Build, then check `build.json`
   against the SQL editor's `changed_at`.
 - [ ] **T3** (AC2) Write `supabase/functions/publish/index.ts`. Guide the owner to create the
   function and the `DEPLOY_HOOK_URL` secret in the dashboard. Run the AC2 calls (the owner's
   token from Local Storage, never written to a file). Record here the deploy hook's real
   status code and whether "Verify JWT" accepts the owner's token.
-- [ ] **T4** (AC4, AC5, AC6, AC8, AC9) `src/lib/publish.ts` and the Publicar card in
+- [x] **T4** (AC4, AC5, AC6, AC8, AC9) `src/lib/publish.ts` and the Publicar card in
   `src/pages/admin/index.astro`.
 - [ ] **T5** (AC10) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`. Then the flows on the
   live demo after a push, at 360 px. That includes the 10-minute failure run, with
   `WHATSAPP_NUMBER` restored afterwards.
-- [ ] **T6** Add the Publicar card to `design.md`. Update the `learning/code/` walkthroughs for
+- [x] **T6** Add the Publicar card to `design.md`. Update the `learning/code/` walkthroughs for
   every new or changed file.
 
 ## Out of scope
@@ -288,6 +292,11 @@ The AC1 test is a commented block at the end of the file, like `products-write.s
   - /docs/builds/managing-builds and /build-queues (Hobby: 1 concurrent build, queued);
   - developers.cloudflare.com/pages/configuration/deploy-hooks and /serving-pages (POST;
     `max-age=0, must-revalidate`) and /pages/platform/limits.
+- Owner's run, 2026-10-28 (`/debug`): with the first `touch_catalog()`, a price saved from
+  `/admin/` answered `400` `21000`, while the same kind of update in the SQL editor worked. The
+  trigger's `update` had no `where`. Adding `where id = true` fixed it: the owner re-ran the
+  function and saw the save work and `changed_at` move. The cause named, Supabase's
+  `pg_safeupdate` on API requests, is from memory, not docs; the observed behavior matches it.
 - **Not confirmed, tested by T3 and the ACs:**
   - the deploy hook's HTTP status (any 2xx is accepted);
   - whether "Verify JWT" accepts the owner's token under the new signing keys (T3 records it);

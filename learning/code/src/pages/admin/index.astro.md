@@ -913,12 +913,15 @@ toque al botón y la web nueva.
 		invalid: 'Algún dato no es válido. Revisa el formulario.',
 		forbidden: 'Esta cuenta no puede cambiar el catálogo.',
 		gone: 'Este producto ya no existe. La lista se ha actualizado.',
+		system: 'Error del sistema, no es culpa tuya. Avisa a quien mantiene la web.',
 		unknown: 'Algo salió mal. Inténtalo otra vez.',
 	};
 ```
 
 - `PRODUCT_MESSAGES`: lo mismo para cada tipo de `ProductError`, con los textos de la tabla de
   errores de la spec 0015. También es un `Record`, así que no puede faltar ninguno.
+- `system` (añadido el 2026-10-28) dice claramente que el fallo no es del dueño y a quién avisar,
+  porque reintentar o revisar el formulario no lo arreglaría.
 
 ```astro
 	// These errors mean the loaded list is out of date, so it loads again.
@@ -1895,6 +1898,352 @@ toque al botón y la web nueva.
   la lista: `box.matches('[data-stock]')` comprueba que el cambio vino de una casilla de
   disponibilidad, y entonces llama a `switchStock`.
 
+### 39b. Publicar: las piezas y el estado
+
+Desde aquí, todo es de la feature 13 (spec 0016). La idea en una frase: la tarjeta "Publicar"
+**deduce** su estado comparando tres horas (la del último cambio en Supabase, las de
+`/build.json` y la de la última publicación) con `publishState()` de
+[`publish.ts`](../../lib/publish.ts.md#9-la-regla-publishstate), y mientras espera un build lo
+vigila leyendo `/build.json` cada 15 segundos.
+
+```astro
+
+	// --- Publish (spec 0016) -----------------------------------------------------------------
+
+	const publishStatus = root.querySelector<HTMLElement>('[data-publish-status]')!;
+	const publishAlert = root.querySelector<HTMLElement>('[data-publish-alert]')!;
+	const publishButton = root.querySelector<HTMLButtonElement>('[data-publish]')!;
+```
+
+- `// --- Publish (spec 0016) ---`: separador, "Publicar".
+- Las tres piezas de la tarjeta del bloque 7b: la línea de estado, la zona de errores y el botón.
+
+```astro
+
+	// Only the latest load or watch may write the card; stopPublish() moves it on.
+	let publishRun = 0;
+	// True while a publish is being watched: the card then keeps "Publicando…".
+	let watching = false;
+	let publishTimer: number | undefined;
+```
+
+- `publishRun`: "Solo la última carga o vigilancia puede escribir en la tarjeta; `stopPublish()`
+  lo hace avanzar." Es el mismo truco que `loadRun` en el bloque 30: cada carga o vigilancia
+  recuerda el número que tenía `publishRun` al empezar. Cuando llega su respuesta (a veces
+  minutos después), compara: si el número cambió, es que empezó otra cosa o se paró todo, y esa
+  respuesta vieja se tira sin tocar la tarjeta.
+- `watching`: "Verdadero mientras se vigila una publicación: la tarjeta mantiene entonces
+  'Publicando…'." Lo mira `markPending()` (bloque 39f).
+- `publishTimer`: el número que devuelve `setTimeout` para la próxima pregunta a `/build.json`
+  ([setTimeout](../../../glosario.md#settimeout)), o `undefined` si no hay ninguna programada.
+  Guardarlo permite cancelarla.
+
+### 39c. Publicar: el mensaje de un error y la línea de estado
+
+```astro
+
+	function publishMessage(error: unknown): string {
+		return error instanceof PublishError ? PUBLISH_MESSAGES[error.kind] : MESSAGES[kindOf(error)];
+	}
+```
+
+- Como `messageOf()` del bloque 27, pero para publicar: si es un `PublishError`, su mensaje de
+  `PUBLISH_MESSAGES` (bloque 13); si no, el de `MESSAGES` ("Sin conexión…", "Demasiados
+  intentos…").
+
+```astro
+
+	function stateLine(state: PublishState): string {
+		if (state.publishing) return PUBLISHING;
+		return state.pending ? PENDING : UP_TO_DATE;
+	}
+```
+
+- Convierte el estado calculado en la frase de la tarjeta:
+  - si hay una publicación en marcha → "Publicando… La web se actualiza en unos minutos.";
+  - si no, y hay cambios pendientes → "Hay cambios sin publicar.";
+  - si no → "La web está al día.".
+- "Publicando" va primero: mientras se construye, lo importante es que ya viene algo.
+
+### 39d. Publicar: parar todo
+
+```astro
+
+	function stopPublish() {
+		publishRun++;
+		watching = false;
+		window.clearTimeout(publishTimer);
+	}
+```
+
+- `publishRun++`: el contador avanza, así que cualquier carga o pregunta que esté en camino, al
+  volver, verá otro número y no escribirá nada (bloque 39b).
+- `watching = false`: ya no se vigila nada.
+- `window.clearTimeout(publishTimer)`: cancela la próxima pregunta programada, si la hay
+  ([setTimeout](../../../glosario.md#settimeout)).
+- La llaman `show()` al salir de las vistas con sesión (bloque 16), y `loadPublish()` y `watch()`
+  antes de empezar, para que nunca haya dos vigilancias a la vez.
+
+### 39e. Publicar: cuando falla una carga
+
+```astro
+
+	// A load that fails shows its message, an empty status line and a usable button.
+	function failPublish(run: number, error: unknown) {
+		if (run !== publishRun) return;
+		watching = false;
+		publishStatus.textContent = '';
+		if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+		publishAlert.textContent = publishMessage(error);
+	}
+```
+
+- El comentario: "Una carga que falla enseña su mensaje, una línea de estado vacía y un botón que
+  se puede usar." (Spec 0016: si no se sabe el estado, mejor no decir nada que decir algo falso.)
+- `run !== publishRun`: si es de una carga vieja, nada.
+- Deja de vigilar y vacía la línea de estado.
+- Sesión acabada → "Entrar" con "Tu sesión terminó. Entra de nuevo." (AC9). Si no, el mensaje en
+  rojo. El botón no se toca: el dueño puede intentar publicar igualmente.
+
+### 39f. Publicar: marcar cambios pendientes
+
+```astro
+
+	// After a product write the catalog differs from the live site, with no request needed.
+	function markPending() {
+		if (!watching) publishStatus.textContent = PENDING;
+	}
+```
+
+- El comentario: "Después de escribir un producto, el catálogo es distinto del de la web, sin
+  necesidad de preguntar." Si el dueño acaba de guardar, cambiar la disponibilidad o borrar
+  (bloques 34, 37 y 39), Supabase ya tiene algo que la web no enseña. No hace falta pedir las
+  horas para saberlo: se escribe "Hay cambios sin publicar." directamente (AC4).
+- `if (!watching)`: salvo mientras se vigila una publicación, que conserva "Publicando…". Ese
+  cambio no se pierde: cuando el build llegue, `finishWatch()` (bloque 39h) vuelve a leer la hora
+  de Supabase y verá que hay algo pendiente (AC7).
+
+### 39g. Publicar: cargar el estado al abrir la vista
+
+```astro
+
+	// The three values load together when the signed-in view opens. A publish whose build is not
+	// live yet (after a reload, or from another device) is watched from here.
+	async function loadPublish() {
+		stopPublish();
+		const run = publishRun;
+		publishStatus.textContent = CHECKING;
+		publishAlert.textContent = '';
+```
+
+- El comentario: "Los tres valores se cargan juntos cuando se abre la vista de sesión iniciada.
+  Una publicación cuyo build todavía no está en la web (tras recargar, o desde otro dispositivo)
+  se vigila desde aquí."
+- `stopPublish()` y `const run = publishRun;`: para lo que hubiera en marcha y se queda con el
+  número nuevo.
+- La línea dice "Comprobando…" y la zona de errores se vacía.
+
+```astro
+		try {
+			const [build, changedAt, requestedAt] = await Promise.all([readBuild(), catalogChangedAt(), lastPublish()]);
+			if (run !== publishRun) return;
+			const state = publishState(build, changedAt, requestedAt);
+```
+
+- `Promise.all([…])`: las tres lecturas **a la vez** ([promise-all](../../../glosario.md#promise-all)):
+  `/build.json` de la web, la hora del último cambio y la de la última publicación (ver
+  [`publish.ts.md`](../../lib/publish.ts.md)). Si una falla, falla todo y se va al `catch`.
+- `if (run !== publishRun) return;`: si mientras tanto empezó otra cosa, esta respuesta se tira.
+- `publishState(…)`: el estado, `{ pending, publishing }`.
+
+```astro
+			if (state.publishing && requestedAt !== null) watch(requestedAt);
+			else publishStatus.textContent = stateLine(state);
+		} catch (error) {
+			failPublish(run, error);
+		}
+	}
+```
+
+- Si hay una publicación en marcha, se empieza a vigilarla con `watch()` (bloque 39j). Es lo que
+  hace que, si el dueño **recarga** la página mientras Vercel construye, o la abre en otro móvil,
+  siga viendo "Publicando…" y luego "Publicado…" (AC6). `requestedAt !== null` ya es cierto si
+  `publishing` lo es, pero así TypeScript sabe que es un texto.
+- Si no, la línea del estado: "Hay cambios sin publicar." o "La web está al día.".
+- Si algo falla, `failPublish()` (bloque 39e).
+
+### 39h. Publicar: el build vigilado ya está en la web
+
+```astro
+
+	// The watched build is live: "Publicado…" once, then the state with the database's latest
+	// stamp, so an edit made during the build still shows as pending.
+	async function finishWatch(run: number, build: Build, requestedAt: string) {
+		try {
+			const changedAt = await catalogChangedAt();
+			if (run !== publishRun) return;
+			watching = false;
+			publishStatus.textContent = PUBLISHED;
+```
+
+- El comentario: "El build vigilado está en la web: 'Publicado…' una vez, y luego el estado con
+  el sello más reciente de la base de datos, así un cambio hecho durante el build sigue saliendo
+  como pendiente."
+- `await catalogChangedAt()`: vuelve a leer la hora del último cambio. No sirve la del principio:
+  el dueño pudo cambiar algo mientras Vercel construía.
+- Si sigue siendo la vigilancia actual: deja de vigilar y escribe "Publicado. La web ya muestra
+  los cambios." (AC5).
+
+```astro
+			const line = stateLine(publishState(build, changedAt, requestedAt));
+			publishTimer = window.setTimeout(() => {
+				// A product write in the meantime already set its own line.
+				if (run === publishRun && publishStatus.textContent === PUBLISHED) publishStatus.textContent = line;
+			}, PUBLISHED_MS);
+		} catch (error) {
+			failPublish(run, error);
+		}
+	}
+```
+
+- `line`: la línea que vendrá después. Con el build nuevo, `publishing` es falso (el build es
+  posterior a la petición), así que será "La web está al día." o, si el dueño cambió algo durante
+  el build, "Hay cambios sin publicar." (AC7). Nunca "al día" para un catálogo que la web no
+  enseña.
+- `window.setTimeout(() => { … }, PUBLISHED_MS)`: 5 segundos después
+  ([setTimeout](../../../glosario.md#settimeout)), cambia "Publicado…" por esa línea. Se guarda
+  en `publishTimer` para que `stopPublish()` pueda cancelarlo.
+- La condición: "Una escritura de producto en este tiempo ya puso su propia línea." Solo cambia la
+  línea si sigue siendo la misma vigilancia **y** la línea sigue diciendo "Publicado…". Si el
+  dueño guardó algo en esos 5 segundos, `markPending()` ya escribió "Hay cambios sin publicar." y
+  no hay que pisarlo.
+
+### 39i. Publicar: rendirse a los 10 minutos
+
+```astro
+
+	// No new build after the time limit: the failure message, and the state as the live site
+	// shows it. The publish itself is not "still running" any more.
+	async function giveUp(run: number) {
+		watching = false;
+		publishAlert.textContent = PUBLISH_FAILED;
+		publishStatus.textContent = '';
+```
+
+- El comentario: "Ningún build nuevo después del límite de tiempo: el mensaje de fallo, y el
+  estado tal como lo enseña la web. La publicación ya no cuenta como 'en marcha'."
+- Pasa cuando el build de Vercel falló (por ejemplo, una variable de entorno mal puesta): Vercel
+  sigue sirviendo la web anterior y `/build.json` no cambia nunca.
+- Deja de vigilar, pone en rojo "La publicación no terminó. Tus cambios siguen guardados. Vuelve a
+  publicar y, si vuelve a pasar, avisa a quien te hizo la web." (AC9) y vacía la línea mientras
+  calcula la nueva.
+
+```astro
+		try {
+			const [build, changedAt] = await Promise.all([readBuild(), catalogChangedAt()]);
+			if (run !== publishRun) return;
+			publishStatus.textContent = stateLine(publishState(build, changedAt, null));
+		} catch (error) {
+			if (run === publishRun && isSignedOut(error)) show('sign-in', MESSAGES.signedOut);
+		}
+	}
+```
+
+- Lee otra vez `/build.json` y la hora del último cambio, y calcula el estado pasando `null` como
+  última publicación: así `publishing` es falso. Si no, la publicación fallida, posterior al
+  build de la web, haría salir "Publicando…" para siempre. El resultado normal: "Hay cambios sin
+  publicar." (AC9).
+- Si falla: solo se hace algo con una sesión acabada ("Entrar"). Cualquier otro error se ignora:
+  el aviso rojo ya está puesto y la línea se queda vacía.
+
+### 39j. Publicar: vigilar el build
+
+```astro
+
+	// Reads /build.json every 15 s until a build newer than the request is live. The limit is
+	// counted with performance.now(), never the phone's clock. A failed poll (offline) is skipped.
+	function watch(requestedAt: string) {
+		stopPublish();
+		const run = publishRun;
+		const started = performance.now();
+		watching = true;
+		publishStatus.textContent = PUBLISHING;
+```
+
+- El comentario: "Lee `/build.json` cada 15 s hasta que esté en la web un build más nuevo que la
+  petición. El límite se cuenta con `performance.now()`, nunca con el reloj del móvil. Una
+  pregunta que falla (sin conexión) se salta."
+- `watch(requestedAt)`: recibe la hora **del servidor** a la que se pidió la publicación.
+- `stopPublish()` y `const run = publishRun;`: solo una vigilancia a la vez.
+- `const started = performance.now();`: pone en marcha el cronómetro
+  ([performance.now()](../../../glosario.md#performance-now)). Si el dueño tuviera la hora del
+  móvil mal puesta, o la cambiara, un cálculo con `Date.now()` daría tiempos absurdos; el
+  cronómetro no. Los 10 minutos cuentan desde que **esta** página empezó a vigilar: si el dueño
+  recarga, empiezan de nuevo.
+- `watching = true;` y "Publicando… La web se actualiza en unos minutos." (AC5).
+
+```astro
+		const poll = async () => {
+			const build = await readBuild().catch(() => null);
+			if (run !== publishRun) return;
+```
+
+- `poll`: una pregunta a `/build.json` ([polling](../../../glosario.md#polling)). Es una función
+  guardada en una constante para poder programarla una y otra vez.
+- `readBuild().catch(() => null)`: si la lectura falla (sin conexión, o un `/build.json` raro), en
+  vez de un error da `null` ([promesa-then](../../../glosario.md#promesa-then)). Una pregunta
+  fallida no para la vigilancia: la siguiente lo vuelve a intentar.
+- Si la vigilancia ya no es la actual (se paró o empezó otra), no hace nada más y no programa
+  ninguna pregunta: así se apaga.
+
+```astro
+			if (build && Date.parse(build.builtAt) > Date.parse(requestedAt)) return void finishWatch(run, build, requestedAt);
+			if (performance.now() - started >= WATCH_LIMIT_MS) return void giveUp(run);
+			publishTimer = window.setTimeout(poll, POLL_MS);
+		};
+		publishTimer = window.setTimeout(poll, POLL_MS);
+	}
+```
+
+- Primera condición: si llegó un `/build.json` y su `builtAt` es **posterior** a la petición
+  ([fecha ISO](../../../glosario.md#fecha-iso)), el build pedido ya está en la web: `finishWatch()`
+  (bloque 39h). `return void finishWatch(…)` la lanza sin esperarla y termina `poll` en la misma
+  línea ([operador void](../../../glosario.md#operador-void)).
+- Segunda: si el cronómetro pasa de 10 minutos, `giveUp()` (bloque 39i).
+- Si no, programa la siguiente pregunta dentro de 15 s.
+- La última línea, fuera de `poll`: programa la **primera** pregunta, también a los 15 s. No se
+  pregunta en el acto porque un build no termina en un segundo.
+
+### 39k. Publicar: el botón
+
+```astro
+
+	// Always usable except while its own request runs: the server's 60 s gap handles repeats.
+	publishButton.addEventListener('click', () => {
+		publishAlert.textContent = '';
+		void whileBusy(publishButton, async () => {
+			try {
+				watch(await requestPublish());
+			} catch (error) {
+				if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+				publishAlert.textContent = publishMessage(error);
+			}
+		});
+	});
+```
+
+- El comentario: "Siempre se puede usar, salvo mientras corre su propia petición: la pausa de 60 s
+  del servidor se encarga de las repeticiones." No se desactiva mientras se vigila: si el dueño
+  cambia otro precio durante un build, puede volver a publicar. Si lo hace antes de un minuto,
+  la Edge Function contesta "demasiado pronto".
+- Al pulsar: borra el error anterior y, con el botón ocupado ("Publicar cambios…",
+  `whileBusy()`, bloque 17), llama a `requestPublish()`
+  ([`publish.ts.md`](../../lib/publish.ts.md#5-pedir-una-publicación-requestpublish)).
+- Si va bien: `watch(…)` con la hora que devolvió el servidor. La línea pasa a "Publicando…".
+- Si falla: sesión acabada → "Entrar". Si no, el mensaje en rojo: "Acabas de publicar. Espera un
+  minuto…", "Sin conexión…", "Esta cuenta no puede publicar." o "No se pudo publicar…". La
+  línea de estado no se toca: lo que decía sigue siendo verdad (AC9).
+
 ### 40. Al abrir la página
 
 ```astro
@@ -1973,14 +2322,19 @@ toque al botón y la web nueva.
   `dist/admin/index.html` y un archivo `.js` en `dist/_astro/`.
 - **En el navegador:** el script pasa esos valores a [`auth.ts`](../../lib/auth.ts.md), que habla
   con Supabase Auth y guarda la sesión en `localStorage`. Los productos los lee y escribe
-  [`products.ts`](../../lib/products.ts.md), a través de `authFetch()` de `auth.ts`.
+  [`products.ts`](../../lib/products.ts.md), a través de `authFetch()` de `auth.ts`. Publicar lo
+  hace [`publish.ts`](../../lib/publish.ts.md): pide la publicación a la
+  [Edge Function `publish`](../../../supabase/functions/publish/index.ts.md), lee las tablas de
+  [`publish.sql`](../../../supabase/publish.sql.md) y el archivo
+  [`/build.json`](../build.json.ts.md) de la propia web.
 - **Supabase:** los ajustes del panel (registro cerrado, contraseña mínima de 8, *Redirect URLs*
   con `/admin/`) y la función `is_owner()` están en [`supabase/auth.sql`](../../../supabase/auth.sql.md);
   las políticas que dejan escribir solo al dueño, en
   [`supabase/products-write.sql`](../../../supabase/products-write.sql.md).
 - **La web pública:** lo que se guarda aquí llega a Supabase al instante, pero las páginas de
-  clientes cambian en el siguiente build (feature 13). Un producto añadido aquí no tiene foto, y
-  la tienda le pone la caja [`NoPhoto`](../../components/NoPhoto.astro.md).
+  clientes cambian en el siguiente build, el que empieza el botón "Publicar cambios" (feature
+  13). Un producto añadido aquí no tiene foto, y la tienda le pone la caja
+  [`NoPhoto`](../../components/NoPhoto.astro.md).
 - **Peso:** `pnpm check:weight` mide `/admin/` con su propio presupuesto (JS ≤ 15 KB);
   ver [`check-weight.mjs.md`](../../../scripts/check-weight.mjs.md).
 - **Aislada:** ninguna página de clientes enlaza aquí, y ninguna otra página tiene `<script>` ni
@@ -2013,8 +2367,28 @@ está mal, sin escribir en la base de datos.
    ninguna petición nueva.
 4. Pulsa "Cancelar". No hay nada que deshacer: no se mandó ninguna petición de escritura.
 
+**3. La tarjeta "Publicar", sin publicar nada:** mira las tres lecturas que hace al abrir la
+vista.
+
+1. Con `pnpm dev` en marcha y la sesión del dueño abierta, abre F12 → *Network* y recarga
+   `http://localhost:4321/admin/`.
+2. **Qué deberías ver:** entre las peticiones, `build.json` (a `localhost`), `catalog_state` y
+   `publishes` (a `supabase.co`), que salen casi a la vez (bloque 39g). La tarjeta dice un
+   momento "Comprobando…" y luego "La web está al día." o "Hay cambios sin publicar.", pero
+   nunca "Publicando…": en `pnpm dev`, `/build.json` se calcula en cada petición con la hora de
+   ese momento, así que una publicación siempre parece terminada
+   ([`build.json.ts.md`](../build.json.ts.md)). El estado de verdad se ve en la web publicada.
+3. Haz clic en la petición `build.json` → *Response*: verás `builtAt` y `catalogChangedAt`.
+4. **No pulses "Publicar cambios"** en esta prueba: aunque estés en tu PC, la Edge Function es la
+   de verdad y lanzaría un despliegue real en Vercel. No hay nada que deshacer: solo se ha leído.
+
 ## Términos
 
+- [polling](../../../glosario.md#polling) · [settimeout](../../../glosario.md#settimeout) ·
+  [performance-now](../../../glosario.md#performance-now) · [fecha-iso](../../../glosario.md#fecha-iso) ·
+  [promesa-then](../../../glosario.md#promesa-then) · [edge-function](../../../glosario.md#edge-function) ·
+  [despliegue](../../../glosario.md#despliegue) · [endpoint](../../../glosario.md#endpoint) (nuevos,
+  spec 0016)
 - [template-html](../../../glosario.md#template-html) ·
   [textcontent-e-innerhtml](../../../glosario.md#textcontent-e-innerhtml) ·
   [setcustomvalidity](../../../glosario.md#setcustomvalidity) ·

@@ -742,10 +742,25 @@ el texto del mensaje, que puede cambiar). Los que aparecen en el proyecto: `4250
 repetido donde no se admite (por ejemplo, una [clave primaria](#clave-primaria) que ya existe);
 `23503` = la [clave foránea](#clave-foranea) apunta a algo que no existe; `23514` = no cumple un
 [check](#restriccion-check); `23502` = falta un valor `not null`; `22P02` = un valor con forma
-imposible para su tipo (letras donde va un número). [PostgREST](#postgrest) lo devuelve en el
+imposible para su tipo (letras donde va un número); `21000` = aquí, un `update` o `delete` sin
+`where` que [pg_safeupdate](#pg-safeupdate) rechazó. [PostgREST](#postgrest) lo devuelve en el
 campo `code` del JSON de error y elige con él el
 [código de estado HTTP](#codigo-de-estado-http). Según la spec 0015: `23505` y `23503` → `409`;
-`42501` → `403` si la petición llevaba sesión; casi todos los demás → `400`.
+`42501` → `403` si la petición llevaba sesión; casi todos los demás → `400`. Los dos primeros
+caracteres son la **clase** del código, que agrupa causas parecidas: `22` = error en un dato
+(forma o tamaño imposible), `23` = rompe una regla de la tabla. `src/lib/products.ts` usa la
+clase para separar "el dato estaba mal" (`invalid`) de "falló el sistema" (`system`).
+
+### pg-safeupdate
+Una extensión de [Postgres](#postgres), es decir, un complemento que le añade comportamiento.
+Hace una sola cosa: rechaza todo `update` o `delete` que no lleve `where` (el filtro que dice a
+qué filas afecta), con el [código de error](#codigo-de-error-postgres) `21000` y el mensaje
+`UPDATE requires a WHERE clause`. Existe porque, a través de una API, un filtro olvidado
+cambiaría o borraría la tabla entera. Supabase la activa para las peticiones que llegan por
+[PostgREST](#postgrest), también para lo que esas peticiones disparan, como un
+[trigger](#trigger), pero no en el [editor SQL](#editor-sql). Por eso un `update` sin `where`
+funciona en el editor y falla desde `/admin/`. Es una regla ciega: aunque la tabla tenga una sola
+fila, el `where` hace falta.
 
 ### timestamptz
 Un tipo de columna de Postgres para guardar **un instante**: fecha y hora con su

@@ -6,6 +6,8 @@
 **Scope:** `docs/scope/scope.md` → feature 12
 **Supersedes:** — (amends spec 0013: `photo_path` becomes nullable and the `photo` field of the
 spec 0004 shape becomes optional; the public pages gain a "Sin foto" state)
+**Amended:** 2026-10-28 — a new error kind, `system`, for a refused request that is not the
+owner's data (Design → Errors, AC11, T7). The amendment is built and verified; the spec is Accepted.
 
 ## Context
 The owner can sign in to `/admin/` (spec 0014), but the signed-in view is a placeholder. This
@@ -92,6 +94,13 @@ that correctly.
 - **AC10:** `pnpm typecheck`, `pnpm build` and `pnpm check:weight` pass. `/admin/` JS stays
   within its 15 KB gzipped limit. No public route has a `<script>` tag or contains
   `supabase.co` or `sb_publishable_`.
+- **AC11:** A refusal that is not about the owner's data says so (amended 2026-10-28):
+  - a save, and a stock switch, answered `400` `21000` (mocked) show "Error del sistema, no es
+    culpa tuya. Avisa a quien mantiene la web.", and the console logs the status and code;
+  - after it, the form keeps every value and the checkbox returns to its previous state;
+  - a save answered `400` `23514` (mocked) still shows "Algún dato no es válido. Revisa el
+    formulario.";
+  - a save answered `500` still shows "Algo salió mal. Inténtalo otra vez.".
 
 ## Design
 
@@ -174,15 +183,22 @@ create policy "owner deletes products" on public.products
 |---|---|---|---|
 | `exists` | 409 `23505` | Ya existe un producto con ese enlace. La lista se ha actualizado. | reload the list |
 | `noCategory` | 409 `23503` | Esa categoría ya no existe. La lista se ha actualizado. | reload the list |
-| `invalid` | 400 (for example `23514`, `23502`, `22P02`) | Algún dato no es válido. Revisa el formulario. | stay |
+| `invalid` | 400 whose code starts with `22` or `23` (for example `22P02`, `23514`, `23502`) | Algún dato no es válido. Revisa el formulario. | stay |
 | `forbidden` | 403 `42501` | Esta cuenta no puede cambiar el catálogo. | stay |
 | `gone` | PATCH or DELETE returned `[]` | Este producto ya no existe. La lista se ha actualizado. | reload the list |
-| `unknown` | anything else | Algo salió mal. Inténtalo otra vez. | stay |
+| `system` | any other 4xx: a 400 with another code or none (for example `21000`), a 403 or 409 with another code, a 404… | Error del sistema, no es culpa tuya. Avisa a quien mantiene la web. | stay |
+| `unknown` | anything else (for example a 5xx) | Algo salió mal. Inténtalo otra vez. | stay |
 | `offline`, `rate`, `signedOut` | `AuthError` (spec 0014) | spec 0014's messages | `signedOut` shows sign-in |
 
   PostgREST answers an expired or invalid JWT with 401 (`PGRST301`/`PGRST303`), which
   `authFetch` already refreshes and retries once (spec 0014). A 403 `42501` is a real refusal
   and is never retried.
+
+  Postgres codes starting with `22` are data errors (a value of the wrong form or size) and
+  `23` are rule errors (a check, a `not null`, a key); both mean "the data sent was wrong".
+  Every other refusal is a fault in the system (the database, its SQL, the config), which the
+  owner cannot fix from the form, so `system` says so. `system` and `unknown` still log the
+  method, path, status and code with `console.error`, as today.
 
 **`src/pages/admin/index.astro`**
 - The processed `<script>` also imports `src/lib/products.ts` and `formatPrice` from
@@ -285,6 +301,21 @@ without an `<img>` counts 0 KB of images.
     demo, after the owner pushes `main`.
 - [x] **T6** Add the new components and classes to `design.md`. Update the `learning/code/`
   walkthroughs for every new or changed file.
+- [x] **T7** (AC10, AC11) Amendment 2026-10-28: add `system` to `ProductErrorKind` and the
+  `22`/`23` test to `failure()` in `src/lib/products.ts`; add its message to
+  `PRODUCT_MESSAGES` in `src/pages/admin/index.astro`. Run the AC11 cases against a mocked
+  answer and the AC10 checks. Update the two walkthroughs and `glosario.md`.
+  - 2026-10-28 (`/develop`): the real `products.ts`, bundled with a stub `authFetch`, mapped 11
+    mocked answers as the table says (400 `21000` on POST, PATCH and `setStock` → `system`; 400
+    `23514`/`22P02` → `invalid`; 400 with no code, 403 other, 404 → `system`; 403 `42501` →
+    `forbidden`; 409 `23505` → `exists`; 500 → `unknown`), each logging status and code. AC10
+    clean: typecheck 0 errors, build 27 pages, weight within budget (`/admin/` JS 6.3 KB
+    gzipped), no public `<script>` or Supabase values. The in-page AC11 run is for
+    `/check verify`.
+  - 2026-10-28 (`/check verify`): AC10 clean again. AC11 in the page at 360 px against a mocked
+    Supabase, 16 browser checks passed: save, add and stock switch answered 400 `21000` show the
+    system message, log status and code, keep every value, and undo the checkbox; 400 `23514`
+    and 500 keep their messages; no write reached Supabase.
 
 ## Out of scope
 - Photo upload, replace or removal, and deleting a removed product's photo from the bucket.
@@ -310,6 +341,12 @@ without an `<img>` counts 0 KB of images.
   - references/api/tables_views (insert → 201);
   - supabase.com/blog/postgrest-12-2 and supabase.com/docs/reference/dart/using-modifiers-maxaffected
     (`max-affected` needs v12.2 or v13).
+- Owner answers, 2026-10-28 (amendment): a refusal that is not the owner's data gets its own
+  message, "Error del sistema, no es culpa tuya. Avisa a quien mantiene la web.". Trigger: a
+  `400` `21000` from spec 0016's trigger showed "Algún dato no es válido" with nothing wrong in
+  the form.
+- Postgres SQLSTATE classes `22` (data exception) and `23` (integrity constraint violation):
+  from memory, not looked up; the classes are part of the SQL standard and stable.
 - **Not confirmed, tested by T3 and the ACs:**
   - a PATCH or DELETE that matches no row answers 200 `[]` (from memory, not docs). The
     one-row check covers both cases;
@@ -354,3 +391,10 @@ without an `<img>` counts 0 KB of images.
   not an error. CUP prices are whole numbers, so this is accepted.
 - The one-row check assumes PostgREST returns the affected rows with
   `return=representation`. T3 confirms it before the UI is built on top.
+
+**Amendment 2026-10-28, options considered:** its own `system` message (chosen, owner) vs
+reusing `unknown`, "Algo salió mal. Inténtalo otra vez." (runner-up, recommended: no new kind,
+but it invites a retry that cannot help when the SQL itself is wrong) vs keeping every 400 as
+`invalid` (rejected: it sent the owner to check a form with nothing wrong in it). The `22`/`23`
+class test vs a fixed list of codes: the classes also cover data codes not seen yet, such as a
+value too long (`22001`) or out of range (`22003`).

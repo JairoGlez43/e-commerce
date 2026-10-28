@@ -14,9 +14,11 @@ create policy "catalog state is public to read" on public.catalog_state
   for select to anon, authenticated using (true);
 
 -- security definer: the owner's role has no write grant on catalog_state.
+-- The where is required: Supabase's pg_safeupdate refuses an update without one when it comes
+-- through the REST API, triggers included (error 21000).
 create or replace function public.touch_catalog() returns trigger
   language plpgsql security definer set search_path = ''
-  as $$ begin update public.catalog_state set changed_at = now(); return null; end $$;
+  as $$ begin update public.catalog_state set changed_at = now() where id = true; return null; end $$;
 create trigger products_touch_catalog after insert or update or delete on public.products
   for each statement execute function public.touch_catalog();
 create trigger categories_touch_catalog after insert or update or delete on public.categories

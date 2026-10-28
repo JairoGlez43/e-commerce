@@ -118,3 +118,26 @@ deletes it at the end, and each step that edits one restores its old value.
   - `grep -rlE "supabase\.co|sb_publishable_" dist --include=*.html` → only `dist/admin/index.html`.
   - Live demo after a deploy: run AC4 and AC6 once (CORS for `PATCH` and `DELETE` from the site's
     origin).
+- **AC11 (system refusals, amended 2026-10-28):** signed in on `http://localhost:4321/admin/`,
+  DevTools open. In the console, paste this mock; it answers the next writes on `products` with
+  the given status and code, and lets every read through:
+  ```js
+  window.__mock = { status: 400, code: '21000' };
+  const realFetch = window.fetch;
+  window.fetch = (url, init = {}) =>
+    String(url).includes('/rest/v1/products') && ['POST', 'PATCH'].includes(init.method)
+      ? Promise.resolve(new Response(JSON.stringify({ code: window.__mock.code }), {
+          status: window.__mock.status, headers: { 'Content-Type': 'application/json' } }))
+      : realFetch(url, init);
+  ```
+  - Open a product, change its name, tap "Guardar" → "Error del sistema, no es culpa tuya. Avisa a
+    quien mantiene la web."; the console shows
+    `[products] PATCH /rest/v1/products failed with status 400 (21000)`; every field keeps the
+    typed value. "Añadir producto" with a valid form → the same message and log line (`POST`).
+  - Back in the list, tap a row's "Disponible" checkbox → the same message in the list's alert
+    area, and the checkbox returns to its previous state.
+  - `window.__mock = { status: 400, code: '23514' }`, save the form → "Algún dato no es válido.
+    Revisa el formulario."
+  - `window.__mock = { status: 500, code: 'XX000' }`, save the form → "Algo salió mal. Inténtalo
+    otra vez."
+  - Reload the page to remove the mock. Nothing was written to Supabase.

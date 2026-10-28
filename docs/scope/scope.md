@@ -272,7 +272,7 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 - The owner can delete a product after confirming.
 - Invalid input (empty name, negative price) is refused with a clear message in Spanish.
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [x] Build it — /develop
 - [x] Verify it — /check verify
 **Notes:** Depends on 10 and 11. The admin UI is not bound by the public pages' no-client-JS
@@ -288,7 +288,7 @@ rule unless /architect says so.
 - The owner can tell whether a publish is still running, finished, or failed.
 - Many edits in a row cause one update of the public site, not one per edit.
 **Tasks:**
-- [ ] Decide it — /architect
+- [x] Decide it — /architect
 - [ ] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** Depends on 12.

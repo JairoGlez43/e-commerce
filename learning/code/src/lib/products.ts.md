@@ -119,17 +119,19 @@ export interface FieldProblem {
 
 ```ts
 
-export type ProductErrorKind = 'exists' | 'noCategory' | 'invalid' | 'forbidden' | 'gone' | 'unknown';
+export type ProductErrorKind = 'exists' | 'noCategory' | 'invalid' | 'forbidden' | 'gone' | 'system' | 'unknown';
 ```
 
-- Los 6 tipos de error ([alias de tipo](../../glosario.md#alias-de-tipo)). Cada uno acaba siendo
+- Los 7 tipos de error ([alias de tipo](../../glosario.md#alias-de-tipo)). Cada uno acaba siendo
   un mensaje en español en la página:
   - `exists`: ya hay un producto con ese `id`.
   - `noCategory`: la categoría elegida ya no existe.
-  - `invalid`: Supabase rechazó algún dato.
+  - `invalid`: Supabase rechazó algún dato del formulario.
   - `forbidden`: esta cuenta no puede escribir (no es el dueño).
   - `gone`: el producto que se quería cambiar o borrar ya no existe.
-  - `unknown`: cualquier otra cosa.
+  - `system`: Supabase rechazó la petición por un fallo del sistema (la base de datos, su SQL,
+    la configuración), no por los datos. El dueño no puede arreglarlo desde el formulario.
+  - `unknown`: cualquier otra cosa (por ejemplo, el servidor falló con un `500`).
 
 ```ts
 
@@ -495,8 +497,6 @@ async function failure(method: string, path: string, response: Response): Promis
 	// A real refusal by RLS. authFetch() already refreshed and retried an expired token (401).
 	if (response.status === 403 && code === '42501') return new ProductError('forbidden');
 	console.error(`[products] ${method} ${path.split('?')[0]} failed with status ${response.status} (${code ?? 'no code'})`);
-	return new ProductError(response.status === 400 ? 'invalid' : 'unknown');
-}
 ```
 
 - El comentario: "Un rechazo de verdad de RLS. `authFetch()` ya renovó y reintentó un token
@@ -508,8 +508,31 @@ async function failure(method: string, path: string, response: Response): Promis
 - Todo lo demás: una línea en la consola del navegador para quien programa, por ejemplo
   `[products] PATCH /rest/v1/products failed with status 400 (23514)`. `path.split('?')[0]`
   quita la parte `?id=eq.…`, así que el mensaje no lleva datos del producto.
-- Un `400` → `invalid` (un dato que Postgres no acepta, como un `check` que no se cumple);
-  cualquier otro estado → `unknown`.
+
+```ts
+	// Postgres classes 22 (data) and 23 (rules) mean the data sent was wrong. Any other 4xx is a
+	// fault the owner cannot fix from the form (spec 0015, amended 2026-10-28).
+	if (response.status === 400 && (code?.startsWith('22') || code?.startsWith('23'))) return new ProductError('invalid');
+	if (response.status >= 400 && response.status < 500) return new ProductError('system');
+	return new ProductError('unknown');
+}
+```
+
+- El comentario: "Las clases 22 (datos) y 23 (reglas) de Postgres significan que los datos
+  enviados estaban mal. Cualquier otro 4xx es un fallo que el dueño no puede arreglar desde el
+  formulario."
+- Los dos primeros caracteres de un [código de error](../../glosario.md#codigo-de-error-postgres)
+  son su **clase**: `22…` = un valor con forma o tamaño imposible (`22P02`), `23…` = no cumple una
+  regla de la tabla (`23514`, `23502`). `400` + una de esas clases → `invalid`.
+- `code?.startsWith('22')`: `?.` porque `code` puede ser `undefined` (respuesta sin código). En
+  ese caso la expresión da `undefined`, que cuenta como falso, y se sigue a la línea siguiente.
+- Cualquier otro estado entre `400` y `499` → `system`. Por ejemplo `400` + `21000`: el
+  [trigger](../../glosario.md#trigger) de publicar (spec 0016) chocó con
+  [pg_safeupdate](../../glosario.md#pg-safeupdate). Antes ese caso decía "Algún dato no es
+  válido" y mandaba al dueño a revisar un formulario que estaba bien.
+- Lo que queda (sobre todo un `5xx`, fallo del servidor) → `unknown`, que invita a reintentar.
+- `system` y `unknown` pasan por el `console.error` de arriba, así que quien mantiene la web ve el
+  estado y el código en la consola.
 
 ### 12. Mandar una petición: `send()`
 
