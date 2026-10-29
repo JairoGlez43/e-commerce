@@ -21,8 +21,8 @@
 | 10 | Catalog data online              | done              | default | docs/specs/0013-catalog-data-online.md |
 | 11 | Owner login                      | done              | default | docs/specs/0014-owner-login.md |
 | 12 | Manage products                  | done              | default | docs/specs/0015-manage-products.md |
-| 13 | Publish changes                  | in-progress       | default | docs/specs/0016-publish-changes.md |
-| 14 | Product photos upload            | needs-a-decision  | default | —    |
+| 13 | Publish changes                  | done              | default | docs/specs/0016-publish-changes.md |
+| 14 | Product photos upload            | in-progress       | default | docs/specs/0017-product-photos-upload.md |
 | 15 | Manage categories                | needs-a-decision  | default | —    |
 
 Status values: `planned` · `needs-a-decision` · `in-progress` · `done`
@@ -279,7 +279,7 @@ specifically Supabase, where the owner already has an account. Open: one setup p
 rule unless /architect says so.
 
 ## 13 · Publish changes
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0016-publish-changes.md
 **Code:** `supabase/publish.sql`, `supabase/functions/publish/index.ts`, `src/lib/publish.ts`, `src/pages/build.json.ts`, `src/pages/admin/index.astro`
 **Depth:** default
@@ -290,13 +290,13 @@ rule unless /architect says so.
 **Tasks:**
 - [x] Decide it — /architect
 - [x] Build it — /develop
-- [ ] Verify it — /check verify
+- [x] Verify it — /check verify
 **Notes:** Depends on 12.
 
 ## 14 · Product photos upload
-**Status:** needs-a-decision
-**Spec:** —
-**Code:** —
+**Status:** in-progress
+**Spec:** docs/specs/0017-product-photos-upload.md
+**Code:** `supabase/photos.sql`, `src/lib/photos.ts`, `src/lib/products.ts`, `src/lib/auth.ts`, `src/pages/admin/index.astro`, `scripts/check-weight.mjs`
 **Depth:** default
 **Done when:**
 - The owner can add or replace a product's photo straight from the phone's camera or gallery.
@@ -304,7 +304,7 @@ rule unless /architect says so.
 - A product without a photo still shows correctly on the public site.
 **Tasks:**
 - [ ] Decide it — /architect
-- [ ] Build it — /develop
+- [x] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** Depends on 12.
 

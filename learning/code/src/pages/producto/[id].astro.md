@@ -129,7 +129,8 @@ const category = await getEntry(product.data.category);
   campos del producto en variables cortas, para no escribir `product.data.` cada vez. `photo` es,
   desde la spec 0013, la URL de la foto en Supabase
   ([imagen remota](../../../glosario.md#imagen-remota)), y desde la spec 0015 puede ser
-  `undefined`: un producto añadido desde `/admin/` no tiene foto hasta la feature 14.
+  `undefined`: un producto de `/admin/` sin foto (añadido sin ella, o con "Quitar foto" de la
+  spec 0017).
 - `const category = await getEntry(product.data.category);`: busca la categoría del producto.
   `product.data.category` no es el nombre de la categoría sino una
   [referencia](../../../glosario.md#reference), `{ collection: 'categories', id: 'granos-y-pastas' }`

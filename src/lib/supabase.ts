@@ -19,6 +19,7 @@ export interface ProductRow {
 	photo_path: string | null;
 }
 
+// The build's copy of the bucket name. src/lib/photos.ts keeps the browser's copy (spec 0017).
 const PHOTO_BUCKET = 'product-photos';
 // PostgREST's default limit per request; a full page could mean the catalog was cut off.
 const MAX_ROWS = 1000;

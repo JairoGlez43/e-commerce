@@ -145,8 +145,8 @@ const products = defineCollection({
   `https://<ref>.supabase.co/storage/v1/object/public/product-photos/arroz-blanco.jpg`
   ([Storage y bucket](../glosario.md#storage-y-bucket)). Así el mismo `seed.sql` sirve para el
   proyecto de Supabase de cualquier tienda.
-  - Desde la spec 0015, `photo_path` puede ser `null`: un producto añadido desde `/admin/` no
-    tiene foto hasta la feature 14. `row.photo_path ? … : undefined` se lee "si hay nombre de
+  - Desde la spec 0015, `photo_path` puede ser `null`: un producto de `/admin/` sin foto (añadido
+    sin ella, o con "Quitar foto" de la spec 0017). `row.photo_path ? … : undefined` se lee "si hay nombre de
     archivo, su URL; si no, `undefined`" (el campo queda sin valor). Así `photoUrl()` nunca
     recibe `null`, y las páginas enseñan la caja "Sin foto" de
     [`NoPhoto.astro`](components/NoPhoto.astro.md).

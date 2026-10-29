@@ -7,21 +7,23 @@
 > `src/pages/admin/index.astro`),
 > [spec 0015](../../../../../docs/specs/0015-manage-products.md) (Design →
 > `src/pages/admin/index.astro`) y [spec 0016](../../../../../docs/specs/0016-publish-changes.md)
+> (Design → `src/pages/admin/index.astro`) y [spec 0017](../../../../../docs/specs/0017-product-photos-upload.md)
 > (Design → `src/pages/admin/index.astro`), con la regla de la
 > [spec 0012](../../../../../docs/specs/0012-admin-backend.md) de que `/admin/` es la única ruta
 > con JavaScript · **Lo usan:** nadie lo importa; es una página propia por
 > [ruta por archivo](../../../glosario.md#ruta-por-archivo). Ninguna página de clientes enlaza
-> aquí · **Usa:** `BaseLayout`, `site` de `src/lib/site.ts`, `supabaseConfig()` de
+> aquí · **Usa:** `BaseLayout`, [`NoPhoto`](../../components/NoPhoto.astro.md), `site` de `src/lib/site.ts`, `supabaseConfig()` de
 > [`src/lib/supabase.ts`](../../lib/supabase.ts.md) (en el build), y en el navegador
 > [`src/lib/auth.ts`](../../lib/auth.ts.md), [`src/lib/products.ts`](../../lib/products.ts.md),
-> [`src/lib/publish.ts`](../../lib/publish.ts.md) y `formatPrice()` de
+> [`src/lib/publish.ts`](../../lib/publish.ts.md), [`src/lib/photos.ts`](../../lib/photos.ts.md) y `formatPrice()` de
 > [`src/lib/price.ts`](../../lib/price.ts.md)
 
 ## Para qué sirve
 
 Es la administración del catálogo: hoy, el login (spec 0014), los productos (spec 0015, feature
-12) y publicar los cambios en la web (spec 0016, feature 13); las features 14 y 15 añadirán las
-fotos y las categorías. Enseña una de cinco **vistas**, según el momento:
+12), publicar los cambios en la web (spec 0016, feature 13) y las fotos de los productos (spec
+0017, feature 14); la feature 15 añadirá las categorías. Enseña una de cinco **vistas**, según
+el momento:
 
 | Vista | Cuándo sale |
 |---|---|
@@ -46,7 +48,8 @@ La página tiene dos partes que corren en momentos distintos:
 2. El `<script>` del final: corre **en el navegador** del dueño. Decide qué vista enseñar y
    reacciona a los formularios. Toda la lógica de sesión vive en
    [`auth.ts`](../../lib/auth.ts.md), la de productos en
-   [`products.ts`](../../lib/products.ts.md) y la de publicar en
+   [`products.ts`](../../lib/products.ts.md), la de las fotos en
+   [`photos.ts`](../../lib/photos.ts.md) y la de publicar en
    [`publish.ts`](../../lib/publish.ts.md); el script solo lee formularios, cambia de vista,
    dibuja la lista y pone mensajes en español.
 
@@ -57,6 +60,7 @@ La página tiene dos partes que corren en momentos distintos:
 ```astro
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import NoPhoto from '../../components/NoPhoto.astro';
 import { site } from '../../lib/site';
 import { supabaseConfig } from '../../lib/supabase';
 ```
@@ -65,6 +69,9 @@ import { supabaseConfig } from '../../lib/supabase';
 - `import BaseLayout …`: el [layout](../../../glosario.md#layout) común
   ([explicación](../../layouts/BaseLayout.astro.md)). Las rutas empiezan por `../../` porque esta
   página está una carpeta más abajo que las demás (`src/pages/admin/`).
+- `import NoPhoto …` (spec 0017): la caja "Sin foto" de la tienda
+  ([explicación](../../components/NoPhoto.astro.md)). El formulario de producto la enseña
+  cuando el producto no tiene foto (bloque 9).
 - `import { site } …`: el nombre de la tienda ([explicación](../../lib/site.ts.md)).
 - `import { supabaseConfig } …`: la función que lee y valida `SUPABASE_URL` y
   `SUPABASE_PUBLISHABLE_KEY` ([explicación](../../lib/supabase.ts.md#4-leer-y-validar-la-configuración)).
@@ -527,6 +534,102 @@ toque al botón y la web nueva.
   envía solo y el script decide cuándo enseñar los avisos (bloque 35).
 
 ```astro
+				<!-- Photo (spec 0017): shrunk on the phone when chosen, uploaded by "Guardar". -->
+				<div class="flex flex-col gap-2">
+					<p class="font-medium">Foto</p>
+					<img
+						data-photo-preview
+						alt=""
+						hidden
+						class="aspect-square w-full max-w-60 rounded-card border border-border object-cover"
+					/>
+					<div data-photo-none class="w-full max-w-60">
+						<NoPhoto framed />
+					</div>
+```
+
+- El comentario ([comentario en plantilla](../../../glosario.md#comentario-en-plantilla)): "Foto
+  (spec 0017): se reduce en el móvil al elegirla y se sube con 'Guardar'." La foto es un campo más
+  del formulario, el primero, encima de "Nombre".
+- `<p class="font-medium">Foto</p>`: el título del bloque, con el mismo aspecto que las etiquetas
+  de los otros campos. Es un `<p>` y no un `<label>` porque no nombra un solo campo: debajo hay
+  una imagen y dos botones.
+- La vista previa, dos piezas de las que solo se ve una a la vez (el script cambia su
+  [`hidden`](../../../glosario.md#atributo-hidden), bloque 26c):
+  - `<img data-photo-preview alt="" hidden …>`: la foto, cuando hay una. Empieza escondida y
+    **sin `src`**: el script se lo pone al abrir un producto con foto o al elegir una. Así la
+    página no descarga ninguna foto al cargarse. `alt=""` la marca como
+    [imagen decorativa](../../../glosario.md#imagen-decorativa): el producto ya lo nombra el campo
+    "Nombre".
+  - Sus clases: `aspect-square` (cuadrada), `w-full max-w-60` (todo el ancho, pero como mucho
+    15 rem; ver [unidades de Tailwind](../../../glosario.md#unidades-tailwind)),
+    `rounded-card border border-border` (el marco de las fotos de la tienda) y `object-cover`
+    (recorta la foto para llenar el cuadrado sin deformarla). Es el mismo recorte cuadrado que
+    verán los clientes.
+  - `<div data-photo-none …><NoPhoto framed /></div>`: la caja "Sin foto" de la tienda, con su
+    marco ([`NoPhoto.astro.md`](../../components/NoPhoto.astro.md)), del mismo ancho. Es la que se
+    ve al empezar.
+
+```astro
+					<div class="flex flex-wrap items-center gap-3">
+						<input id="product-photo" data-photo-input type="file" accept="image/*" class="peer sr-only" />
+						<label
+							for="product-photo"
+							data-photo-pick
+							class="inline-flex min-h-11 w-fit cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-50"
+						>
+							Añadir foto
+						</label>
+```
+
+- Una fila de botones que pasa a la línea siguiente si no cabe
+  ([flex-wrap](../../../glosario.md#flex-wrap)).
+- `<input … type="file" accept="image/*" …>`: el campo para elegir una foto
+  ([input-file](../../../glosario.md#input-file)). En el móvil ofrece la cámara y la galería (sin
+  `capture`, que obligaría a usar la cámara). No lleva `name`: el script lo lee aparte, nunca
+  viaja con el formulario.
+  - `class="peer sr-only"`: está escondido a la vista ([sr-only](../../../glosario.md#sr-only)),
+    pero sigue recibiendo el foco del teclado. `peer` lo marca para que la etiqueta de al lado
+    pueda reaccionar a él ([variante peer](../../../glosario.md#variante-peer)).
+- `<label for="product-photo" …>`: lo que el dueño ve y toca. Por el `for`, tocarla abre el
+  selector de archivos igual que el campo. El script cambia su texto entre "Añadir foto" y
+  "Cambiar foto".
+  - Sus clases son las del botón secundario de `design.md` (blanco, borde beige, redondo, de al
+    menos 44 px de alto con `inline-flex min-h-11 items-center`;
+    [área táctil](../../../glosario.md#area-tactil)), más `cursor-pointer` (la mano del ratón al
+    pasar por encima, como en un botón).
+  - `peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent`:
+    cuando el campo escondido tiene el foco del teclado, la etiqueta dibuja el
+    [contorno](../../../glosario.md#outline) naranja. Sin esto, quien usa el teclado no vería
+    dónde está.
+  - `peer-disabled:opacity-50`: mientras el campo está desactivado (durante un guardado,
+    bloque 34), la etiqueta se ve pálida.
+
+```astro
+						<button
+							type="button"
+							data-photo-remove
+							hidden
+							class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4 disabled:opacity-50"
+						>
+							Quitar foto
+						</button>
+					</div>
+					<p data-photo-status role="status" class="text-sm text-muted empty:hidden"></p>
+				</div>
+```
+
+- `<button type="button" data-photo-remove hidden …>Quitar foto</button>`: un botón con aspecto
+  de enlace (naranja y subrayado), de 44 px de alto. `type="button"`: no envía el formulario.
+  Empieza escondido; el script lo enseña solo mientras se ve una foto. `disabled:opacity-50`:
+  pálido mientras se guarda.
+- `<p data-photo-status role="status" …>`: la línea de estado de la foto, en gris y pequeña:
+  "Preparando foto…", "La foto nueva se subirá al guardar." o "La foto se quitará al guardar.".
+  `role="status"` hace que el lector de pantalla la lea cuando cambia, sin interrumpir
+  ([role alert y status](../../../glosario.md#role-alert-status)); vacía, `empty:hidden` la
+  esconde.
+
+```astro
 				<div class="flex flex-col gap-1">
 					<label for="product-name" class="font-medium">Nombre</label>
 					<input
@@ -783,22 +886,23 @@ toque al botón y la web nueva.
 ```astro
 
 <script>
-	// The admin's views (specs 0014, 0015, 0016). Every Auth rule lives in src/lib/auth.ts, every
-	// product rule in src/lib/products.ts and every publish rule in src/lib/publish.ts; this script
-	// only reads the forms, shows one view at a time, draws the list and turns errors into Spanish
-	// messages.
+	// The admin's views (specs 0014–0017). Every Auth rule lives in src/lib/auth.ts, every product
+	// rule in src/lib/products.ts, every photo rule in src/lib/photos.ts and every publish rule in
+	// src/lib/publish.ts; this script only reads the forms, shows one view at a time, draws the list
+	// and turns errors into Spanish messages.
 ```
 
 - `<script>`: sin ningún atributo, así que Astro lo **procesa**: entiende TypeScript y los
-  `import`, lo junta con `auth.ts`, `products.ts`, `publish.ts` y `price.ts` en un solo archivo
+  `import`, lo junta con `auth.ts`, `products.ts`, `photos.ts`, `publish.ts` y `price.ts` en un solo archivo
   de `dist/_astro/` y escribe en la página un `<script type="module" src="/_astro/….js">`
   ([script en Astro](../../../glosario.md#script-en-astro)). En el build del 2026-10-27, con la
   feature 12 ya hecha y antes de la 13, ese archivo pesaba 5,2 KB comprimido con gzip, medido
   como lo mide `pnpm check:weight`: lejos del límite de 15 KB de esta página. La feature 13 le
-  añade el código de publicar, y la spec 0016 (AC10) exige que siga por debajo de ese límite.
-- El comentario: "Las vistas de la administración (specs 0014, 0015, 0016). Todas las reglas de
-  Auth viven en `src/lib/auth.ts`, todas las de productos en `src/lib/products.ts` y todas las de
-  publicar en `src/lib/publish.ts`; este script solo lee los formularios, enseña una vista cada
+  añade el código de publicar y la 14 el de las fotos; las specs 0016 (AC10) y 0017 (AC9) exigen
+  que siga por debajo de ese límite.
+- El comentario: "Las vistas de la administración (specs 0014–0017). Todas las reglas de Auth
+  viven en `src/lib/auth.ts`, todas las de productos en `src/lib/products.ts`, todas las de las
+  fotos en `src/lib/photos.ts` y todas las de publicar en `src/lib/publish.ts`; este script solo lee los formularios, enseña una vista cada
   vez, dibuja la lista y convierte los errores en mensajes en español."
 
 ```astro
@@ -824,21 +928,21 @@ toque al botón y la web nueva.
   está explicada allí.
 
 ```astro
+	import { preparePhoto, publicPhotoUrl } from '../../lib/photos';
 	import { formatPrice } from '../../lib/price';
 	import {
 		ProductError,
 		type FieldName,
+		type PhotoChange,
 		type ProductErrorKind,
 		type ProductFields,
-		addProduct,
-		changedFields,
 		checkFields,
-		deleteProduct,
 		groupProducts,
 		listCategories,
 		listProducts,
+		removeProduct,
+		saveProduct,
 		setStock,
-		updateProduct,
 	} from '../../lib/products';
 	import {
 		PublishError,
@@ -854,11 +958,16 @@ toque al botón y la web nueva.
 	import type { CategoryRow, ProductRow } from '../../lib/supabase';
 ```
 
+- De [`photos.ts`](../../lib/photos.ts.md) (spec 0017): `preparePhoto`, que reduce en el móvil la
+  foto elegida, y `publicPhotoUrl`, la dirección pública de la foto que un producto ya tiene. La
+  subida y el borrado de fotos no se importan aquí: los hace `saveProduct()` por dentro.
 - `formatPrice`: el mismo formato de precio que la tienda, `280 CUP`
   ([`price.ts.md`](../../lib/price.ts.md)).
-- De [`products.ts`](../../lib/products.ts.md): la clase `ProductError`, tres tipos y las
-  funciones de productos (leer, añadir, cambiar, borrar, revisar el formulario y agrupar la
-  lista). Cada una está explicada allí.
+- De [`products.ts`](../../lib/products.ts.md): la clase `ProductError`, cuatro tipos (entre
+  ellos `PhotoChange`, qué hacer con la foto al guardar) y las funciones de productos: leer,
+  revisar el formulario, agrupar la lista, cambiar la casilla "Disponible", guardar con su foto
+  (`saveProduct`) y borrar con su foto (`removeProduct`). Desde la spec 0017, añadir y editar
+  pasan las dos por `saveProduct`. Cada una está explicada allí.
 - De [`publish.ts`](../../lib/publish.ts.md) (spec 0016): la clase `PublishError`, tres tipos
   (`Build`, la forma de `/build.json`; `PublishErrorKind`, los tipos de error; `PublishState`, el
   estado calculado) y cinco funciones: leer la hora del último cambio (`catalogChangedAt`), la
@@ -929,6 +1038,13 @@ toque al botón y la web nueva.
 	const LOADING = 'Cargando productos…';
 	const SAVED = 'Producto guardado.';
 	const DELETED = 'Producto borrado.';
+	// The photo block and the save button's steps (spec 0017).
+	const PREPARING = 'Preparando foto…';
+	const PHOTO_NEW = 'La foto nueva se subirá al guardar.';
+	const PHOTO_REMOVE = 'La foto se quitará al guardar.';
+	const UNREADABLE = 'No se pudo abrir esta foto. Prueba con otra.';
+	const UPLOADING = 'Subiendo foto…';
+	const SAVING = 'Guardando…';
 	// The project's minimum password length, set in the Supabase dashboard (spec 0014).
 	const MIN_PASSWORD = 8;
 ```
@@ -940,6 +1056,15 @@ toque al botón y la web nueva.
   ([genérico](../../../glosario.md#generico)).
 - `LOADING`, `SAVED` y `DELETED`: los avisos de la lista: "Cargando productos…", "Producto
   guardado." y "Producto borrado."
+- El comentario: "El bloque de la foto y los pasos del botón de guardar (spec 0017)." Los textos de
+  la spec 0017:
+  - `PREPARING`: mientras se reduce la foto elegida.
+  - `PHOTO_NEW` y `PHOTO_REMOVE`: la línea de estado de la foto cuando hay un cambio pendiente,
+    que se hará al pulsar "Guardar".
+  - `UNREADABLE`: el mensaje de un `PhotoError` (la foto no se pudo abrir), en la zona de errores
+    del formulario.
+  - `UPLOADING` y `SAVING`: el texto del botón "Guardar" en cada paso de `saveProduct()`
+    (bloque 34).
 - El comentario: "La longitud mínima de contraseña del proyecto, configurada en el panel de
   Supabase (spec 0014)." Tiene que coincidir con ese ajuste y con el `minlength="8"` del HTML.
 
@@ -1040,6 +1165,8 @@ toque al botón y la web nueva.
 	function show(view: View, alert = '') {
 		// Leaving the signed-in views (sign-out, a refused session) stops the publish watch.
 		if (view !== 'signed-in' && view !== 'product') stopPublish();
+		// Leaving the form drops a photo that was not saved.
+		if (view !== 'product') resetPhoto();
 		for (const element of root.querySelectorAll<HTMLElement>('[data-view]')) {
 			element.hidden = element.dataset.view !== view;
 			element.querySelector('[data-alert]')!.textContent = '';
@@ -1059,6 +1186,10 @@ toque al botón y la web nueva.
   "Producto", llama a `stopPublish()` (bloque 39d): si el dueño estaba esperando un build, la
   página deja de preguntar por `/build.json`. Ir al formulario de un producto **no** la para: el
   dueño puede editar mientras Vercel construye.
+- El comentario de la spec 0017: "Salir del formulario descarta una foto que no se guardó." Con
+  cualquier vista que no sea "Producto" (volver a la lista con "Cancelar", después de guardar,
+  una sesión acabada…), `resetPhoto()` (bloque 26c) olvida la foto elegida y libera su memoria.
+  Así "Cancelar" no cambia nada, y la próxima vez que se abra el formulario empieza limpio.
 - El `for`: recorre las cinco vistas. `element.hidden = element.dataset.view !== view;` esconde
   todas menos la pedida. Y vacía el mensaje de error (`[data-alert]`) de cada una, para que no
   quede uno viejo. Cada vista tiene uno; en "Sesión iniciada" es el de la tarjeta de la cuenta.
@@ -1334,16 +1465,255 @@ toque al botón y la web nueva.
 	const confirmBlock = root.querySelector<HTMLElement>('[data-confirm]')!;
 	const confirmYes = root.querySelector<HTMLButtonElement>('[data-confirm-yes]')!;
 	const confirmNo = root.querySelector<HTMLButtonElement>('[data-confirm-no]')!;
+	const photoPreview = root.querySelector<HTMLImageElement>('[data-photo-preview]')!;
+	const photoNone = root.querySelector<HTMLElement>('[data-photo-none]')!;
+	const photoInput = root.querySelector<HTMLInputElement>('[data-photo-input]')!;
+	const photoPick = root.querySelector<HTMLElement>('[data-photo-pick]')!;
+	const photoRemove = root.querySelector<HTMLButtonElement>('[data-photo-remove]')!;
+	const photoStatus = root.querySelector<HTMLElement>('[data-photo-status]')!;
+```
+
+- Una constante por cada pieza del HTML que el script toca, buscadas una vez al cargar: los
+  mensajes y el botón "Reintentar" de la lista, la lista, el formulario de producto con su zona
+  de errores, su botón "Guardar" y su casilla `in_stock`, el título y el enlace del formulario,
+  las piezas de borrar y, desde la spec 0017, las seis piezas del bloque "Foto" (bloque 9): la
+  vista previa, la caja "Sin foto", el campo de archivo, su etiqueta, "Quitar foto" y la línea de
+  estado. `form('product')` es el formulario de la vista `product` (bloque 14).
+
+### 26b. Foto: el estado
+
+```astro
+
+	// --- Photo (spec 0017) ---------------------------------------------------------------------
+
+	// What "Guardar" will do with the photo; `keep` whenever the form opens.
+	let photoChange: PhotoChange = { kind: 'keep' };
+	// The blob: URL of the new photo's preview, revoked when replaced or when the form closes.
+	let previewUrl: string | undefined;
+	// Only the latest choice may set the photo: a slow preparation must not undo a later tap.
+	let photoRun = 0;
+```
+
+- `// --- Photo (spec 0017) ---`: separador. Desde aquí, todo es de la feature 14.
+- Tres variables con el estado de la foto mientras el formulario está abierto:
+  - `photoChange`: "Lo que 'Guardar' hará con la foto; `keep` cada vez que se abre el
+    formulario." Es un `PhotoChange` de [`products.ts`](../../lib/products.ts.md#2-los-tipos-del-formulario):
+    dejarla (`keep`), poner una nueva (`new`, con la foto ya reducida) o quitarla (`remove`).
+    **Nada se manda a Supabase hasta "Guardar"**: elegir o quitar una foto solo cambia esta
+    variable.
+  - `previewUrl`: "La URL `blob:` de la vista previa de la foto nueva, que se revoca cuando se
+    sustituye o cuando se cierra el formulario." La foto nueva todavía no está en ningún servidor;
+    para enseñarla en el `<img>` se usa una [URL de objeto](../../../glosario.md#url-de-objeto),
+    que apunta a la foto en la memoria de la pestaña.
+  - `photoRun`: "Solo la última elección puede poner la foto: una preparación lenta no debe
+    deshacer un toque posterior." Un contador, como `loadRun` (bloque 30): reducir una foto grande
+    puede tardar un poco; si entretanto el dueño elige otra o pulsa "Quitar foto", el resultado
+    de la primera llega tarde y ya no debe valer.
+
+### 26c. Foto: dibujar el bloque
+
+```astro
+
+	function dropPreviewUrl() {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
+		previewUrl = undefined;
+	}
+```
+
+- `dropPreviewUrl()`: si hay una URL de vista previa, la revoca (`URL.revokeObjectURL`), así el
+  navegador libera la foto de su memoria, y la olvida. Se llama cada vez que esa foto deja de
+  hacer falta.
+
+```astro
+
+	// Draws the block from the state: the new photo, the current one, or the "Sin foto" box.
+	function drawPhoto() {
+		let src = '';
+		if (photoChange.kind === 'new' && previewUrl) src = previewUrl;
+		else if (photoChange.kind === 'keep' && editing?.photo_path) {
+			src = publicPhotoUrl(root.dataset.supabaseUrl!, editing.photo_path);
+		}
+```
+
+- El comentario: "Dibuja el bloque a partir del estado: la foto nueva, la actual o la caja 'Sin
+  foto'." Igual que la lista, el bloque nunca se cambia a trozos: se vuelve a pintar entero desde
+  las variables del bloque 26b.
+- `src`: qué foto enseñar, o `''` para ninguna.
+  - Con una foto nueva (`new`), su URL `blob:`.
+  - Si no hay cambio (`keep`) y el producto que se edita tiene foto, su dirección pública en el
+    bucket: `publicPhotoUrl()` ([`photos.ts.md`](../../lib/photos.ts.md#10-la-dirección-pública-de-la-foto-actual))
+    con la dirección de Supabase del atributo `data-supabase-url` (bloque 3) y el `photo_path`
+    del producto. `editing?.photo_path`: al añadir, `editing` es `null` y esto da `undefined`
+    ([encadenamiento opcional](../../../glosario.md#encadenamiento-opcional)).
+  - Con `remove`, o al añadir sin foto: `''`.
+
+```astro
+		if (src) {
+			if (photoPreview.getAttribute('src') !== src) photoPreview.src = src;
+		} else {
+			photoPreview.removeAttribute('src');
+		}
+```
+
+- Si hay foto: le pone el `src` al `<img>`, pero solo si es distinto del que ya tiene. Así, al
+  redibujar sin cambios, el navegador no vuelve a cargar la misma foto.
+  `getAttribute('src')` lee el atributo tal como se escribió.
+- Si no: le quita el `src`, para que el `<img>` escondido no siga guardando ni pidiendo una foto.
+
+```astro
+		photoPreview.hidden = !src;
+		photoNone.hidden = Boolean(src);
+		photoPick.textContent = src ? 'Cambiar foto' : 'Añadir foto';
+		photoRemove.hidden = !src;
+		photoStatus.textContent = photoChange.kind === 'new' ? PHOTO_NEW : photoChange.kind === 'remove' ? PHOTO_REMOVE : '';
+	}
+```
+
+- Con foto: se ve la foto y se esconde "Sin foto"; sin foto, al revés. `Boolean(src)` convierte
+  el texto en `true` (si tiene algo) o `false` (si es `''`).
+- La etiqueta dice "Cambiar foto" si hay foto y "Añadir foto" si no (spec 0017, AC2).
+- "Quitar foto" solo se ve si hay una foto que quitar.
+- La línea de estado: "La foto nueva se subirá al guardar." con `new`, "La foto se quitará al
+  guardar." con `remove`, y vacía con `keep` (y entonces `empty:hidden` la esconde). Son dos
+  `? :` seguidos: si es `new`, el primero; si no, mira si es `remove`.
+
+```astro
+
+	function resetPhoto() {
+		photoRun++;
+		dropPreviewUrl();
+		photoChange = { kind: 'keep' };
+		photoInput.value = '';
+		saveButton.disabled = false;
+	}
+```
+
+- `resetPhoto()`: vuelve al estado de partida. La llaman `show()` al salir del formulario
+  (bloque 16) y `openForm()` al abrirlo (bloque 32).
+  - `photoRun++`: si una foto se estaba preparando, su resultado ya no valdrá (bloque 26d).
+  - Libera la vista previa, vuelve a `keep` y vacía el campo de archivo.
+  - `saveButton.disabled = false`: por si se salió del formulario mientras una foto se preparaba
+    (en ese momento "Guardar" está desactivado).
+
+### 26d. Foto: elegir una
+
+```astro
+
+	// The photo is shrunk as soon as it is chosen, so the preview shows what will be uploaded.
+	// "Guardar" waits until it is ready.
+	async function choosePhoto(file: File) {
+		const run = ++photoRun;
+		productAlert.textContent = '';
+		photoStatus.textContent = PREPARING;
+		saveButton.disabled = true;
+```
+
+- El comentario: "La foto se reduce en cuanto se elige, así la vista previa enseña lo que se va a
+  subir. 'Guardar' espera a que esté lista."
+- `choosePhoto(file)`: recibe el [File](../../../glosario.md#blob) elegido.
+- `const run = ++photoRun;`: suma uno al contador y se queda con el número nuevo. Es "el número
+  de esta elección". (`++` delante suma **antes** de leer el valor.)
+- Borra el error anterior del formulario, pone "Preparando foto…" en la línea de estado y
+  desactiva "Guardar": no se puede guardar una foto que aún no está lista.
+
+```astro
+		try {
+			const photo = await preparePhoto(file);
+			if (run !== photoRun) return;
+			dropPreviewUrl();
+			previewUrl = URL.createObjectURL(photo);
+			photoChange = { kind: 'new', photo };
+```
+
+- `await preparePhoto(file)`: la reduce y la convierte en JPEG en el propio móvil
+  ([`photos.ts.md`](../../lib/photos.ts.md#5-reducir-la-foto-preparephoto)).
+- `if (run !== photoRun) return;`: si mientras tanto pasó otra cosa (otra foto elegida, "Quitar
+  foto", salir del formulario), el contador ya no es el mismo y este resultado se tira. Esa otra
+  acción ya dejó el bloque como debe estar, botón incluido.
+- Si sigue siendo la última: suelta la vista previa anterior, si había, y crea una nueva con la
+  foto reducida (`URL.createObjectURL`, [URL de objeto](../../../glosario.md#url-de-objeto)). El
+  dueño ve **la foto que se va a subir**, no la original.
+- `photoChange = { kind: 'new', photo }`: al guardar, se subirá esta foto. `{ kind: 'new', photo }`
+  es la forma corta de `{ kind: 'new', photo: photo }`.
+
+```astro
+		} catch {
+			// preparePhoto() throws only PhotoError('unreadable'); the state stays as it was.
+			if (run !== photoRun) return;
+			productAlert.textContent = UNREADABLE;
+		}
+		saveButton.disabled = false;
+		drawPhoto();
+	}
+```
+
+- El comentario: "`preparePhoto()` solo lanza `PhotoError('unreadable')`; el estado se queda
+  como estaba." Si la foto no se pudo abrir (un HEIC en Android, un archivo que no es una
+  imagen), sale "No se pudo abrir esta foto. Prueba con otra." en la zona de errores, y
+  `photoChange` no se toca: si había una foto, sigue ahí (spec 0017, AC6).
+- Las dos últimas líneas valen para los dos casos: "Guardar" vuelve a funcionar y el bloque se
+  redibuja (bloque 26c). Con éxito, se ve la foto nueva con "La foto nueva se subirá al
+  guardar."; con error, el bloque como estaba antes, y la línea "Preparando foto…" desaparece.
+
+```astro
+
+	photoInput.addEventListener('change', () => {
+		const file = photoInput.files?.[0];
+		// Reset, so choosing the same file again still fires "change".
+		photoInput.value = '';
+		if (file) void choosePhoto(file);
+	});
+```
+
+- El evento `change` del campo de archivo salta cuando el dueño elige una foto
+  ([input-file](../../../glosario.md#input-file)).
+- `photoInput.files?.[0]`: el primer archivo elegido, o `undefined`. `?.[0]` es el
+  [encadenamiento opcional](../../../glosario.md#encadenamiento-opcional) con corchetes.
+- El comentario: "Se vacía, para que elegir otra vez el mismo archivo siga disparando `change`."
+  Sin esto, si el dueño quita una foto y vuelve a elegir la misma, no pasaría nada. El archivo
+  ya está guardado en `file`, así que vaciar el campo no lo pierde.
+- `void choosePhoto(file)`: la lanza sin esperarla ([operador void](../../../glosario.md#operador-void)).
+
+### 26e. Foto: "Quitar foto"
+
+```astro
+
+	// A photo the product had is removed on save; a new one not saved yet is only dropped.
+	photoRemove.addEventListener('click', () => {
+		photoRun++;
+		dropPreviewUrl();
+		photoChange = editing?.photo_path ? { kind: 'remove' } : { kind: 'keep' };
+		saveButton.disabled = false;
+		drawPhoto();
+		// The button just hid itself; focus moves to the photo control.
+		photoInput.focus();
+	});
+```
+
+- El comentario: "Una foto que el producto tenía se quita al guardar; una nueva que aún no se ha
+  guardado solo se descarta."
+- `photoRun++`: si una foto se estaba preparando, su resultado ya no vale.
+- `dropPreviewUrl()`: suelta la vista previa de la foto nueva, si la había.
+- Dos casos:
+  - Si el producto tenía una foto guardada: `remove`. Al guardar, se pondrá `photo_path` a `null`
+    y se borrará el archivo.
+  - Si no (al añadir, o si solo había una foto nueva sin guardar): `keep`. No hay nada que
+    quitar en Supabase; basta con olvidar la foto elegida.
+- Redibuja el bloque: con `remove`, la caja "Sin foto" y "La foto se quitará al guardar." (AC5).
+- El comentario: "El botón se acaba de esconder a sí mismo; el foco pasa al control de la foto."
+  "Quitar foto" ya no se ve (no hay foto), y un elemento escondido no puede tener el foco. Sin
+  esta línea, quien usa el teclado se quedaría sin saber dónde está. `photoInput.focus()` lo
+  lleva al campo de archivo, y la etiqueta "Añadir foto" dibuja su contorno (bloque 9).
+
+### 26f. Un campo por su nombre
+
+```astro
 
 	function field(name: FieldName) {
 		return productForm.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 	}
 ```
 
-- Una constante por cada pieza del HTML que el script toca, buscadas una vez al cargar: los
-  mensajes y el botón "Reintentar" de la lista, la lista, el formulario de producto con su zona
-  de errores, su botón "Guardar" y su casilla `in_stock`, el título y el enlace del formulario, y
-  las piezas de borrar. `form('product')` es el formulario de la vista `product` (bloque 14).
 - `field(name)`: el campo del formulario de producto con ese `name`.
   `productForm.elements.namedItem(name)` busca entre los campos del formulario por su `name`.
   `as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement`: le dice a TypeScript que será
@@ -1573,6 +1943,8 @@ toque al botón y la web nueva.
 	function openForm(product: ProductRow | null) {
 		editing = product;
 		productForm.reset();
+		resetPhoto();
+		drawPhoto();
 		for (const name of FIELD_NAMES) field(name).setCustomValidity('');
 		fillCategories(product?.category_id ?? '');
 		productTitle.textContent = product ? 'Editar producto' : 'Añadir producto';
@@ -1583,6 +1955,10 @@ toque al botón y la web nueva.
   añadir (AC3, AC4).
 - `productForm.reset()`: vuelve a dejar los campos como en el HTML: vacíos y "Disponible"
   marcado.
+- `resetPhoto()` y `drawPhoto()` (spec 0017, bloque 26c): la foto empieza en `keep` y el bloque
+  "Foto" enseña la foto actual del producto (cargada de su dirección pública en ese momento, no
+  antes) o, al añadir o si no tiene, la caja "Sin foto". `drawPhoto()` lee `editing`, que se
+  acaba de poner en la primera línea.
 - Borra los mensajes que hubieran quedado en los campos de una vez anterior
   ([setcustomvalidity](../../../glosario.md#setcustomvalidity)).
 - `fillCategories(product?.category_id ?? '')`: rehace el desplegable y elige la categoría del
@@ -1658,33 +2034,68 @@ toque al botón y la web nueva.
 
 ```astro
 
+	// The save order and its cleanup live in saveProduct(); the button's label follows its steps.
+	// The photo controls are locked meanwhile, so the photo cannot change under the save.
 	async function save(fields: ProductFields) {
+		photoInput.disabled = true;
+		photoRemove.disabled = true;
+```
+
+- El comentario: "El orden de guardar y su limpieza viven en `saveProduct()`; el texto del botón
+  sigue sus pasos. Mientras tanto, los controles de la foto se bloquean, para que la foto no
+  pueda cambiar en mitad del guardado."
+- `save(fields)`: recibe los campos ya revisados.
+- `photoInput.disabled = true` y `photoRemove.disabled = true`: ni elegir otra foto ni quitarla
+  mientras se sube la elegida. Con el campo desactivado, la etiqueta "Cambiar foto" se ve pálida
+  (`peer-disabled:opacity-50`, bloque 9).
+
+```astro
 		try {
-			if (editing) {
-				const changes = changedFields(editing, fields);
-				putProduct(Object.keys(changes).length > 0 ? await updateProduct(editing.id, changes) : editing);
-			} else {
-				putProduct(await addProduct(fields, products.map((product) => product.id)));
-			}
+			const takenIds = products.map((product) => product.id);
+			putProduct(
+				await saveProduct(editing, fields, photoChange, takenIds, (step) => {
+					saveButton.textContent = step === 'uploading' ? UPLOADING : SAVING;
+				}),
+			);
 			markPending();
 			showList(SAVED);
+```
+
+- `takenIds`: los ids de todos los productos cargados, para que el id de uno nuevo no choque con
+  ninguno (`-2`, `-3`…).
+- `saveProduct(editing, fields, photoChange, takenIds, …)`
+  ([`products.ts.md`](../../lib/products.ts.md#18-guardar-un-producto-con-su-foto-saveproduct)):
+  una sola llamada para añadir y para editar. Le pasa el producto que se edita (o `null` al
+  añadir), los campos, qué hacer con la foto y los ids usados. Por dentro sube la foto nueva si la
+  hay, guarda la fila con un solo `POST` o `PATCH` (o ninguno, si no cambió nada) y borra la foto
+  vieja si se cambió o se quitó.
+- El último argumento es una función, `(step) => { … }`, que `saveProduct` llama al empezar cada
+  paso: pone en el botón "Subiendo foto…" mientras sube la foto y
+  "Guardando…" mientras guarda la fila (spec 0017, AC5). Sin foto nueva, el botón pasa directo a
+  "Guardando…". Al terminar, el `finally` de `whileBusy()` (bloque 17) le devuelve su texto
+  "Guardar".
+- `putProduct(…)` guarda en la lista la fila que devolvió Supabase (bloque 31).
+- Si va bien: `markPending()` (spec 0016, bloque 39f) pone en la tarjeta "Publicar" "Hay cambios
+  sin publicar." sin hacer ninguna petición, y vuelta a la lista con "Producto guardado.". (Si no
+  cambió nada, también lo dice: es una línea de más, no un error.) Al salir del formulario,
+  `show()` llama a `resetPhoto()` (bloque 16).
+
+```astro
 		} catch (error) {
 			failForm(error);
+		} finally {
+			photoInput.disabled = false;
+			photoRemove.disabled = false;
 		}
 	}
 ```
 
-- `save(fields)`: recibe los campos ya revisados.
-- Si se está editando: `changedFields()` calcula qué cambió
-  ([`products.ts.md`](../../lib/products.ts.md#8-solo-lo-que-cambió-changedfields)). Si cambió
-  algo, `updateProduct()` manda un `PATCH` con solo eso y `putProduct` guarda la fila que
-  devuelve Supabase; si no cambió nada, no se manda ninguna petición y se usa el producto tal
-  cual.
-- Si se está añadiendo: `addProduct()` con los ids de todos los productos cargados, para que el
-  id nuevo no choque con ninguno (`-2`, `-3`…).
-- Si va bien: `markPending()` (spec 0016, bloque 39f) pone en la tarjeta "Publicar" "Hay cambios
-  sin publicar." sin hacer ninguna petición, y vuelta a la lista con "Producto guardado.". (Si no
-  cambió nada, también lo dice: es una línea de más, no un error.) Si falla: `failForm()`.
+- Si falla: `failForm()` (bloque 33). El formulario se queda con todos sus valores **y con la
+  foto elegida** (`photoChange` no se toca), así el dueño puede pulsar "Guardar" otra vez cuando
+  vuelva la red (AC6). Un fallo de la subida llega como `ProductError` o `AuthError`, con los
+  mismos mensajes que el resto.
+- `finally` ([finally](../../../glosario.md#finally)): haya ido bien o mal, los controles de la
+  foto vuelven a funcionar.
 
 ### 35. Enviar el formulario de producto
 
@@ -1800,7 +2211,7 @@ toque al botón y la web nueva.
 		if (!product) return;
 		void whileBusy(confirmYes, async () => {
 			try {
-				await deleteProduct(product.id);
+				await removeProduct(product.id);
 				products = products.filter((item) => item.id !== product.id);
 				markPending();
 				showList(DELETED);
@@ -1813,9 +2224,13 @@ toque al botón y la web nueva.
 
 - "Sí, borrar": `const product = editing;` guarda el producto en una constante antes de esperar
   a la red, por si `editing` cambiara mientras tanto.
-- Con el botón ocupado, `deleteProduct(product.id)`. Si va bien, lo quita de `products`, marca la
-  tarjeta "Publicar" con "Hay cambios sin publicar." (`markPending()`, bloque 39f) y vuelve a la
-  lista con "Producto borrado.". Si falla, `failForm()` (bloque 33).
+- Con el botón ocupado, `removeProduct(product.id)`
+  ([`products.ts.md`](../../lib/products.ts.md#19-borrar-un-producto-y-su-foto-removeproduct)):
+  borra la fila y, desde la spec 0017, también su foto del bucket. Si va bien, lo quita de
+  `products`, marca la tarjeta "Publicar" con "Hay cambios sin publicar." (`markPending()`,
+  bloque 39f) y vuelve a la lista con "Producto borrado.". Si lo único que falla es borrar el
+  archivo de la foto, el producto ya está borrado y el mensaje es el mismo; el fallo solo queda en
+  la consola. Si falla borrar el producto, `failForm()` (bloque 33).
 
 ### 38. Los demás botones y la lista
 
@@ -2322,7 +2737,9 @@ vigila leyendo `/build.json` cada 15 segundos.
   `dist/admin/index.html` y un archivo `.js` en `dist/_astro/`.
 - **En el navegador:** el script pasa esos valores a [`auth.ts`](../../lib/auth.ts.md), que habla
   con Supabase Auth y guarda la sesión en `localStorage`. Los productos los lee y escribe
-  [`products.ts`](../../lib/products.ts.md), a través de `authFetch()` de `auth.ts`. Publicar lo
+  [`products.ts`](../../lib/products.ts.md), a través de `authFetch()` de `auth.ts`. Las fotos
+  las reduce en el móvil [`photos.ts`](../../lib/photos.ts.md), que también las sube y las borra
+  en el bucket cuando `saveProduct()` o `removeProduct()` se lo piden. Publicar lo
   hace [`publish.ts`](../../lib/publish.ts.md): pide la publicación a la
   [Edge Function `publish`](../../../supabase/functions/publish/index.ts.md), lee las tablas de
   [`publish.sql`](../../../supabase/publish.sql.md) y el archivo
@@ -2330,11 +2747,13 @@ vigila leyendo `/build.json` cada 15 segundos.
 - **Supabase:** los ajustes del panel (registro cerrado, contraseña mínima de 8, *Redirect URLs*
   con `/admin/`) y la función `is_owner()` están en [`supabase/auth.sql`](../../../supabase/auth.sql.md);
   las políticas que dejan escribir solo al dueño, en
-  [`supabase/products-write.sql`](../../../supabase/products-write.sql.md).
+  [`supabase/products-write.sql`](../../../supabase/products-write.sql.md); las que dejan subir
+  y borrar fotos solo al dueño, en [`supabase/photos.sql`](../../../supabase/photos.sql.md).
 - **La web pública:** lo que se guarda aquí llega a Supabase al instante, pero las páginas de
   clientes cambian en el siguiente build, el que empieza el botón "Publicar cambios" (feature
-  13). Un producto añadido aquí no tiene foto, y la tienda le pone la caja
-  [`NoPhoto`](../../components/NoPhoto.astro.md).
+  13). Un producto sin foto (añadido sin ella, o con "Quitar foto") sale en la tienda con la
+  caja [`NoPhoto`](../../components/NoPhoto.astro.md); con foto, el build la descarga del bucket
+  y la reduce para las páginas.
 - **Peso:** `pnpm check:weight` mide `/admin/` con su propio presupuesto (JS ≤ 15 KB);
   ver [`check-weight.mjs.md`](../../../scripts/check-weight.mjs.md).
 - **Aislada:** ninguna página de clientes enlaza aquí, y ninguna otra página tiene `<script>` ni
@@ -2367,7 +2786,20 @@ está mal, sin escribir en la base de datos.
    ninguna petición nueva.
 4. Pulsa "Cancelar". No hay nada que deshacer: no se mandó ninguna petición de escritura.
 
-**3. La tarjeta "Publicar", sin publicar nada:** mira las tres lecturas que hace al abrir la
+**3. Elegir una foto sin guardarla:** comprueba que la foto se prepara en el móvil y que no se
+manda nada hasta "Guardar".
+
+1. Con `pnpm dev` en marcha y la sesión del dueño abierta, abre F12 → *Network* y pulsa "Añadir
+   producto". El bloque "Foto" enseña la caja "Sin foto" y el botón "Añadir foto".
+2. Pulsa "Añadir foto" y elige cualquier foto de tu ordenador. **Qué deberías ver:** un momento
+   "Preparando foto…", y luego la foto en cuadrado, el botón "Cambiar foto", el enlace "Quitar
+   foto" y la línea "La foto nueva se subirá al guardar." (bloque 26d). En *Network*, ninguna
+   petición nueva a `supabase.co`: la foto solo está en la memoria de la pestaña.
+3. Pulsa "Quitar foto". **Qué deberías ver:** vuelve la caja "Sin foto", y la línea de estado
+   desaparece (al añadir no hay nada guardado que quitar, bloque 26e).
+4. Pulsa "Cancelar". No hay nada que deshacer: no se mandó ninguna petición de escritura.
+
+**4. La tarjeta "Publicar", sin publicar nada:** mira las tres lecturas que hace al abrir la
 vista.
 
 1. Con `pnpm dev` en marcha y la sesión del dueño abierta, abre F12 → *Network* y recarga
@@ -2389,6 +2821,10 @@ vista.
   [promesa-then](../../../glosario.md#promesa-then) · [edge-function](../../../glosario.md#edge-function) ·
   [despliegue](../../../glosario.md#despliegue) · [endpoint](../../../glosario.md#endpoint) (nuevos,
   spec 0016)
+- [url-de-objeto](../../../glosario.md#url-de-objeto) · [input-file](../../../glosario.md#input-file) ·
+  [variante-peer](../../../glosario.md#variante-peer) · [blob](../../../glosario.md#blob) (nuevos,
+  spec 0017) · [imagen-decorativa](../../../glosario.md#imagen-decorativa) ·
+  [outline](../../../glosario.md#outline) · [unidades-tailwind](../../../glosario.md#unidades-tailwind)
 - [template-html](../../../glosario.md#template-html) ·
   [textcontent-e-innerhtml](../../../glosario.md#textcontent-e-innerhtml) ·
   [setcustomvalidity](../../../glosario.md#setcustomvalidity) ·

@@ -3,11 +3,21 @@
 // home of the form's field rules and of the id rule. What really protects the data is RLS with
 // public.is_owner() (supabase/products-write.sql); these rules only give Spanish messages first.
 import { authFetch } from './auth';
+import { deletePhoto, uploadPhoto } from './photos';
 // Type-only: nothing from supabase.ts (build-time code) reaches the browser bundle.
 import type { CategoryRow, ProductRow } from './supabase';
 
-// What the form edits. Never `id` (fixed once added) and never `photo_path` (feature 14).
+// What the form edits. Never `id` (fixed once added); `photo_path` is sent only by saveProduct()
+// (spec 0017).
 export type ProductFields = Pick<ProductRow, 'name' | 'category_id' | 'price' | 'unit' | 'in_stock' | 'description'>;
+
+// What happens to the photo when the form is saved (spec 0017).
+export type PhotoChange = { kind: 'keep' } | { kind: 'new'; photo: Blob } | { kind: 'remove' };
+
+// The step a save is on, for the button's label.
+export type SaveStep = 'uploading' | 'saving';
+
+type ProductChanges = Partial<ProductFields> & { photo_path?: string | null };
 
 // The form's values as typed, before checkFields().
 export interface RawFields {
@@ -187,23 +197,60 @@ export function listProducts(): Promise<ProductRow[]> {
 	return send<ProductRow>(`/rest/v1/products?select=${PRODUCT_COLUMNS}&order=name.asc`);
 }
 
-// The id is the only thing the admin ever sets besides the fields; photo_path stays null.
-export async function addProduct(fields: ProductFields, takenIds: Iterable<string>): Promise<ProductRow> {
-	const body = { id: productId(fields.name, takenIds), ...fields };
+async function insertProduct(body: ProductFields & { id: string; photo_path?: string }): Promise<ProductRow> {
 	const rows = await send<ProductRow>('/rest/v1/products', { method: 'POST', body: JSON.stringify(body) }, 201);
 	const [row] = rows;
 	if (row === undefined) throw new ProductError('unknown');
 	return row;
 }
 
-export async function updateProduct(id: string, fields: Partial<ProductFields>): Promise<ProductRow> {
-	return onlyRow(await send<ProductRow>(rowPath(id), { method: 'PATCH', body: JSON.stringify(fields) }));
+async function updateProduct(id: string, changes: ProductChanges): Promise<ProductRow> {
+	return onlyRow(await send<ProductRow>(rowPath(id), { method: 'PATCH', body: JSON.stringify(changes) }));
 }
 
 export function setStock(id: string, inStock: boolean): Promise<ProductRow> {
 	return updateProduct(id, { in_stock: inStock });
 }
 
-export async function deleteProduct(id: string): Promise<void> {
-	onlyRow(await send<ProductRow>(rowPath(id), { method: 'DELETE' }));
+// The single home of the save order, for adding and editing (spec 0017). The photo goes up
+// first, then one write saves the fields and photo_path together: a failed upload saves nothing.
+// A failed write deletes the new file; a successful one deletes the old file. deletePhoto()
+// never throws, so a cleanup failure is only logged.
+export async function saveProduct(
+	row: ProductRow | null,
+	fields: ProductFields,
+	photo: PhotoChange,
+	takenIds: Iterable<string>,
+	onStep: (step: SaveStep) => void,
+): Promise<ProductRow> {
+	const id = row ? row.id : productId(fields.name, takenIds);
+	let uploaded: string | undefined;
+	if (photo.kind === 'new') {
+		onStep('uploading');
+		uploaded = await uploadPhoto(id, photo.photo);
+	}
+	onStep('saving');
+	let saved: ProductRow;
+	try {
+		if (row) {
+			const changes: ProductChanges = changedFields(row, fields);
+			if (uploaded) changes.photo_path = uploaded;
+			if (photo.kind === 'remove') changes.photo_path = null;
+			saved = Object.keys(changes).length > 0 ? await updateProduct(id, changes) : row;
+		} else {
+			saved = await insertProduct({ id, ...fields, ...(uploaded ? { photo_path: uploaded } : {}) });
+		}
+	} catch (error) {
+		if (uploaded) await deletePhoto(uploaded);
+		throw error;
+	}
+	if (row?.photo_path && photo.kind !== 'keep') await deletePhoto(row.photo_path);
+	return saved;
+}
+
+// Deletes the product, then its photo. DELETE returns the deleted row, so the photo deleted is
+// the one the database held.
+export async function removeProduct(id: string): Promise<void> {
+	const deleted = onlyRow(await send<ProductRow>(rowPath(id), { method: 'DELETE' }));
+	if (deleted.photo_path) await deletePhoto(deleted.photo_path);
 }

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import NoPhoto from '../../components/NoPhoto.astro';
 import { site } from '../../lib/site';
 import { supabaseConfig } from '../../lib/supabase';
 
@@ -195,6 +196,38 @@ const { url, key } = supabaseConfig();
 			<h2 data-product-title tabindex="-1">Añadir producto</h2>
 			<p data-product-link class="text-sm text-muted empty:hidden"></p>
 			<form data-form="product" method="post" novalidate class="flex flex-col gap-4">
+				<!-- Photo (spec 0017): shrunk on the phone when chosen, uploaded by "Guardar". -->
+				<div class="flex flex-col gap-2">
+					<p class="font-medium">Foto</p>
+					<img
+						data-photo-preview
+						alt=""
+						hidden
+						class="aspect-square w-full max-w-60 rounded-card border border-border object-cover"
+					/>
+					<div data-photo-none class="w-full max-w-60">
+						<NoPhoto framed />
+					</div>
+					<div class="flex flex-wrap items-center gap-3">
+						<input id="product-photo" data-photo-input type="file" accept="image/*" class="peer sr-only" />
+						<label
+							for="product-photo"
+							data-photo-pick
+							class="inline-flex min-h-11 w-fit cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-50"
+						>
+							Añadir foto
+						</label>
+						<button
+							type="button"
+							data-photo-remove
+							hidden
+							class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4 disabled:opacity-50"
+						>
+							Quitar foto
+						</button>
+					</div>
+					<p data-photo-status role="status" class="text-sm text-muted empty:hidden"></p>
+				</div>
 				<div class="flex flex-col gap-1">
 					<label for="product-name" class="font-medium">Nombre</label>
 					<input
@@ -326,10 +359,10 @@ const { url, key } = supabaseConfig();
 </BaseLayout>
 
 <script>
-	// The admin's views (specs 0014, 0015, 0016). Every Auth rule lives in src/lib/auth.ts, every
-	// product rule in src/lib/products.ts and every publish rule in src/lib/publish.ts; this script
-	// only reads the forms, shows one view at a time, draws the list and turns errors into Spanish
-	// messages.
+	// The admin's views (specs 0014–0017). Every Auth rule lives in src/lib/auth.ts, every product
+	// rule in src/lib/products.ts, every photo rule in src/lib/photos.ts and every publish rule in
+	// src/lib/publish.ts; this script only reads the forms, shows one view at a time, draws the list
+	// and turns errors into Spanish messages.
 	import {
 		AuthError,
 		type AuthErrorKind,
@@ -345,21 +378,21 @@ const { url, key } = supabaseConfig();
 		signOut,
 		storedUser,
 	} from '../../lib/auth';
+	import { preparePhoto, publicPhotoUrl } from '../../lib/photos';
 	import { formatPrice } from '../../lib/price';
 	import {
 		ProductError,
 		type FieldName,
+		type PhotoChange,
 		type ProductErrorKind,
 		type ProductFields,
-		addProduct,
-		changedFields,
 		checkFields,
-		deleteProduct,
 		groupProducts,
 		listCategories,
 		listProducts,
+		removeProduct,
+		saveProduct,
 		setStock,
-		updateProduct,
 	} from '../../lib/products';
 	import {
 		PublishError,
@@ -403,6 +436,13 @@ const { url, key } = supabaseConfig();
 	const LOADING = 'Cargando productos…';
 	const SAVED = 'Producto guardado.';
 	const DELETED = 'Producto borrado.';
+	// The photo block and the save button's steps (spec 0017).
+	const PREPARING = 'Preparando foto…';
+	const PHOTO_NEW = 'La foto nueva se subirá al guardar.';
+	const PHOTO_REMOVE = 'La foto se quitará al guardar.';
+	const UNREADABLE = 'No se pudo abrir esta foto. Prueba con otra.';
+	const UPLOADING = 'Subiendo foto…';
+	const SAVING = 'Guardando…';
 	// The project's minimum password length, set in the Supabase dashboard (spec 0014).
 	const MIN_PASSWORD = 8;
 	const PUBLISH_MESSAGES: Record<PublishErrorKind, string> = {
@@ -438,6 +478,8 @@ const { url, key } = supabaseConfig();
 	function show(view: View, alert = '') {
 		// Leaving the signed-in views (sign-out, a refused session) stops the publish watch.
 		if (view !== 'signed-in' && view !== 'product') stopPublish();
+		// Leaving the form drops a photo that was not saved.
+		if (view !== 'product') resetPhoto();
 		for (const element of root.querySelectorAll<HTMLElement>('[data-view]')) {
 			element.hidden = element.dataset.view !== view;
 			element.querySelector('[data-alert]')!.textContent = '';
@@ -572,6 +614,93 @@ const { url, key } = supabaseConfig();
 	const confirmBlock = root.querySelector<HTMLElement>('[data-confirm]')!;
 	const confirmYes = root.querySelector<HTMLButtonElement>('[data-confirm-yes]')!;
 	const confirmNo = root.querySelector<HTMLButtonElement>('[data-confirm-no]')!;
+	const photoPreview = root.querySelector<HTMLImageElement>('[data-photo-preview]')!;
+	const photoNone = root.querySelector<HTMLElement>('[data-photo-none]')!;
+	const photoInput = root.querySelector<HTMLInputElement>('[data-photo-input]')!;
+	const photoPick = root.querySelector<HTMLElement>('[data-photo-pick]')!;
+	const photoRemove = root.querySelector<HTMLButtonElement>('[data-photo-remove]')!;
+	const photoStatus = root.querySelector<HTMLElement>('[data-photo-status]')!;
+
+	// --- Photo (spec 0017) ---------------------------------------------------------------------
+
+	// What "Guardar" will do with the photo; `keep` whenever the form opens.
+	let photoChange: PhotoChange = { kind: 'keep' };
+	// The blob: URL of the new photo's preview, revoked when replaced or when the form closes.
+	let previewUrl: string | undefined;
+	// Only the latest choice may set the photo: a slow preparation must not undo a later tap.
+	let photoRun = 0;
+
+	function dropPreviewUrl() {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
+		previewUrl = undefined;
+	}
+
+	// Draws the block from the state: the new photo, the current one, or the "Sin foto" box.
+	function drawPhoto() {
+		let src = '';
+		if (photoChange.kind === 'new' && previewUrl) src = previewUrl;
+		else if (photoChange.kind === 'keep' && editing?.photo_path) {
+			src = publicPhotoUrl(root.dataset.supabaseUrl!, editing.photo_path);
+		}
+		if (src) {
+			if (photoPreview.getAttribute('src') !== src) photoPreview.src = src;
+		} else {
+			photoPreview.removeAttribute('src');
+		}
+		photoPreview.hidden = !src;
+		photoNone.hidden = Boolean(src);
+		photoPick.textContent = src ? 'Cambiar foto' : 'Añadir foto';
+		photoRemove.hidden = !src;
+		photoStatus.textContent = photoChange.kind === 'new' ? PHOTO_NEW : photoChange.kind === 'remove' ? PHOTO_REMOVE : '';
+	}
+
+	function resetPhoto() {
+		photoRun++;
+		dropPreviewUrl();
+		photoChange = { kind: 'keep' };
+		photoInput.value = '';
+		saveButton.disabled = false;
+	}
+
+	// The photo is shrunk as soon as it is chosen, so the preview shows what will be uploaded.
+	// "Guardar" waits until it is ready.
+	async function choosePhoto(file: File) {
+		const run = ++photoRun;
+		productAlert.textContent = '';
+		photoStatus.textContent = PREPARING;
+		saveButton.disabled = true;
+		try {
+			const photo = await preparePhoto(file);
+			if (run !== photoRun) return;
+			dropPreviewUrl();
+			previewUrl = URL.createObjectURL(photo);
+			photoChange = { kind: 'new', photo };
+		} catch {
+			// preparePhoto() throws only PhotoError('unreadable'); the state stays as it was.
+			if (run !== photoRun) return;
+			productAlert.textContent = UNREADABLE;
+		}
+		saveButton.disabled = false;
+		drawPhoto();
+	}
+
+	photoInput.addEventListener('change', () => {
+		const file = photoInput.files?.[0];
+		// Reset, so choosing the same file again still fires "change".
+		photoInput.value = '';
+		if (file) void choosePhoto(file);
+	});
+
+	// A photo the product had is removed on save; a new one not saved yet is only dropped.
+	photoRemove.addEventListener('click', () => {
+		photoRun++;
+		dropPreviewUrl();
+		photoChange = editing?.photo_path ? { kind: 'remove' } : { kind: 'keep' };
+		saveButton.disabled = false;
+		drawPhoto();
+		// The button just hid itself; focus moves to the photo control.
+		photoInput.focus();
+	});
 
 	function field(name: FieldName) {
 		return productForm.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
@@ -676,6 +805,8 @@ const { url, key } = supabaseConfig();
 	function openForm(product: ProductRow | null) {
 		editing = product;
 		productForm.reset();
+		resetPhoto();
+		drawPhoto();
 		for (const name of FIELD_NAMES) field(name).setCustomValidity('');
 		fillCategories(product?.category_id ?? '');
 		productTitle.textContent = product ? 'Editar producto' : 'Añadir producto';
@@ -709,18 +840,25 @@ const { url, key } = supabaseConfig();
 		if (needsReload(error)) void loadCatalog();
 	}
 
+	// The save order and its cleanup live in saveProduct(); the button's label follows its steps.
+	// The photo controls are locked meanwhile, so the photo cannot change under the save.
 	async function save(fields: ProductFields) {
+		photoInput.disabled = true;
+		photoRemove.disabled = true;
 		try {
-			if (editing) {
-				const changes = changedFields(editing, fields);
-				putProduct(Object.keys(changes).length > 0 ? await updateProduct(editing.id, changes) : editing);
-			} else {
-				putProduct(await addProduct(fields, products.map((product) => product.id)));
-			}
+			const takenIds = products.map((product) => product.id);
+			putProduct(
+				await saveProduct(editing, fields, photoChange, takenIds, (step) => {
+					saveButton.textContent = step === 'uploading' ? UPLOADING : SAVING;
+				}),
+			);
 			markPending();
 			showList(SAVED);
 		} catch (error) {
 			failForm(error);
+		} finally {
+			photoInput.disabled = false;
+			photoRemove.disabled = false;
 		}
 	}
 
@@ -778,7 +916,7 @@ const { url, key } = supabaseConfig();
 		if (!product) return;
 		void whileBusy(confirmYes, async () => {
 			try {
-				await deleteProduct(product.id);
+				await removeProduct(product.id);
 				products = products.filter((item) => item.id !== product.id);
 				markPending();
 				showList(DELETED);

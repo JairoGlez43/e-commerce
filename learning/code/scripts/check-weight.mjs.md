@@ -118,7 +118,9 @@ if (!fs.existsSync(dist)) {
 ```js
 const kb = (bytes) => bytes / 1024;
 const gzipSize = (buffer) => zlib.gzipSync(buffer).length;
-const fileSize = (url) => fs.statSync(path.join(dist, url)).size;
+// An <img> with no src yet (the admin's photo preview, filled by its script, spec 0017) loads
+// nothing at page load, so it counts 0.
+const fileSize = (url) => (url ? fs.statSync(path.join(dist, url)).size : 0);
 ```
 
 - `kb(bytes)`: pasa bytes a KB (1 KB = 1024 bytes).
@@ -128,6 +130,16 @@ const fileSize = (url) => fs.statSync(path.join(dist, url)).size;
 - `fileSize(url)`: el tamaño en disco de un archivo de `dist/`. Recibe la ruta tal como sale
   en el HTML (`/_astro/arroz-blanco….webp`) y `path.join` la convierte en
   `dist\_astro\arroz-blanco….webp`.
+- El comentario: "Un `<img>` que todavía no tiene `src` (la vista previa de la foto en la
+  administración, que rellena su script, spec 0017) no carga nada al abrir la página, así que
+  cuenta 0."
+  - `url ? … : 0`: si hay ruta, mide el archivo; si no (`undefined`, porque el `<img>` no tiene
+    `src`), devuelve `0` sin tocar el disco.
+  - Por qué hace falta: el formulario de `/admin/` lleva un `<img data-photo-preview>` vacío, al
+    que el script le pone `src` solo cuando el dueño abre un producto o elige una foto. Para ese
+    `<img>`, `largestImage()` (bloque 6) no encuentra ni `srcset` ni `src` y devuelve
+    `undefined`. Sin la comprobación, `path.join(dist, undefined)` lanzaría un error y el script
+    entero se pararía.
 
 ### 5. Encontrar todas las páginas
 

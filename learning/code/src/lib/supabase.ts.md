@@ -7,7 +7,8 @@
 > **Lo usan:** [`src/content.config.ts`](../content.config.ts.md) (sus tres loaders) y, solo
 > `supabaseConfig()`, [`src/pages/admin/index.astro`](../pages/admin/index.astro.md) (spec
 > [0014](../../../../docs/specs/0014-owner-login.md)); solo los tipos `CategoryRow` y
-> `ProductRow`, [`src/lib/products.ts`](products.ts.md) (spec 0015) ·
+> `ProductRow`, [`src/lib/products.ts`](products.ts.md) (spec 0015). El nombre del bucket tiene
+> una segunda copia, para el navegador, en [`src/lib/photos.ts`](photos.ts.md) (spec 0017) ·
 > **Usa:** las variables de entorno `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`, y la
 > [API REST](../../glosario.md#api-rest) de Supabase con `fetch`
 
@@ -78,7 +79,8 @@ export interface ProductRow {
   `string | null` es una [unión](../../glosario.md#union): el nombre del archivo, o `null` si el
   producto no tiene foto. Desde la spec 0015 la columna admite `null`
   ([`products-write.sql`](../../supabase/products-write.sql.md)), porque un producto añadido
-  desde `/admin/` no tiene foto todavía. Gracias a esta unión, TypeScript obliga a quien use
+  desde `/admin/` puede no tener foto. La feature 14 ya llegó (spec 0017): el dueño puede subir
+  una foto, o quitarla y volver a `null`, desde el formulario de `/admin/`. Gracias a esta unión, TypeScript obliga a quien use
   `photo_path` a comprobar antes que no es `null` (lo hace
   [`content.config.ts`](../content.config.ts.md)).
 - Estas dos interfaces también las usa [`products.ts`](products.ts.md), el código del
@@ -91,11 +93,17 @@ export interface ProductRow {
 ### 3. Dos constantes
 
 ```ts
+// The build's copy of the bucket name. src/lib/photos.ts keeps the browser's copy (spec 0017).
 const PHOTO_BUCKET = 'product-photos';
 // PostgREST's default limit per request; a full page could mean the catalog was cut off.
 const MAX_ROWS = 1000;
 ```
 
+- El comentario: "La copia del build del nombre del bucket. `src/lib/photos.ts` guarda la copia
+  del navegador (spec 0017)." El mismo nombre está escrito dos veces a propósito: este archivo
+  solo corre en el build y [`photos.ts`](photos.ts.md#3-las-constantes) solo en el navegador, y
+  si uno importara del otro arrastraría código que en ese lado no funciona. El comentario
+  recuerda que, si cambia uno, hay que cambiar el otro.
 - `const PHOTO_BUCKET = 'product-photos';`: el nombre del bucket donde están las fotos
   ([Storage y bucket](../../glosario.md#storage-y-bucket)). Lo crea `schema.sql`. Va en
   mayúsculas por costumbre: es un valor fijo que no cambia nunca.

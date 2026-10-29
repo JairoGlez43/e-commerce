@@ -106,6 +106,9 @@ Cuba are slow and unreliable. Sources: `docs/brief.md`, `docs/scope/scope.md`.
   fake `WHATSAPP_NUMBER` inline.
 - Database changes: edit `supabase/*.sql` and run them by hand in the Supabase dashboard SQL
   editor (no Supabase CLI, spec 0013).
+- Edge Function changes: edit `supabase/functions/<name>/index.ts`, paste it into the dashboard
+  editor of that function, then "Deploy updates" (no rollback; the repo copy is the source,
+  spec 0016).
 - Weight check: `pnpm check:weight` after `pnpm build` (`scripts/check-weight.mjs`, spec 0001
   AC7); measures every page in `dist/` against the budget, exits 1 when one is over.
   `/admin/` gets its own JS limit (15 KB gzipped). Every other route keeps the public budget
@@ -178,6 +181,9 @@ Added by spec 0016:
   and `throw new Error(…)` for a missing/invalid env var (`src/lib/whatsapp.ts`).
   `src/lib/supabase.ts` also throws on a bad URL or key, a secret key, a failed or non-2xx read,
   an empty table and ≥ 1000 rows; messages name the variable, never its value (spec 0013).
+- Server code exception: the Edge Function `publish` only (spec 0016). It answers
+  `{ "error": "<code>" }` with its status (`signedOut`, `tooSoon`, `forbidden`, `hook`,
+  `unknown`), and its logs name the step and status, never a header, a token or the hook URL.
 - Admin errors: a refused PostgREST write maps by its Postgres code. Class `22`/`23` →
   `invalid` ("revisa el formulario"); any other 4xx → `system` ("no es culpa tuya"); anything
   else → `unknown` (`failure()` in `src/lib/products.ts`, spec 0015).
@@ -286,6 +292,10 @@ _Added by /sync from /debug findings: symptom → cause → rule._
   Supabase's `pg_safeupdate` refuses an `update` or `delete` without `where` on API requests,
   including what a trigger runs → every `update`/`delete` in a trigger or function the API can
   reach has a `where` (`touch_catalog()`: `where id = true`, spec 0016).
+- After "Salir" in another tab, this tab still publishes → `readSession()` fell back to its
+  in-memory copy when `admin-session` was missing, not only when storage was unavailable → a
+  missing key means signed out: `readSession()` clears the memory copy (spec 0014, found by
+  spec 0016 verify).
 
 ## Git
 integration: off   <!-- on = /develop branches and commits as milestones land -->

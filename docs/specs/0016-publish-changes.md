@@ -1,6 +1,6 @@
 # 0016 · Publish changes
 
-**Status:** In Progress
+**Status:** Accepted
 <!-- Proposed → In Progress → Accepted · Assumed (recorded by /develop, awaiting ratification) · Superseded by NNNN -->
 **Date:** 2026-10-28
 **Scope:** `docs/scope/scope.md` → feature 13
@@ -264,7 +264,7 @@ The AC1 test is a commented block at the end of the file, like `products-write.s
     Flag for `/architect`: the Design above says it "stays on".
 - [x] **T4** (AC4, AC5, AC6, AC8, AC9) `src/lib/publish.ts` and the Publicar card in
   `src/pages/admin/index.astro`.
-- [ ] **T5** (AC10) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`. Then the flows on the
+- [x] **T5** (AC10) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`. Then the flows on the
   live demo after a push, at 360 px. That includes the 10-minute failure run, with
   `WHATSAPP_NUMBER` restored afterwards.
 - [x] **T6** Add the Publicar card to `design.md`. Update the `learning/code/` walkthroughs for

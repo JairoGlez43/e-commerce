@@ -312,6 +312,15 @@ Un `Buffer` es el contenido de un archivo (o de un texto) como bytes, tal cual. 
 sin codificación devuelve uno, y `Buffer.from('texto')` convierte un texto. Funciones como la
 compresión de `zlib` trabajan con bytes, no con texto.
 
+### crypto-getrandomvalues
+`crypto.getRandomValues(new Uint8Array(4))` llena una lista de 4 bytes con números al azar
+(cada uno de 0 a 255) que el navegador saca de una fuente segura, imposible de adivinar, no como
+`Math.random()`. `Uint8Array` es una lista de bytes de tamaño fijo, la versión del navegador del
+[Buffer](#buffer). Para escribir cada byte como texto se usa el **hexadecimal**: base 16, con
+las cifras `0-9` y `a-f`, así que un byte cabe siempre en dos caracteres
+(`byte.toString(16).padStart(2, '0')`: 10 → `'0a'`, 255 → `'ff'`). 4 bytes dan 8 caracteres,
+como `3f9a0c7e`.
+
 ### set
 `new Set(lista)` crea una colección que **no admite repetidos**. `[...new Set(['a', 'a', 'b'])]`
 da `['a', 'b']`: es la forma corta de quitar duplicados de una lista.
@@ -818,6 +827,18 @@ archivo por su URL, sin clave:
 `https://<ref>.supabase.co/storage/v1/object/public/<bucket>/<archivo>`. Subir o borrar sigue
 necesitando permiso. Aquí el bucket es `product-photos`.
 
+### politicas-de-storage
+Supabase guarda la lista de archivos de [Storage](#storage-y-bucket) en una tabla de Postgres,
+`storage.objects`: una fila por archivo, con columnas como `bucket_id` (en qué bucket está) y
+`name` (su nombre). Por eso los permisos de los archivos se escriben igual que los de cualquier
+tabla: con [RLS](#rls) y [políticas](#politica) sobre `storage.objects`. Una política
+`for insert` decide quién puede **subir** un archivo; `for delete`, quién puede **borrarlo**; y
+`for select`, quién puede **ver su fila** (Storage la lee antes de borrar). Subir o borrar sin
+una política que lo permita da error. Leer un archivo de un bucket **público** por su URL
+pública no pasa por estas políticas. Además, cada bucket tiene sus propios límites, que no son
+políticas: el tamaño máximo de un archivo (`file_size_limit`, en bytes) y los tipos de archivo
+que acepta (`allowed_mime_types`, por ejemplo solo `image/jpeg`).
+
 ---
 
 ## Imágenes
@@ -891,6 +912,54 @@ quedará el archivo publicado: en el build, [Vite](#vite) lo copia a la carpeta 
 [`dist/`](#dist) con un *hash* en el nombre (unas letras que cambian si cambia el archivo, para que el navegador no
 use una copia vieja). Con un [SVG](#svg), Astro deja usar además ese objeto como componente que
 pega el SVG en línea; este proyecto solo usa su `.src`.
+
+### blob
+<a id="file"></a>
+Un `Blob` es, en el navegador, un trozo de datos en bytes (por ejemplo, una foto entera) con su
+tipo (`blob.type`, como `'image/jpeg'`) y su tamaño (`blob.size`, en bytes). Se parece al
+[Buffer](#buffer) de Node, pero no se puede leer byte a byte directamente: se pasa tal cual a
+quien lo necesite (una petición, una [URL de objeto](#url-de-objeto)). Un `File` es un `Blob` con
+nombre: es lo que te da un [`<input type="file">`](#input-file) cuando el usuario elige un
+archivo de su móvil o su ordenador.
+
+### url-de-objeto
+`URL.createObjectURL(blob)` da una dirección que empieza por `blob:`
+(`blob:https://tienda…/1f3a…`) y apunta a un [Blob](#blob) que está **en la memoria de esa
+pestaña**. Sirve como `src` de un `<img>` para enseñar una foto que todavía no se ha subido a
+ningún sitio. Solo funciona en esa pestaña y mientras esté abierta. Mientras la dirección exista,
+el navegador guarda el Blob en memoria; `URL.revokeObjectURL(direccion)` le dice "ya no la
+necesito", y así libera esa memoria (una foto puede ocupar varios MB).
+
+### canvas
+`<canvas>` es un elemento HTML que es un lienzo de píxeles en blanco: con JavaScript se dibuja en
+él. Se crea con `document.createElement('canvas')` (no hace falta meterlo en la página),
+`canvas.width` y `canvas.height` fijan su tamaño en píxeles, y `canvas.getContext('2d')` da el
+objeto que dibuja: `fillStyle` + `fillRect(x, y, ancho, alto)` pinta un rectángulo de un color, y
+`drawImage(imagen, x, y, ancho, alto)` pinta una imagen **estirada o encogida** a ese tamaño. Al
+final, `canvas.toBlob(callback, 'image/jpeg', 0.8)` convierte lo dibujado en un archivo JPEG
+nuevo (un [Blob](#blob)) y se lo pasa a la función `callback` (o `null` si no pudo). El `0.8` es
+la **calidad** del JPEG, de 0 a 1: menos calidad, archivo más pequeño. Es la forma de reducir una
+foto en el propio navegador, sin librerías.
+
+### exif
+Datos que la cámara guarda **dentro** del archivo de una foto, además de la imagen: el modelo
+del móvil, la fecha, la **orientación** (si el móvil estaba de lado) y a menudo el **lugar GPS**
+donde se hizo. Si se publica la foto tal cual, cualquiera que la descargue puede leer dónde se
+hizo. Al redibujar la foto en un [canvas](#canvas) y sacar un JPEG nuevo, solo se copian los
+píxeles: el EXIF no pasa al archivo nuevo.
+
+### heic
+El formato en que los iPhone guardan las fotos por defecto. Ocupa menos que JPEG, pero no todos
+los navegadores saben abrirlo: Safari sí; Chrome en Android, normalmente no.
+
+### imagebitmap
+`await createImageBitmap(archivo)` abre (*decodifica*) un archivo de imagen, como un
+[File](#blob) elegido por el usuario, y devuelve un `ImageBitmap`: la imagen ya convertida en
+píxeles, con su `width` y `height`, lista para pasársela a `drawImage()` de un
+[canvas](#canvas). Por defecto aplica la orientación del [EXIF](#exif), así que una foto hecha
+con el móvil de lado sale derecha. Si el navegador no sabe abrir ese formato (un
+[HEIC](#heic) en Android, un archivo que no es una imagen), lanza un error. Cuando ya no se
+necesita, `bitmap.close()` libera su memoria.
 
 ---
 
@@ -992,6 +1061,14 @@ no ocupa sitio ni mueve nada. El contorno de [foco](#focus-visible) es un `outli
 proyecto, 2 px en `accent` (`global.css`). La clase `outline-cream` de Tailwind cambia solo su
 color (`outline-color: var(--color-cream)`), y con la [variante](#variante) `focus-visible:`
 (`focus-visible:outline-cream`) solo mientras se ve ese contorno.
+
+### variante-peer
+Una [variante](#variante) de Tailwind que mira a **otro** elemento, un hermano anterior. Al
+elemento que se vigila se le pone la clase `peer`; a los que vienen **después** de él, dentro del
+mismo padre, se les ponen clases como `peer-focus-visible:outline-accent` ("cuando el `peer` tiene
+el [foco visible](#focus-visible), dibújame un contorno") o `peer-disabled:opacity-50` ("cuando el
+`peer` está desactivado, pálido"). Sirve cuando el elemento que recibe el foco está escondido
+(por ejemplo con [`sr-only`](#sr-only)) y es otro, el que se ve, quien tiene que enseñarlo.
 
 ---
 
@@ -1139,6 +1216,16 @@ ver [focus-visible](#focus-visible).)
 una pista como "Solo el número, sin decimales". Al llegar al campo, el lector de pantalla lee la
 pista después de la etiqueta. A diferencia del `<label>`, no le da nombre al campo: lo describe.
 
+### input-file
+`<input type="file">` es el campo que deja elegir un archivo del dispositivo. En un móvil, al
+tocarlo, el sistema ofrece la cámara y la galería. `accept="image/*"` pide solo imágenes (es una
+sugerencia al selector, no una garantía). Desde JavaScript, `input.files` es la lista de archivos
+elegidos (`input.files[0]` el primero, un [File](#blob)), y el evento `change` salta cuando se
+elige uno. Ese evento no salta si se elige **el mismo** archivo que ya estaba elegido; poner
+`input.value = ''` vacía la elección para que vuelva a saltar. Un `<label for="id">` de ese campo
+abre el selector igual que el propio campo, así que el campo se puede esconder y enseñar solo la
+etiqueta con aspecto de botón.
+
 ---
 
 ## Web y rendimiento
@@ -1212,6 +1299,15 @@ cerrar la pestaña y el navegador. `localStorage.setItem('clave', 'texto')` guar
 con `JSON.stringify(objeto)` y se recupera con `JSON.parse(texto)`. Cualquier script de ese
 mismo sitio puede leerlo. En modo privado o con el almacenamiento bloqueado, usarlo puede lanzar
 un error. Se ve en las herramientas del navegador (F12 → *Application* → *Local storage*).
+
+### formdata
+`new FormData()` crea el cuerpo de una petición con la forma que usa un formulario HTML que sube
+archivos. `body.append('file', blob, 'nombre.jpg')` le añade una parte llamada `file` con un
+[Blob](#blob) y su nombre de archivo. Pasado como `body` a [fetch](#fetch), el navegador lo manda
+como `multipart/form-data`: un formato que separa cada parte con una línea frontera (*boundary*)
+inventada para esa petición. Por eso **no** hay que poner tú la cabecera `Content-Type`: el
+navegador la escribe con esa frontera; si la pones a mano (por ejemplo `application/json`), el
+servidor no sabe leer el cuerpo. Es lo que en Express recibirías con un paquete como `multer`.
 
 ---
 

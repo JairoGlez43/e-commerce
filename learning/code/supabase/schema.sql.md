@@ -126,7 +126,7 @@ create table public.products (
   guardando solo el nombre, el mismo `seed.sql` sirve para el proyecto de cualquier tienda. La URL
   la arma `photoUrl()` en [`supabase.ts`](../src/lib/supabase.ts.md). Desde la spec 0015, el
   `not null` se quita en [`products-write.sql`](products-write.sql.md): un producto puede no tener
-  foto (`null`) hasta la feature 14, y el `check` sigue rechazando un texto vacío.
+  foto (`null`), y el `check` sigue rechazando un texto vacío.
 - `);`: cierra la tabla.
 
 Fíjate en lo que **no** hay: ni fecha de creación ni marca de "borrador". La spec 0013 lo deja
@@ -198,7 +198,8 @@ values ('product-photos', 'product-photos', true);
 ```
 
 - El comentario: "Bucket público: cualquiera puede ver una foto por su URL. Todavía no hay
-  políticas de subida (feature 14)."
+  políticas de subida (feature 14)." Esas políticas llegaron con la spec 0017, en
+  [`photos.sql`](photos.sql.md).
 - `insert into storage.buckets (id, name, public)`: Supabase guarda la lista de
   [buckets](../glosario.md#storage-y-bucket) en una tabla suya, `buckets`, del esquema
   `storage`. Crear un bucket es tan simple como añadirle una fila. `insert into tabla (columnas)`

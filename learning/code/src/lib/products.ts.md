@@ -1,12 +1,17 @@
 # `src/lib/products.ts`
 
 > **Qué es:** las lecturas y escrituras de productos que hace el dueño desde `/admin/`, más las
-> reglas del formulario y la regla del id, hablando con Supabase con `fetch` · **Lo decidió:**
+> reglas del formulario, la regla del id y el orden en que se guarda un producto con su foto,
+> hablando con Supabase con `fetch` · **Lo decidió:**
 > [spec 0015](../../../../docs/specs/0015-manage-products.md) (Decision y Design →
-> `src/lib/products.ts`) · **Lo usan:** solo el `<script>` de
-> [`src/pages/admin/index.astro`](../pages/admin/index.astro.md) · **Usa:** `authFetch()` de
-> [`auth.ts`](auth.ts.md), los tipos `CategoryRow` y `ProductRow` de
-> [`supabase.ts`](supabase.ts.md) y la API de [PostgREST](../../glosario.md#postgrest)
+> `src/lib/products.ts`), con los cambios de la
+> [spec 0017](../../../../docs/specs/0017-product-photos-upload.md) (Design → `src/lib/products.ts`)
+> · **Lo usan:** solo el `<script>` de
+> [`src/pages/admin/index.astro`](../pages/admin/index.astro.md); además,
+> [`photos.ts`](photos.ts.md) le toma prestada la clase `ProductError` · **Usa:** `authFetch()` de
+> [`auth.ts`](auth.ts.md), `uploadPhoto()` y `deletePhoto()` de [`photos.ts`](photos.ts.md), los
+> tipos `CategoryRow` y `ProductRow` de [`supabase.ts`](supabase.ts.md) y la API de
+> [PostgREST](../../glosario.md#postgrest)
 
 ## Para qué sirve
 
@@ -23,6 +28,10 @@ directamente con Supabase, a través de la [API REST](../../glosario.md#api-rest
 3. **La regla del id** (`productId()`): el `id` de un producto nuevo, que es su
    [slug](../../glosario.md#slug) en la URL, sale de su nombre: "Café Cubano 250 g" →
    `cafe-cubano-250-g`.
+4. **El orden de guardar** (`saveProduct()`, spec 0017, feature 14): desde que el formulario
+   tiene foto, guardar son hasta tres pasos (subir la foto nueva, guardar la fila, borrar la
+   foto vieja). Este archivo es el único que sabe en qué orden van y qué se limpia si uno falla.
+   Las peticiones de la foto en sí las hace [`photos.ts`](photos.ts.md).
 
 Como `auth.ts`, **corre en el navegador del dueño, no en el build**: solo lo importa el script
 de `/admin/`. Y no protege nada por sí solo: lo que de verdad decide quién puede escribir es
@@ -40,6 +49,7 @@ su navegador, Postgres seguiría diciendo que no.
 // home of the form's field rules and of the id rule. What really protects the data is RLS with
 // public.is_owner() (supabase/products-write.sql); these rules only give Spanish messages first.
 import { authFetch } from './auth';
+import { deletePhoto, uploadPhoto } from './photos';
 // Type-only: nothing from supabase.ts (build-time code) reaches the browser bundle.
 import type { CategoryRow, ProductRow } from './supabase';
 ```
@@ -52,6 +62,13 @@ import type { CategoryRow, ProductRow } from './supabase';
   español."
 - `import { authFetch } from './auth';`: la función que manda una petición con la sesión del
   dueño ([`auth.ts.md`](auth.ts.md#18-capa-2-un-reintento-si-supabase-rechaza-el-token)).
+- `import { deletePhoto, uploadPhoto } from './photos';` (spec 0017): subir una foto al bucket y
+  borrarla ([`photos.ts.md`](photos.ts.md)). Las usa `saveProduct()` (bloque 18) y
+  `removeProduct()` (bloque 19).
+  - Fíjate en que `photos.ts` también importa de aquí (la clase `ProductError`): cada archivo
+    importa del otro. Funciona porque ninguno de los dos **usa** lo importado al cargarse, solo
+    dentro de sus funciones, que se ejecutan más tarde, cuando los dos archivos ya están
+    cargados.
 - El comentario: "Solo tipos: nada de `supabase.ts` (código del build) llega al archivo del
   navegador."
 - `import type { CategoryRow, ProductRow } from './supabase';`: las formas de una fila de cada
@@ -65,16 +82,59 @@ import type { CategoryRow, ProductRow } from './supabase';
 
 ```ts
 
-// What the form edits. Never `id` (fixed once added) and never `photo_path` (feature 14).
+// What the form edits. Never `id` (fixed once added); `photo_path` is sent only by saveProduct()
+// (spec 0017).
 export type ProductFields = Pick<ProductRow, 'name' | 'category_id' | 'price' | 'unit' | 'in_stock' | 'description'>;
 ```
 
-- El comentario: "Lo que edita el formulario. Nunca `id` (fijo una vez añadido) ni `photo_path`
-  (feature 14)."
-- `ProductFields`: una fila de producto, pero solo con los seis campos que el dueño puede
-  cambiar. `Pick<ProductRow, …>` se queda con esos campos de `ProductRow`
+- El comentario: "Lo que edita el formulario. Nunca `id` (fijo una vez añadido); `photo_path`
+  solo lo manda `saveProduct()` (spec 0017)."
+- `ProductFields`: una fila de producto, pero solo con los seis campos de texto, precio y
+  casilla que el dueño escribe. `Pick<ProductRow, …>` se queda con esos campos de `ProductRow`
   ([tipos utilitarios](../../glosario.md#tipos-utilitarios)). Si un día `ProductRow` cambiara el
   tipo de un campo, este tipo cambiaría con él.
+- La foto no es uno de ellos: no es un texto que se escribe, sino un archivo que hay que subir
+  aparte. Va por su propio camino, `PhotoChange`, justo debajo.
+
+```ts
+
+// What happens to the photo when the form is saved (spec 0017).
+export type PhotoChange = { kind: 'keep' } | { kind: 'new'; photo: Blob } | { kind: 'remove' };
+```
+
+- El comentario: "Qué le pasa a la foto cuando se guarda el formulario (spec 0017)."
+- `PhotoChange`: una [unión](../../glosario.md#union) de tres formas, cada una con su `kind`:
+  - `{ kind: 'keep' }`: dejar la foto como está (la que tenía, o ninguna). Es lo que vale al
+    abrir el formulario.
+  - `{ kind: 'new'; photo: Blob }`: poner una foto nueva. `photo` es la foto ya reducida en el
+    móvil, como [Blob](../../glosario.md#blob) (un trozo de bytes con su tipo).
+  - `{ kind: 'remove' }`: quitar la foto que tenía ("Quitar foto").
+- Solo la forma `new` lleva `photo`. Así TypeScript no deja leer `photo.photo` sin haber
+  comprobado antes que `photo.kind === 'new'`.
+
+```ts
+
+// The step a save is on, for the button's label.
+export type SaveStep = 'uploading' | 'saving';
+```
+
+- El comentario: "El paso en que va un guardado, para el texto del botón."
+- `SaveStep`: `'uploading'` (subiendo la foto) o `'saving'` (guardando la fila). La página
+  pone "Subiendo foto…" o "Guardando…" en el botón según cuál le llegue (bloque 18).
+
+```ts
+
+type ProductChanges = Partial<ProductFields> & { photo_path?: string | null };
+```
+
+- `ProductChanges`: lo que puede llevar un `PATCH` (bloque 17). Sin `export`: solo se usa dentro
+  de este archivo.
+  - `Partial<ProductFields>`: cualquiera de los seis campos, todos opcionales
+    ([tipos utilitarios](../../glosario.md#tipos-utilitarios)).
+  - `&`: "y además". `A & B` es un objeto que cumple los dos tipos a la vez: tiene los campos de
+    `A` y los de `B`.
+  - `{ photo_path?: string | null }`: y, si hace falta, `photo_path`: un texto (el nombre de la
+    foto nueva) o `null` (sin foto). El `?` lo hace opcional.
 
 ```ts
 
@@ -151,6 +211,9 @@ export class ProductError extends Error {
   [clase](../../glosario.md#clase) de error propia que lleva su `kind`. Si falla la sesión o no
   hay red, lo que llega es un `AuthError` (`signedOut`, `offline`…), que este archivo no toca;
   la página sabe tratar los dos.
+- Desde la spec 0017, [`photos.ts`](photos.ts.md) también lanza `ProductError` cuando falla una
+  subida (`forbidden`, `system` o `unknown`). Así la página usa una sola tabla de mensajes para
+  todo lo que puede fallar al guardar.
 
 ### 4. Las constantes
 
@@ -401,7 +464,7 @@ export function changedFields(row: ProductRow, fields: ProductFields): Partial<P
   nombres TypeScript no puede comprobar que el valor encaja en ese campo concreto y rechaza la
   asignación.
 - Si el dueño cambia solo el precio, se manda `{ "price": 12500 }` y nada más. Si no cambió
-  nada, `{}`, y la página ni siquiera manda la petición.
+  nada, `{}`, y `saveProduct()` (bloque 18) ni siquiera manda la petición.
 
 ### 9. La lista agrupada: `groupProducts()`
 
@@ -626,13 +689,11 @@ export function listProducts(): Promise<ProductRow[]> {
   Lee con el token del dueño, aunque leer es público: la política de lectura de
   [`schema.sql`](../../supabase/schema.sql.md) deja leer también al rol `authenticated`.
 
-### 16. Añadir un producto
+### 16. Crear la fila: `insertProduct()`
 
 ```ts
 
-// The id is the only thing the admin ever sets besides the fields; photo_path stays null.
-export async function addProduct(fields: ProductFields, takenIds: Iterable<string>): Promise<ProductRow> {
-	const body = { id: productId(fields.name, takenIds), ...fields };
+async function insertProduct(body: ProductFields & { id: string; photo_path?: string }): Promise<ProductRow> {
 	const rows = await send<ProductRow>('/rest/v1/products', { method: 'POST', body: JSON.stringify(body) }, 201);
 	const [row] = rows;
 	if (row === undefined) throw new ProductError('unknown');
@@ -640,27 +701,29 @@ export async function addProduct(fields: ProductFields, takenIds: Iterable<strin
 }
 ```
 
-- El comentario: "El id es lo único que la administración pone además de los campos;
-  `photo_path` se queda en `null`."
-- `body`: el `id` calculado del nombre (bloque 7) más los seis campos ya revisados. No lleva
-  `photo_path`, así que Postgres lo deja vacío (`null`), que desde
-  [`products-write.sql`](../../supabase/products-write.sql.md) se admite.
+- Sin `export`: desde la spec 0017 la página ya no la llama; solo `saveProduct()` (bloque 18).
+  Así nadie puede crear un producto saltándose el orden de la foto.
+- `body`: los seis campos ya revisados, **y** (`&`, como en `ProductChanges`, bloque 2) el `id` y,
+  si hay foto, su `photo_path`. Sin foto, el cuerpo no lleva `photo_path` y Postgres lo deja vacío
+  (`null`), que desde [`products-write.sql`](../../supabase/products-write.sql.md) se admite.
 - `POST /rest/v1/products` con ese cuerpo, esperando `201` (creado).
-- `JSON.stringify(body)`: el cuerpo va como texto. `authFetch` lo exige así para poder mandar la
-  petición dos veces si tiene que renovar el token.
+- `JSON.stringify(body)`: el cuerpo va como texto. `authFetch` necesita un cuerpo que se pueda
+  mandar dos veces, por si tiene que renovar el token, y un texto se puede.
 - Devuelve la fila creada, tal como la guardó Postgres. Si la lista llegara vacía, `unknown`.
 
-### 17. Cambiar y borrar
+### 17. Cambiar una fila y la casilla "Disponible"
 
 ```ts
 
-export async function updateProduct(id: string, fields: Partial<ProductFields>): Promise<ProductRow> {
-	return onlyRow(await send<ProductRow>(rowPath(id), { method: 'PATCH', body: JSON.stringify(fields) }));
+async function updateProduct(id: string, changes: ProductChanges): Promise<ProductRow> {
+	return onlyRow(await send<ProductRow>(rowPath(id), { method: 'PATCH', body: JSON.stringify(changes) }));
 }
 ```
 
-- `PATCH /rest/v1/products?id=eq.<id>` con solo los campos que cambiaron (bloque 8). `PATCH`
-  cambia esos campos y deja los demás como estaban. Nunca manda `id` ni `photo_path`.
+- También sin `export` desde la spec 0017: la usan `saveProduct()` y `setStock()`, de aquí mismo.
+- `PATCH /rest/v1/products?id=eq.<id>` con solo lo que cambió (`ProductChanges`, bloque 2): los
+  campos distintos (bloque 8) y, si cambió la foto, `photo_path`. `PATCH` cambia esos campos y
+  deja los demás como estaban. Nunca manda `id`.
 - `onlyRow(…)`: exige que haya vuelto exactamente una fila (bloque 13), y la devuelve.
 
 ```ts
@@ -671,20 +734,136 @@ export function setStock(id: string, inStock: boolean): Promise<ProductRow> {
 ```
 
 - La casilla "Disponible" de cada fila de la lista: un `PATCH` con un solo campo,
-  `{ "in_stock": true }` o `false`.
+  `{ "in_stock": true }` o `false`. No toca la foto.
+
+### 18. Guardar un producto con su foto: `saveProduct()`
 
 ```ts
 
-export async function deleteProduct(id: string): Promise<void> {
-	onlyRow(await send<ProductRow>(rowPath(id), { method: 'DELETE' }));
+// The single home of the save order, for adding and editing (spec 0017). The photo goes up
+// first, then one write saves the fields and photo_path together: a failed upload saves nothing.
+// A failed write deletes the new file; a successful one deletes the old file. deletePhoto()
+// never throws, so a cleanup failure is only logged.
+export async function saveProduct(
+	row: ProductRow | null,
+	fields: ProductFields,
+	photo: PhotoChange,
+	takenIds: Iterable<string>,
+	onStep: (step: SaveStep) => void,
+): Promise<ProductRow> {
+```
+
+- El comentario: "El único sitio del orden de guardar, para añadir y para editar (spec 0017).
+  Primero sube la foto; luego una sola escritura guarda los campos y `photo_path` juntos: si la
+  subida falla, no se guarda nada. Si la escritura falla, se borra el archivo nuevo; si sale bien,
+  se borra el viejo. `deletePhoto()` nunca lanza un error, así que un fallo al limpiar solo se
+  apunta en la consola."
+- Por qué en este orden, con un ejemplo: el dueño cambia el precio del arroz y le pone una foto
+  nueva.
+  - Si se guardara **primero** la fila y la subida fallara después, la fila apuntaría a una foto
+    que no existe, y el siguiente build no la encontraría.
+  - Subiendo primero, lo peor que puede pasar es que quede en el bucket un archivo que nadie usa.
+    No molesta a nadie: los clientes nunca piden fotos a Supabase, porque el build las descarga y
+    las sirve desde la propia web (spec 0013).
+- Lo que recibe:
+  - `row`: el producto tal como estaba, o `null` si se está añadiendo uno.
+  - `fields`: los seis campos ya revisados por `checkFields()`.
+  - `photo`: qué hacer con la foto (`PhotoChange`, bloque 2).
+  - `takenIds`: los ids ya usados, para el id de un producto nuevo (bloque 7).
+  - `onStep`: una función de la página a la que avisar de cada paso. `(step: SaveStep) => void`
+    es el tipo de una función que recibe un `SaveStep` y no devuelve nada.
+
+```ts
+	const id = row ? row.id : productId(fields.name, takenIds);
+	let uploaded: string | undefined;
+	if (photo.kind === 'new') {
+		onStep('uploading');
+		uploaded = await uploadPhoto(id, photo.photo);
+	}
+```
+
+- `id`: al editar, el de siempre; al añadir, el que sale del nombre (bloque 7). Se calcula ya
+  ahora porque el nombre del archivo de la foto empieza por él (`arroz-blanco-3f9a0c7e.jpg`).
+- `uploaded`: el nombre del archivo subido, o `undefined` si no se subió nada.
+- **Paso 1, subir** (solo con foto nueva): avisa a la página (`'uploading'`, "Subiendo foto…") y
+  sube la foto con `uploadPhoto()` ([`photos.ts.md`](photos.ts.md)), que devuelve el nombre que le
+  dio. Si falla, lanza un error y la función se acaba aquí: no se ha guardado nada.
+
+```ts
+	onStep('saving');
+	let saved: ProductRow;
+	try {
+		if (row) {
+			const changes: ProductChanges = changedFields(row, fields);
+			if (uploaded) changes.photo_path = uploaded;
+			if (photo.kind === 'remove') changes.photo_path = null;
+			saved = Object.keys(changes).length > 0 ? await updateProduct(id, changes) : row;
+		} else {
+			saved = await insertProduct({ id, ...fields, ...(uploaded ? { photo_path: uploaded } : {}) });
+		}
+```
+
+- **Paso 2, guardar la fila:** avisa a la página (`'saving'`, "Guardando…").
+- Al editar (`row` existe):
+  - `changedFields(row, fields)`: solo los campos que cambiaron (bloque 8).
+  - Con foto nueva, se añade `photo_path` con el nombre del archivo subido.
+  - Con "Quitar foto", `photo_path: null`: el producto vuelve a "Sin foto".
+  - Si al final no hay nada que mandar (`Object.keys(changes).length` es `0`), no hay petición:
+    se devuelve el producto tal cual. Si hay algo, un solo `PATCH` (bloque 17) con los campos y la
+    foto **juntos**: o se guarda todo, o nada.
+- Al añadir: un `POST` (bloque 16) con el `id`, los campos y, solo si se subió una foto,
+  `photo_path`. `...(uploaded ? { photo_path: uploaded } : {})`: un
+  [spread](../../glosario.md#spread) de un objeto que tiene `photo_path` o está vacío; con el
+  vacío, no se añade nada.
+
+```ts
+	} catch (error) {
+		if (uploaded) await deletePhoto(uploaded);
+		throw error;
+	}
+```
+
+- Si el paso 2 falla después de haber subido una foto, se borra ese archivo nuevo (nadie lo va a
+  usar) y se vuelve a lanzar **el mismo** error, para que la página enseñe el mensaje de lo que
+  falló de verdad (por ejemplo "Algún dato no es válido…"). `deletePhoto()` nunca lanza, así que
+  un fallo al borrar no tapa ese error.
+
+```ts
+	if (row?.photo_path && photo.kind !== 'keep') await deletePhoto(row.photo_path);
+	return saved;
 }
 ```
 
+- **Paso 3, limpiar:** si el producto tenía foto y se cambió o se quitó (`kind` distinto de
+  `'keep'`), se borra el archivo viejo del bucket. Solo ahora, cuando la fila ya apunta a la foto
+  nueva (o a ninguna). `row?.photo_path`: al añadir, `row` es `null` y esto da `undefined`
+  ([encadenamiento opcional](../../glosario.md#encadenamiento-opcional)).
+- Devuelve la fila guardada, que la página pone en su lista.
+
+### 19. Borrar un producto y su foto: `removeProduct()`
+
+```ts
+
+// Deletes the product, then its photo. DELETE returns the deleted row, so the photo deleted is
+// the one the database held.
+export async function removeProduct(id: string): Promise<void> {
+	const deleted = onlyRow(await send<ProductRow>(rowPath(id), { method: 'DELETE' }));
+	if (deleted.photo_path) await deletePhoto(deleted.photo_path);
+}
+```
+
+- El comentario: "Borra el producto y después su foto. `DELETE` devuelve la fila borrada, así que
+  la foto que se borra es la que tenía la base de datos."
 - `DELETE /rest/v1/products?id=eq.<id>`. Gracias a `Prefer: return=representation`, la
-  respuesta trae la fila borrada; `onlyRow` comprueba que se borró exactamente una. No devuelve
+  respuesta trae la fila borrada; `onlyRow` comprueba que se borró exactamente una.
+- `if (deleted.photo_path) await deletePhoto(…)`: si tenía foto, la borra del bucket. Se usa el
+  `photo_path` de la respuesta, no el que tenía la página: si alguien cambió la foto desde otro
+  móvil entretanto, la página tendría un nombre viejo, y Postgres sabe el de verdad.
+- El orden importa: primero la fila, luego el archivo. Si borrar el archivo falla, el producto ya
+  está borrado y la página dice "Producto borrado." igualmente; el fallo solo queda en la consola
+  (spec 0017, AC7).
+- Sustituye a la `deleteProduct()` de la spec 0015, que dejaba la foto en el bucket. No devuelve
   nada (`void`).
-- La foto del producto borrado, si la tuviera, se queda en el bucket: borrarla es cosa de la
-  feature 14 (spec 0015, *Out of scope*).
 
 ## Cómo se conecta
 
@@ -693,11 +872,13 @@ export async function deleteProduct(id: string): Promise<void> {
 - **Habla con:** la API de [PostgREST](../../glosario.md#postgrest) de Supabase,
   `/rest/v1/categories` y `/rest/v1/products`, siempre a través de `authFetch()` de
   [`auth.ts`](auth.ts.md), que pone el [access token](../../glosario.md#access-token) del dueño
-  y lo renueva si hace falta.
+  y lo renueva si hace falta. Para las fotos, llama a `uploadPhoto()` y `deletePhoto()` de
+  [`photos.ts`](photos.ts.md), que hablan con Supabase Storage.
 - **La protección:** cada escritura la revisa Postgres con las políticas de
   [`products-write.sql`](../../supabase/products-write.sql.md) y los `check` de
   [`schema.sql`](../../supabase/schema.sql.md). Las reglas de `checkFields()` son una copia para
-  dar mensajes antes.
+  dar mensajes antes. Las subidas y borrados de fotos los revisan las políticas de
+  [`photos.sql`](../../supabase/photos.sql.md).
 - **Sale:** filas (`ProductRow`, `CategoryRow`) y errores (`ProductError` o `AuthError`) hacia
   la página, que dibuja la lista y convierte cada `kind` en un mensaje en español.
 - **El sitio público no cambia al momento:** se guarda en Supabase al instante, pero las páginas
@@ -735,6 +916,8 @@ Son las mismas cadenas de pasos que `productId()` y `checkFields()`, copiadas en
   [politica-de-escritura](../../glosario.md#politica-de-escritura) ·
   [tipos-utilitarios](../../glosario.md#tipos-utilitarios) ·
   [normalizacion-nfd](../../glosario.md#normalizacion-nfd) (nuevos)
+- [blob](../../glosario.md#blob) (nuevo, spec 0017) ·
+  [encadenamiento-opcional](../../glosario.md#encadenamiento-opcional)
 - [api-rest](../../glosario.md#api-rest) · [rls](../../glosario.md#rls) ·
   [clave-primaria](../../glosario.md#clave-primaria) · [clave-foranea](../../glosario.md#clave-foranea) ·
   [access-token](../../glosario.md#access-token) · [slug](../../glosario.md#slug) ·

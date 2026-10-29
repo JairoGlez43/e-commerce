@@ -190,6 +190,15 @@ the script fills them with `textContent` only._
   question `<p class="font-medium">` → `<div class="flex flex-wrap gap-3">` with the Primary button
   (form) "Sí, borrar" and the Secondary button "No, volver". Focus goes to "No, volver". Never
   `confirm()`: some in-app browsers block it.
+- **Photo block** (spec 0017) · first in the product form ·
+  `<div class="flex flex-col gap-2">` → `<p class="font-medium">Foto</p>` → the preview
+  `<img alt="" class="aspect-square w-full max-w-60 rounded-card border border-border object-cover">`
+  (the public site's square crop; decorative, the name field names the product) or, when there is
+  no photo, `<div class="w-full max-w-60"><NoPhoto framed /></div>` → `<div class="flex flex-wrap items-center gap-3">`
+  with the file input `<input type="file" accept="image/*" class="peer sr-only">` and its label styled
+  as the Secondary button plus `cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-50`
+  ("Añadir foto" / "Cambiar foto"; the hidden input carries the focus, the label shows it), then the
+  Text button "Quitar foto" plus `disabled:opacity-50` → a Form messages notice for the photo state.
 - **Headings that receive focus** · `h2` with `tabindex="-1"` (the list's "Productos" and the
   form's title), focused when the view changes so the page scrolls to it and screen readers follow.
 
@@ -218,6 +227,10 @@ Graphics: WhatsApp green glyph on `ink` 7.92, white glyph on `accent` 6.04.
 - Admin list: "Cargando productos…" (status), the error (alert) plus a "Reintentar" Secondary
   button, "Todavía no hay productos." (only if the table was emptied in the dashboard), and after a
   write "Producto guardado." / "Producto borrado." (status).
+- Photo block (spec 0017): "Preparando foto…" while the chosen photo shrinks ("Guardar" disabled),
+  then "La foto nueva se subirá al guardar." or "La foto se quitará al guardar."; an unreadable file
+  shows "No se pudo abrir esta foto. Prueba con otra." in the form's alert. While saving, the button
+  reads "Subiendo foto…", then "Guardando…".
 - Publicar card: "Comprobando…" while loading, then one of "Publicando… La web se actualiza en
   unos minutos.", "Hay cambios sin publicar." or "La web está al día."; "Publicado. La web ya
   muestra los cambios." for 5 s when a watched publish ends. Errors go in the alert; the button

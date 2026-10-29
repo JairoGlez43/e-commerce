@@ -16,9 +16,10 @@ Hasta la feature 12, la tabla `products` solo se podía **leer** a través de la
 escritura se rechazaba. Ahora el dueño gestiona los productos desde `/admin/`, y la base de
 datos tiene que dejarle escribir **a él y a nadie más**. Este archivo hace dos cosas:
 
-1. **Permite un producto sin foto.** La subida de fotos llega con la feature 14; mientras tanto,
-   un producto añadido desde `/admin/` no tiene foto, así que la columna `photo_path` tiene que
-   aceptar `null` (el "no hay valor" de SQL).
+1. **Permite un producto sin foto.** Un producto añadido desde `/admin/` puede no tener foto (la
+   subida llegó después, con la feature 14 y [`photos.sql`](photos.sql.md), y el dueño también
+   puede quitarla), así que la columna `photo_path` tiene que aceptar `null` (el "no hay valor"
+   de SQL).
 2. **Abre la escritura solo al dueño**, con un [grant](../glosario.md#grant) y tres
    [políticas de escritura](../glosario.md#politica-de-escritura) que preguntan a
    `public.is_owner()` si el [JWT](../glosario.md#jwt) de la petición es el del dueño.

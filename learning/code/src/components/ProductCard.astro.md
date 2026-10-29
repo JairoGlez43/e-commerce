@@ -87,8 +87,8 @@ const href = `/producto/${product.id}`;
   producto: nombre, formato, precio (número entero), si hay existencias (`true`/`false`) y la
   foto. Desde la spec 0013, `photo` es un texto: la URL de la foto en Supabase
   ([imagen remota](../../glosario.md#imagen-remota)), no una foto de `src/assets/`. Desde la spec
-  0015 puede faltar: un producto añadido desde `/admin/` no tiene foto hasta la feature 14, y
-  entonces `photo` es `undefined`.
+  0015 puede faltar: un producto de `/admin/` sin foto (añadido sin ella, o con "Quitar foto" de
+  la spec 0017) tiene `photo` a `undefined`.
 - ``const href = `/producto/${product.id}`;``: arma la URL del producto con un
   [template literal](../../glosario.md#template-literal): `/producto/arroz-blanco`. Esa página
   la genera [`src/pages/producto/[id].astro`](../pages/producto/%5Bid%5D.astro.md) (feature 06).

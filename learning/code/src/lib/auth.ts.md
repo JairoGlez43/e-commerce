@@ -5,7 +5,8 @@
 > [spec 0014](../../../../docs/specs/0014-owner-login.md) (Decision y Design →
 > `src/lib/auth.ts`) · **Lo usan:** el `<script>` de
 > [`src/pages/admin/index.astro`](../pages/admin/index.astro.md) y, solo `authFetch()`,
-> [`src/lib/products.ts`](products.ts.md) (spec 0015) · **Usa:**
+> [`src/lib/products.ts`](products.ts.md) (spec 0015), [`src/lib/publish.ts`](publish.ts.md) (spec 0016) y
+> [`src/lib/photos.ts`](photos.ts.md) (spec 0017; `photos.ts` también usa `AuthError`) · **Usa:**
 > la API de [Supabase Auth](../../glosario.md#supabase-auth) con
 > [`fetch`](../../glosario.md#fetch) y el [localStorage](../../glosario.md#localstorage) del
 > navegador
@@ -52,7 +53,8 @@ una conexión mala de Cuba nunca le cierre la sesión por error.
 - "El login del dueño contra Supabase Auth con `fetch` a secas, sin SDK (spec 0014). Solo para
   el navegador: lo importa el script de la página de administración. El único sitio de cada
   llamada a Auth y de la sesión guardada. Las features 12–14 mandarán sus propias peticiones a
-  través de `authFetch()`."
+  través de `authFetch()`." Hoy ya lo hacen: [`products.ts`](products.ts.md),
+  [`publish.ts`](publish.ts.md) y [`photos.ts`](photos.ts.md).
 - SDK (*Software Development Kit*): la librería oficial de Supabase para JavaScript. El proyecto
   no la usa (specs 0012, 0013 y 0014): pesa, y con `fetch` basta.
 
@@ -212,8 +214,8 @@ function readSession(): Session | null {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (raw) return JSON.parse(raw) as Session;
-    // Removed by a sign-out, maybe in another tab: forget the in-memory copy too (spec 0014).
-		memorySession = null;
+		// Removed by a sign-out, maybe in another tab: forget the in-memory copy too (spec 0014).
+		memorySession = null;  
 	} catch {
 		// Storage unavailable or corrupt: fall back to the in-memory copy.
 	}
@@ -342,7 +344,8 @@ async function send(path: string, init: RequestInit = {}, accessToken?: string):
 	const headers = new Headers(init.headers);
 	// The publishable key goes in apikey only, never in Authorization.
 	headers.set('apikey', config.key);
-	headers.set('Content-Type', 'application/json');
+	// A FormData body (a photo upload, spec 0017) gets the browser's multipart header instead.
+	if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
 	if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 	try {
 		return await fetch(`${config.url}${path}`, { ...init, headers });
@@ -366,7 +369,16 @@ async function send(path: string, init: RequestInit = {}, accessToken?: string):
 - El comentario: "La clave publishable va solo en `apikey`, nunca en `Authorization`." Son dos
   cabeceras distintas: `apikey` dice **qué proyecto** ([clave publishable](../../glosario.md#clave-publishable));
   `Authorization` dice **qué usuario**.
-- `Content-Type: application/json`: los cuerpos que mandamos son JSON.
+- `Content-Type: application/json`: los cuerpos que mandamos son JSON. Con una excepción desde la
+  spec 0017, que explica el comentario: "Un cuerpo `FormData` (la subida de una foto, spec 0017)
+  lleva en su lugar la cabecera *multipart* del navegador."
+  - `init.body instanceof FormData`: ¿el cuerpo es un [FormData](../../glosario.md#formdata)?
+    ([instanceof](../../glosario.md#instanceof)). Solo lo es en `uploadPhoto()` de
+    [`photos.ts`](photos.ts.md).
+  - `!(…)`: si **no** lo es, se pone `application/json`, como siempre. Si lo es, no se pone
+    nada: `fetch` escribe él solo `multipart/form-data` con la línea frontera de esa petición.
+    Si aquí se forzara `application/json`, Storage no sabría leer la foto.
+  - Todas las demás peticiones (login, productos, publicar) siguen exactamente igual.
 - `Authorization: Bearer <token>`: si hay access token, va aquí ([JWT](../../glosario.md#jwt)).
 - `fetch(`${config.url}${path}`, { ...init, headers })`: la petición. `{ ...init, headers }` copia
   las opciones y pone las cabeceras nuevas ([spread](../../glosario.md#spread)).
@@ -543,7 +555,7 @@ export async function getSession(): Promise<{ user: AuthUser | null; accessToken
 ```ts
 // Any authenticated call to the project (Auth now; database, Storage, functions in features
 // 12–14). Layer 2 of spec 0014: a rejected token gets one refresh and one repeat, never more.
-// `init.body` must be a string so the request can be sent twice.
+// `init.body` must be a string or a FormData so the request can be sent twice.
 export async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
 	const session = await getSession();
 	if (!session) throw new AuthError('signedOut');
@@ -553,9 +565,10 @@ export async function authFetch(path: string, init: RequestInit = {}): Promise<R
 
 - El comentario: "Cualquier llamada con sesión al proyecto (hoy Auth; base de datos, Storage y
   funciones en las features 12–14). Capa 2 de la spec 0014: un token rechazado recibe una
-  renovación y una repetición, nunca más. `init.body` tiene que ser un texto para poder mandar la
-  petición dos veces." (Hay cuerpos que `fetch` consume al enviarlos y no se pueden reutilizar;
-  un texto sí.)
+  renovación y una repetición, nunca más. `init.body` tiene que ser un texto o un `FormData` para
+  poder mandar la petición dos veces." (Hay cuerpos que `fetch` consume al enviarlos y no se
+  pueden reutilizar; un texto sí, y un [FormData](../../glosario.md#formdata) también: `fetch` lo
+  vuelve a leer entero en cada envío. Desde la spec 0017, la subida de una foto usa uno.)
 - `authFetch(path, init)`: como `fetch`, pero con la sesión puesta.
 - `await getSession()`: pasa por la capa 1. Sin sesión → `signedOut`.
 - `send(path, init, session.accessToken)`: la petición, con el token.
@@ -775,7 +788,9 @@ export async function setPassword(password: string): Promise<AuthUser> {
 - **Sale:** usuarios y `AuthError` hacia el script de
   [`admin/index.astro`](../pages/admin/index.astro.md), que los convierte en vistas y mensajes en
   español. Y `authFetch()` hacia [`products.ts`](products.ts.md), que manda con él las
-  lecturas y escrituras de productos (feature 12); más adelante, también las features 13–14.
+  lecturas y escrituras de productos (feature 12), hacia [`publish.ts`](publish.ts.md) (feature 13)
+  y hacia [`photos.ts`](photos.ts.md), que sube y borra las fotos con un cuerpo
+  [FormData](../../glosario.md#formdata) (feature 14).
 - **La protección de verdad no está aquí:** está en Supabase, con
   [`is_owner()`](../../supabase/auth.sql.md) y las políticas de la feature 12
   ([`products-write.sql`](../../supabase/products-write.sql.md)). Este archivo solo
@@ -824,3 +839,4 @@ dueño.
   [encadenamiento-opcional](../../glosario.md#encadenamiento-opcional) · [spread](../../glosario.md#spread) ·
   [set](../../glosario.md#set) · [throw](../../glosario.md#throw) ·
   [valor-por-defecto](../../glosario.md#valor-por-defecto) · [async-await](../../glosario.md#async-await)
+- [formdata](../../glosario.md#formdata) · [instanceof](../../glosario.md#instanceof) (spec 0017)

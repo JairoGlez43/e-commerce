@@ -110,7 +110,8 @@ async function send(path: string, init: RequestInit = {}, accessToken?: string):
 	const headers = new Headers(init.headers);
 	// The publishable key goes in apikey only, never in Authorization.
 	headers.set('apikey', config.key);
-	headers.set('Content-Type', 'application/json');
+	// A FormData body (a photo upload, spec 0017) gets the browser's multipart header instead.
+	if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
 	if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 	try {
 		return await fetch(`${config.url}${path}`, { ...init, headers });
@@ -182,7 +183,7 @@ export async function getSession(): Promise<{ user: AuthUser | null; accessToken
 
 // Any authenticated call to the project (Auth now; database, Storage, functions in features
 // 12–14). Layer 2 of spec 0014: a rejected token gets one refresh and one repeat, never more.
-// `init.body` must be a string so the request can be sent twice.
+// `init.body` must be a string or a FormData so the request can be sent twice.
 export async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
 	const session = await getSession();
 	if (!session) throw new AuthError('signedOut');

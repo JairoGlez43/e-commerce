@@ -29,7 +29,9 @@ if (!fs.existsSync(dist)) {
 
 const kb = (bytes) => bytes / 1024;
 const gzipSize = (buffer) => zlib.gzipSync(buffer).length;
-const fileSize = (url) => fs.statSync(path.join(dist, url)).size;
+// An <img> with no src yet (the admin's photo preview, filled by its script, spec 0017) loads
+// nothing at page load, so it counts 0.
+const fileSize = (url) => (url ? fs.statSync(path.join(dist, url)).size : 0);
 
 function findPages(dir) {
 	return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

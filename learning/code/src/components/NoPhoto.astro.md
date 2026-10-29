@@ -10,9 +10,9 @@
 
 ## Para qué sirve
 
-Desde la spec 0015 el dueño puede añadir productos desde `/admin/`, pero subir fotos llega con
-la feature 14. Mientras tanto, un producto nuevo no tiene foto (su `photo_path` es `null` en
-Supabase). Las páginas públicas no pueden dejar un hueco ni una imagen rota: en su lugar dibujan
+Desde la spec 0015 el dueño puede añadir productos desde `/admin/`, y desde la spec 0017
+(feature 14) puede subirles una foto, o quitársela. Un producto sin foto tiene su `photo_path` a
+`null` en Supabase. Las páginas públicas no pueden dejar un hueco ni una imagen rota: en su lugar dibujan
 este cuadrado crema con el texto "Sin foto". Tiene el mismo tamaño que una foto (cuadrado y a
 todo el ancho), así que la tarjeta o la página no cambian de forma.
 
