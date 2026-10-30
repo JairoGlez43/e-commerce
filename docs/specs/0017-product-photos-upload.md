@@ -230,7 +230,7 @@ instead of 3–12 MB.
   so an expired token is refreshed and retried once (spec 0014).
 
 ## Build plan
-- [ ] **T1** (AC1) Check the bucket's column names, then write `supabase/photos.sql`. Guide the
+- [x] **T1** (AC1) Check the bucket's column names, then write `supabase/photos.sql`. Guide the
   owner to run it. Run AC1 with `curl`, with the owner's token from a session. Record here the
   real answers to:
   - an upload as `FormData` (status and body);
@@ -247,10 +247,35 @@ instead of 3–12 MB.
     Flag for `/architect`: the raw-body fallback above is not change-free. `authFetch()` would
     still set `Content-Type: application/json` on a `Blob` body, so that fallback would also need
     the `send()` exception widened (for example, "only when the body is a string").
+  - 2026-10-30: the owner ran `supabase/photos.sql` and the AC1 console snippet. Storage answers
+    every refusal with HTTP 400 and the real status in the body's `statusCode` (a string), which
+    `photoFailure()` already reads:
+    - `FormData` upload, part `file`: 200 `{"Key":"product-photos/prueba-0a1b2c3d.jpg","Id":…}`.
+      The raw-body fallback is not needed.
+    - Same path again: 400 `{"statusCode":"409","error":"Duplicate","code":"KeyAlreadyExists"}`.
+    - Anonymous upload: 400 `{"statusCode":"403","error":"Unauthorized","message":"new row
+      violates row-level security policy","code":"AccessDenied"}`.
+    - `prueba.png` as the owner: the same 400 / `"403"` body (the policy's name pattern).
+    - 3 MB file: 400 `{"statusCode":"413","error":"Payload too large","code":"EntityTooLarge"}`.
+    - Delete existing: 200 `{"message":"Successfully deleted"}`. Delete missing: 400
+      `{"statusCode":"404","error":"not_found","code":"NoSuchKey"}`. Public URL after the delete:
+      400 with the same `"404"` body.
+    - Not tested here: a non-JPEG body under a `.jpg` name against `allowed_mime_types`; the app
+      never sends one, since `preparePhoto()` always encodes JPEG.
 - [ ] **T2** (AC9) `src/lib/auth.ts`: the `Content-Type` change. Run `pnpm typecheck`, then
   sign in and save a product with no photo on `localhost` to show nothing broke.
   - 2026-10-29 (`/develop`): changed; typecheck 0 errors. The sign-in + save on `localhost` needs
     the owner's credentials: still open.
+  - 2026-10-30: the owner saved a product with no photo on `localhost`, but no write reached the
+    database. `catalog_state.changed_at` is still `2026-10-29T18:15:09Z`, and the 19 rows match
+    the 19 live pages. Most likely the form had no change, and then `saveProduct()` sends nothing.
+    The admin kept "Hay cambios sin publicar" after publishing. The running `pnpm dev` serves
+    `/build.json` with the stamp it loaded at start (`2026-10-28T22:44Z`), so localhost shows
+    "pending" until the dev server restarts. This is spec 0016 behavior, not this change, and the
+    comment in `src/pages/build.json.ts` ("local status always looks finished") is wrong. Flag for
+    `/sync` as a known pitfall. Still open: restart `pnpm dev`, then save a real change.
+  - Also from T1: `deletePhoto()` now also counts a body `statusCode: "404"` as deleted. Storage
+    answers a missing file with HTTP 400, which would have logged a false failure. Typecheck 0 errors.
 - [x] **T3** (AC3, AC6) `src/lib/photos.ts`: `preparePhoto`, `photoPath`, `uploadPhoto`,
   `deletePhoto`, `publicPhotoUrl`, `PhotoError`, `photoFailure`. Comment the bucket name in both
   places.

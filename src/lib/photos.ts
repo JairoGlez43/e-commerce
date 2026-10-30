@@ -107,7 +107,8 @@ export async function uploadPhoto(id: string, photo: Blob): Promise<string> {
 export async function deletePhoto(path: string): Promise<void> {
 	try {
 		const response = await authFetch(objectPath(path), { method: 'DELETE' });
-		if (response.ok || response.status === 404) return;
+		// A missing file answers HTTP 400 with `statusCode: "404"` in the body (spec 0017, T1).
+		if (response.ok || response.status === 404 || String((await errorBody(response)).statusCode) === '404') return;
 		console.error(`[photos] DELETE ${path} failed with status ${response.status}`);
 	} catch (error) {
 		console.error(`[photos] DELETE ${path} failed (${error instanceof AuthError ? error.kind : 'unknown'})`);

@@ -397,7 +397,8 @@ export async function uploadPhoto(id: string, photo: Blob): Promise<string> {
 export async function deletePhoto(path: string): Promise<void> {
 	try {
 		const response = await authFetch(objectPath(path), { method: 'DELETE' });
-		if (response.ok || response.status === 404) return;
+		// A missing file answers HTTP 400 with `statusCode: "404"` in the body (spec 0017, T1).
+		if (response.ok || response.status === 404 || String((await errorBody(response)).statusCode) === '404') return;
 		console.error(`[photos] DELETE ${path} failed with status ${response.status}`);
 	} catch (error) {
 		console.error(`[photos] DELETE ${path} failed (${error instanceof AuthError ? error.kind : 'unknown'})`);
@@ -411,6 +412,12 @@ export async function deletePhoto(path: string): Promise<void> {
 - `DELETE` a la ruta del archivo, con la sesión del dueño.
 - `response.ok` (cualquier `2xx`) o `404` (ese archivo ya no existe): las dos cuentan como
   "borrado", porque lo que se quería era que no estuviera.
+- El comentario de la línea anterior: "Un archivo que no existe responde HTTP 400 con
+  `statusCode: "404"` en el cuerpo". Eso se vio de verdad al probar el bucket (T1): Storage
+  responde casi todo rechazo con un 400 y pone el código real dentro del JSON. Por eso la
+  condición también lee el cuerpo con `errorBody()` (la misma función que usa `photoFailure()`
+  para el 403) y acepta `"404"` ahí. `String(...)` lo convierte en texto antes de comparar, porque
+  ese campo llega como texto (`"404"`), no como número.
 - Cualquier otra respuesta: una línea en la consola y nada más.
 - `catch (error)`: si `authFetch` lanzó (sin red, sesión acabada…), también solo una línea en la
   consola, con el `kind` del `AuthError` si lo es ([instanceof](../../glosario.md#instanceof)), o
