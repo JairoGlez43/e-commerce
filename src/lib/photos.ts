@@ -4,7 +4,7 @@
 // and deleted. What really protects the bucket is RLS with public.is_owner() and the bucket's own
 // limits (supabase/photos.sql).
 import { AuthError, authFetch } from './auth';
-import { ProductError } from './products';
+import { RestError } from './rest';
 
 // Thrown only by preparePhoto(); the page turns it into a Spanish message.
 export class PhotoError extends Error {
@@ -83,13 +83,13 @@ async function errorBody(response: Response): Promise<{ statusCode?: unknown; er
 }
 
 // The same kinds as a product write, so the page keeps one table of messages.
-async function photoFailure(method: string, path: string, response: Response): Promise<ProductError> {
+async function photoFailure(method: string, path: string, response: Response): Promise<RestError> {
 	const body = await errorBody(response);
-	if (response.status === 403 || String(body.statusCode) === '403') return new ProductError('forbidden');
+	if (response.status === 403 || String(body.statusCode) === '403') return new RestError('forbidden');
 	const error = typeof body.error === 'string' ? body.error : 'no error';
 	console.error(`[photos] ${method} ${path} failed with status ${response.status} (${error})`);
-	if (response.status >= 400 && response.status < 500) return new ProductError('system');
-	return new ProductError('unknown');
+	if (response.status >= 400 && response.status < 500) return new RestError('system');
+	return new RestError('unknown');
 }
 
 // Uploads the prepared photo under a new path and returns that path. Never overwrites.

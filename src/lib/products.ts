@@ -2,8 +2,8 @@
 // fetch and no SDK (spec 0015). Browser only: imported by the admin page's script. The single
 // home of the form's field rules and of the id rule. What really protects the data is RLS with
 // public.is_owner() (supabase/products-write.sql); these rules only give Spanish messages first.
-import { authFetch } from './auth';
 import { deletePhoto, uploadPhoto } from './photos';
+import { onlyRow, RestError, send } from './rest';
 // Type-only: nothing from supabase.ts (build-time code) reaches the browser bundle.
 import type { CategoryRow, ProductRow } from './supabase';
 
@@ -36,17 +36,6 @@ export interface FieldProblem {
 	message: string;
 }
 
-export type ProductErrorKind = 'exists' | 'noCategory' | 'invalid' | 'forbidden' | 'gone' | 'system' | 'unknown';
-
-// Every function here throws only this or an AuthError from authFetch(), passed through
-// unchanged. The page turns `kind` into a Spanish message.
-export class ProductError extends Error {
-	constructor(readonly kind: ProductErrorKind) {
-		super(`Products: ${kind}`);
-		this.name = 'ProductError';
-	}
-}
-
 // The limits mirror supabase/schema.sql and spec 0004.
 const MAX_NAME = 60;
 const MAX_UNIT = 30;
@@ -55,7 +44,6 @@ const MAX_ID = 60;
 // The largest Postgres integer.
 const MAX_PRICE = 2_147_483_647;
 
-const HEADERS = { 'Content-Type': 'application/json', Prefer: 'return=representation' };
 const PRODUCT_COLUMNS = 'id,name,category_id,price,unit,in_stock,description,photo_path';
 
 // --- Rules ------------------------------------------------------------------------------
@@ -146,45 +134,7 @@ export function groupProducts(
 
 // --- Requests ---------------------------------------------------------------------------
 
-// Reads the JSON body's code only when the answer says it is JSON.
-async function errorCode(response: Response): Promise<string | undefined> {
-	if (!response.headers.get('Content-Type')?.includes('application/json')) return undefined;
-	try {
-		const body = (await response.json()) as { code?: unknown };
-		return typeof body.code === 'string' ? body.code : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-async function failure(method: string, path: string, response: Response): Promise<ProductError> {
-	const code = await errorCode(response);
-	if (response.status === 409 && code === '23505') return new ProductError('exists');
-	if (response.status === 409 && code === '23503') return new ProductError('noCategory');
-	// A real refusal by RLS. authFetch() already refreshed and retried an expired token (401).
-	if (response.status === 403 && code === '42501') return new ProductError('forbidden');
-	console.error(`[products] ${method} ${path.split('?')[0]} failed with status ${response.status} (${code ?? 'no code'})`);
-	// Postgres classes 22 (data) and 23 (rules) mean the data sent was wrong. Any other 4xx is a
-	// fault the owner cannot fix from the form (spec 0015, amended 2026-10-28).
-	if (response.status === 400 && (code?.startsWith('22') || code?.startsWith('23'))) return new ProductError('invalid');
-	if (response.status >= 400 && response.status < 500) return new ProductError('system');
-	return new ProductError('unknown');
-}
-
-async function send<Row>(path: string, init: RequestInit = {}, expected = 200): Promise<Row[]> {
-	const response = await authFetch(path, { ...init, headers: HEADERS });
-	if (response.status !== expected) throw await failure(init.method ?? 'GET', path, response);
-	return (await response.json()) as Row[];
-}
-
-// A PATCH or DELETE that matches no row answers 200 with [] (also when RLS hides the row), so
-// every one checks that exactly one row came back.
-function onlyRow<Row>(rows: Row[]): Row {
-	const [row] = rows;
-	if (rows.length !== 1 || row === undefined) throw new ProductError('gone');
-	return row;
-}
-
+// Every request goes through send() in rest.ts, which throws a RestError or an AuthError.
 function rowPath(id: string): string {
 	return `/rest/v1/products?id=eq.${encodeURIComponent(id)}`;
 }
@@ -200,7 +150,7 @@ export function listProducts(): Promise<ProductRow[]> {
 async function insertProduct(body: ProductFields & { id: string; photo_path?: string }): Promise<ProductRow> {
 	const rows = await send<ProductRow>('/rest/v1/products', { method: 'POST', body: JSON.stringify(body) }, 201);
 	const [row] = rows;
-	if (row === undefined) throw new ProductError('unknown');
+	if (row === undefined) throw new RestError('unknown');
 	return row;
 }
 

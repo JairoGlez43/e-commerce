@@ -400,10 +400,8 @@ const { url, key } = supabaseConfig();
 	import { preparePhoto, publicPhotoUrl } from '../../lib/photos';
 	import { formatPrice } from '../../lib/price';
 	import {
-		ProductError,
 		type FieldName,
 		type PhotoChange,
-		type ProductErrorKind,
 		type ProductFields,
 		checkFields,
 		groupProducts,
@@ -424,6 +422,7 @@ const { url, key } = supabaseConfig();
 		readBuild,
 		requestPublish,
 	} from '../../lib/publish';
+	import { RestError, type RestErrorKind } from '../../lib/rest';
 	import type { CategoryRow, ProductRow } from '../../lib/supabase';
 
 	type View = 'sign-in' | 'recover' | 'new-password' | 'signed-in' | 'product';
@@ -441,9 +440,9 @@ const { url, key } = supabaseConfig();
 	const NO_ACCESS = 'Esta cuenta no tiene acceso a la administración.';
 	const MISMATCH = 'Las contraseñas no coinciden.';
 	const PASSWORD_CHANGED = 'Contraseña cambiada.';
-	const PRODUCT_MESSAGES: Record<ProductErrorKind, string> = {
+	const PRODUCT_MESSAGES: Record<RestErrorKind, string> = {
 		exists: 'Ya existe un producto con ese enlace. La lista se ha actualizado.',
-		noCategory: 'Esa categoría ya no existe. La lista se ha actualizado.',
+		reference: 'Esa categoría ya no existe. La lista se ha actualizado.',
 		invalid: 'Algún dato no es válido. Revisa el formulario.',
 		forbidden: 'Esta cuenta no puede cambiar el catálogo.',
 		gone: 'Este producto ya no existe. La lista se ha actualizado.',
@@ -451,7 +450,7 @@ const { url, key } = supabaseConfig();
 		unknown: 'Algo salió mal. Inténtalo otra vez.',
 	};
 	// These errors mean the loaded list is out of date, so it loads again.
-	const RELOAD_KINDS = new Set<ProductErrorKind>(['exists', 'noCategory', 'gone']);
+	const PRODUCT_RELOAD_KINDS = new Set<RestErrorKind>(['exists', 'reference', 'gone']);
 	const LOADING = 'Cargando productos…';
 	const SAVED = 'Producto guardado.';
 	const DELETED = 'Producto borrado.';
@@ -738,11 +737,11 @@ const { url, key } = supabaseConfig();
 	}
 
 	function needsReload(error: unknown): boolean {
-		return error instanceof ProductError && RELOAD_KINDS.has(error.kind);
+		return error instanceof RestError && PRODUCT_RELOAD_KINDS.has(error.kind);
 	}
 
 	function messageOf(error: unknown): string {
-		return error instanceof ProductError ? PRODUCT_MESSAGES[error.kind] : MESSAGES[kindOf(error)];
+		return error instanceof RestError ? PRODUCT_MESSAGES[error.kind] : MESSAGES[kindOf(error)];
 	}
 
 	// Owner text reaches the page through textContent only, never innerHTML.
@@ -853,7 +852,7 @@ const { url, key } = supabaseConfig();
 	function failForm(error: unknown) {
 		if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
 		const message = messageOf(error);
-		if (error instanceof ProductError && error.kind === 'gone') {
+		if (error instanceof RestError && error.kind === 'gone') {
 			show('signed-in');
 			listTitle.focus();
 			return void loadCatalog(message);
