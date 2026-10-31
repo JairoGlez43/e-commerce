@@ -2,7 +2,7 @@
 
 **Delivery style:** facade
 **Workflow depth:** alpha
-**Updated:** 2026-10-16
+**Updated:** 2026-10-31
 
 ## At a glance
 | #  | Feature                          | Status            | Depth   | Spec |
@@ -24,6 +24,7 @@
 | 13 | Publish changes                  | done              | default | docs/specs/0016-publish-changes.md |
 | 14 | Product photos upload            | done              | default | docs/specs/0017-product-photos-upload.md |
 | 15 | Manage categories                | needs-a-decision  | default | —    |
+| 18 | New shop setup                   | needs-a-decision  | default | —    |
 
 Status values: `planned` · `needs-a-decision` · `in-progress` · `done`
 
@@ -34,6 +35,9 @@ Features 09–15 are the admin panel: the shop owner manages the whole catalog f
 without the developer. It is sold as the "Autónomo" package, priced above the "Gestionado"
 package where the developer makes every update.
 
+Feature 18 is the one-time setup of each sold shop's own copy, after a sale (spec 0012). It
+comes after the admin panel is complete.
+
 Later (not planned yet): cart or delivery flow if the shop offers delivery.
 
 ---
@@ -41,7 +45,7 @@ Later (not planned yet): cart or delivery flow if the shop offers delivery.
 ## 01 · Stack and architecture
 **Status:** done
 **Spec:** docs/specs/0001-stack.md, docs/specs/0009-site-identity.md
-**Code:** src/layouts/BaseLayout.astro, src/styles/global.css, src/content.config.ts, src/data/products.json, src/assets/products/, astro.config.mjs, public/og-default.png, src/lib/site.ts, scripts/check-weight.mjs
+**Code:** src/layouts/BaseLayout.astro, src/styles/global.css, src/content.config.ts, src/lib/supabase.ts, supabase/schema.sql, astro.config.mjs, public/og-default.png, src/lib/site.ts, scripts/check-weight.mjs
 **Depth:** default
 **Done when:**
 - A stack spec records the framework, data approach, hosting and a weight budget for pages.
@@ -84,7 +88,7 @@ Later (not planned yet): cart or delivery flow if the shop offers delivery.
 ## 04 · Sample product data
 **Status:** done
 **Spec:** docs/specs/0004-sample-product-data.md
-**Code:** src/content.config.ts, src/data/categories.json, src/data/products.json, src/lib/price.ts, src/assets/products/
+**Code:** src/content.config.ts, supabase/seed.sql, supabase/seed-photos/, src/lib/price.ts
 **Depth:** default
 **Done when:**
 - The demo has realistic sample products (mostly food) grouped in categories.
@@ -326,3 +330,24 @@ rule unless /architect says so.
 - [ ] Build it — /develop
 - [ ] Verify it — /check verify
 **Notes:** Depends on 12.
+
+## 18 · New shop setup
+**Status:** needs-a-decision
+**Spec:** — (first draft of the steps in docs/specs/0012-admin-backend.md, "New-shop setup session")
+**Code:** —
+**Depth:** default
+**Done when:**
+- After a sale, the developer and the shop owner set up the shop's own copy in one session of
+  about 20 minutes, following written steps.
+- The sold site is online with the shop's own domain and opens on a phone in Cuba.
+- On the sold site, the owner signs in, edits the catalog and publishes, as on the demo.
+**Tasks:**
+- [ ] Decide it — /architect
+- [ ] Build it — /develop
+- [ ] Verify it — /check verify
+**Notes:** Depends on 09–15 (the whole admin). Enrolled 2026-10-31 from spec 0012's Out of
+scope ("The scope does not list it yet"). Already decided in spec 0012: where sold sites are
+hosted, whose accounts hold them, and that the demo stays where it is. Open for /architect: how
+to attach the shop's domain (the nameservers may have to move, spec 0012), the domain's yearly
+price (not researched), and whether the steps live as a checklist in `docs/`. Re-read spec
+0012's Risks (sanctions) before deciding.
