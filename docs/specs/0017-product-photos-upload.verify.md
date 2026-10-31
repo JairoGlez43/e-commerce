@@ -63,12 +63,17 @@ the request URL), or a headless run that intercepts `…/storage/v1/object/…` 
     If 1 is refused but the bucket rules look right, repeat 1 with `body: jpeg` and
     `headers: { ...owner, 'Content-Type': 'image/jpeg' }` and record both answers (spec 0017, T1).
 - **AC2 (the Foto block at 360 px):**
-  - "Añadir producto": the "Sin foto" box, "Añadir foto", no "Quitar foto".
-  - Edit a seed product (it has a photo): its square photo, "Cambiar foto" and "Quitar foto".
-  - Tab with the keyboard to the photo control: an outline shows around "Añadir foto"/"Cambiar
-    foto". Every control measures ≥ 44 px high (DevTools box model).
-  - On an Android phone in Chrome (and an iPhone in Safari if available): tapping the button offers
-    the camera and the gallery.
+  - "Añadir producto": the "Sin foto" box, "Hacer foto" and "Elegir de la galería", no "Quitar
+    foto".
+  - Edit a seed product (it has a photo): its square photo, the same two buttons with the same
+    labels, and "Quitar foto".
+  - Tab with the keyboard to "Hacer foto": an outline shows around it and not around "Elegir de la
+    galería". Tab once more: the outline moves to "Elegir de la galería" only. Every control
+    measures ≥ 44 px high (DevTools box model).
+  - On an Android phone in Chrome: "Hacer foto" opens the camera directly, "Elegir de la galería"
+    opens the gallery. A photo taken with the camera reaches the preview like a picked one. Same on
+    an iPhone in Safari if one is available (note whether the gallery hands over JPEG or HEIC).
+  - On a desktop browser: both buttons open the normal file picker.
 - **AC3 (shrunk on the phone):**
   - Choose the test photo: "Preparando foto…" shows, "Guardar" is disabled, then the new preview and
     "La foto nueva se subirá al guardar.". The network panel shows no request yet.
@@ -106,9 +111,21 @@ the request URL), or a headless run that intercepts `…/storage/v1/object/…` 
 - **AC8 (public site after publishing):** give a product a large phone photo, replace another's,
   remove a third's, then "Publicar cambios" and wait for "Publicado…". On the live site: the new
   photo on `/`, its category page and its product page (`og:image` in the page source points at
-  the new photo); the replaced one shows the new image; the removed one shows "Sin foto". Locally:
-  `WHATSAPP_NUMBER=5355555555 pnpm build && pnpm check:weight` passes. Restore the seed photos
-  afterwards (upload them again from `supabase/seed-photos/`) if the demo should look as before.
+  the new photo); the replaced one shows the new image; the removed one shows "Sin foto". Locally,
+  with a 3:4 phone photo of 12 MP or more in the catalog:
+  - `WHATSAPP_NUMBER=5355555555 pnpm build && pnpm check:weight` passes: thumbnail ≤ 30 KB,
+    detail photo ≤ 90 KB, first view ≤ 150 KB (spec 0001 as amended).
+  - Every product image file in `dist/_astro` is square (card 200 and 400 px, detail 400 and
+    800 px, the 600×600 `og:image`). This prints only the count when all are square:
+    ```sh
+    node -e "const sharp=require('sharp'),fs=require('fs');const files=fs.readdirSync('dist/_astro').filter(f=>/\.(webp|jpg)$/.test(f));Promise.all(files.map(f=>sharp('dist/_astro/'+f).metadata().then(m=>m.width===m.height||console.log('not square',f,m.width,m.height)))).then(()=>console.log(files.length,'files checked'))"
+    ```
+    A source whose shorter side is under 800 px may come out smaller than its target, never
+    stretched.
+  - At 360 px, `/` and a seed product's page: the seed photos look as before (they were already
+    square).
+  Restore the seed photos afterwards (upload them again from `supabase/seed-photos/`) if the demo
+  should look as before.
 - **AC9 (clean, nothing else broke):** `pnpm typecheck`, the build and `pnpm check:weight` pass;
   `/admin/` JS ≤ 15 KB gzipped. `grep -rl "<script" dist --include=*.html | grep -v dist/admin/`
   and `grep -rlE "supabase\.co|sb_publishable_" dist --include=*.html | grep -v dist/admin/` find

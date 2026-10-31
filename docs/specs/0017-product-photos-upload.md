@@ -7,15 +7,34 @@
 **Supersedes:** — (amends spec 0015: the admin now writes `photo_path`, through the photo flow
 only, and a deleted product's photo is removed from the bucket. Amends spec 0013's path rule:
 uploaded photos are `<id>-<8 hex>.jpg`, while seed photos keep `<id>.jpg`. Amends spec 0014's
-`authFetch()`: it no longer forces a JSON `Content-Type` on a `FormData` body.)
+`authFetch()`: it no longer forces a JSON `Content-Type` on a `FormData` body. Amends spec
+0001's weight budget: a catalog thumbnail may weigh up to 30 KB and a detail photo up to 90 KB.)
+**Updated:** 2026-10-31, after `/check verify` found two failures: no camera on Android Chrome
+(AC2) and a phone photo over the weight budget on the public pages (AC8). See "Update
+2026-10-31" in the Rationale.
+
+## Summary
+The owner adds or changes a product's photo from `/admin/`. The phone shrinks the photo to a
+light JPEG before it travels, and "Guardar" uploads it to Supabase Storage with the rest of the
+form. Two buttons let the owner take a new photo with the camera or pick one from the gallery.
+The public pages crop every product photo to a square when the site is built, so what visitors
+download matches what they see, within the weight budget.
 
 ## Context
 The owner manages products from `/admin/` (spec 0015), but a product added there has no photo,
 and the bucket `product-photos` has no upload policies (spec 0013). Phone photos are 3–12 MB
 and often HEIC, and the owner uploads them over slow, expensive mobile data in Cuba. The public
 pages already handle a missing photo (`NoPhoto`, spec 0015). They also resize every remote
-photo at build with `astro:assets`, so the public image budget of spec 0001 holds whatever size
-is uploaded.
+photo at build with `astro:assets`, by width only, and show it as a square through CSS
+(`aspect-square object-cover`). The seed photos are square; a phone photo is usually 3:4.
+
+What `/check verify` measured on 2026-10-30 and 2026-10-31:
+- On the owner's Android phone in Chrome, `<input type="file" accept="image/*">` opens only
+  the gallery (Android's photo picker). The camera is never offered.
+- A real 3:4 phone photo builds into a 400×533 thumbnail (29.2 KB, budget 25) and an
+  800×1066 detail photo (82.6 KB, budget 80). CSS hides a quarter of those pixels, but the
+  visitor still downloads them. Cropped to a square at the same quality (WebP 80, the default),
+  the two real phone photos measure 22 to 26 KB at 400 px and 57 to 77 KB at 800 px.
 
 ## Decision
 - **The phone shrinks the photo before uploading it.** The admin decodes the chosen file and
@@ -24,9 +43,18 @@ is uploaded.
   the EXIF metadata, including the GPS location of the owner's home, and turns iPhone photos
   into plain JPEG. No library is used.
 - **The photo is one more field of the product form, saved by "Guardar"** (owner's choice). The
-  owner picks it from the camera or the gallery (`<input type="file" accept="image/*">`, no
-  `capture`), sees it at once as a square preview (the same crop as the public site), and the
-  upload happens on save. It works when adding a product too.
+  owner sees it at once as a square preview (the same crop as the public site), and the upload
+  happens on save. It works when adding a product too.
+- **Two buttons, "Hacer foto" and "Elegir de la galería"** (owner's choice, 2026-10-31). Each is
+  a label for its own `<input type="file" accept="image/*">`. The camera one adds
+  `capture="environment"` (the attribute that asks the phone to open the rear camera
+  directly); the gallery one has no `capture`. A browser without `capture` support, such as a
+  desktop browser, shows its normal file picker for both.
+- **The public pages crop every product photo to a square at build.** Each `<Image>` and the
+  `og:image` get the same width and height plus `fit="cover"`, so `astro:assets` cuts the
+  square (centered, like CSS `object-cover` and the admin preview) before encoding. Quality
+  stays at the default, WebP 80 (owner's choice), and the budget rises to 30 KB per thumbnail
+  and 90 KB per detail photo (amends spec 0001).
 - **"Quitar foto"** (owner's choice) brings a product back to "Sin foto" on save.
 - **Every upload gets a new file name**, `<id>-<8 random hex>.jpg`, and never overwrites. A new
   URL can never be served stale by Supabase's CDN, the browser or the build's image cache.
@@ -46,11 +74,16 @@ is uploaded.
     `prueba.png` and for a 3 MB JPEG;
   - the owner's token deletes `prueba-0a1b2c3d.jpg`, and its public URL then answers 400 or 404.
 - **AC2:** In the product form (add and edit) at 360 px:
-  - a product without a photo shows the "Sin foto" box and an "Añadir foto" button;
-  - with a photo, the square preview and "Cambiar foto" plus "Quitar foto" show;
-  - tapping "Añadir foto" or "Cambiar foto" on a phone offers both the camera and the gallery
-    (Android Chrome; iOS Safari when a device is available).
-  - Targets are at least 44 px. Keyboard focus on the photo control is visible.
+  - the buttons "Hacer foto" and "Elegir de la galería" always show, with the same labels with
+    or without a photo;
+  - a product without a photo shows the "Sin foto" box and no "Quitar foto";
+  - with a photo, the square preview and "Quitar foto" show;
+  - on Android Chrome, "Hacer foto" opens the camera and "Elegir de la galería" opens the
+    gallery; a photo taken with the camera reaches the preview like a picked one (iOS Safari
+    too when a device is available);
+  - on a desktop browser, both buttons open the normal file picker.
+  - Targets are at least 44 px. Keyboard focus on each button shows its own outline, and only
+    its own.
 - **AC3:** Choosing a 12 MP or larger phone photo shows "Preparando foto…", then the new
   preview and the line "La foto nueva se subirá al guardar.". Nothing is sent before
   "Guardar". In the network panel, the upload on save is a single JPEG under 2 MB:
@@ -88,7 +121,12 @@ is uploaded.
     product page, and its `og:image` is the new photo;
   - a replaced photo shows the new image, never the old one;
   - a removed photo shows the "Sin foto" box;
-  - `pnpm check:weight` passes: thumbnail ≤ 25 KB, detail photo ≤ 80 KB (spec 0001).
+  - every product image file in `dist/` is square: the card's 200 and 400 px versions, the
+    detail page's 400 and 800 px versions and the 600×600 `og:image` (a source whose shorter
+    side is under 800 px may come out smaller, never stretched);
+  - with a 3:4 phone photo of 12 MP or more in the catalog, `pnpm check:weight` passes:
+    thumbnail ≤ 30 KB, detail photo ≤ 90 KB, first view ≤ 150 KB (spec 0001 as amended);
+  - the seed photos look the same as before (they were already square).
 - **AC9:** `pnpm typecheck`, `pnpm build` and `pnpm check:weight` pass. `/admin/` JS stays
   within its 15 KB gzipped limit. No public route has a `<script>` tag or contains
   `supabase.co` or `sb_publishable_`. Sign-in, a product save without a photo and a publish
@@ -188,10 +226,17 @@ of the photo rules)
     `aspect-square w-full max-w-60 rounded-card border border-border object-cover`, or
     `<NoPhoto framed />`. Only one is visible at a time, toggled with `hidden`. The image is
     decorative because the name field names the product.
-  - the control: `<input id="product-photo" type="file" accept="image/*" class="peer sr-only">`
-    and its `<label for="product-photo">`, styled as the secondary button of `design.md`, with
-    `inline-flex min-h-11 items-center` and a visible outline on `peer-focus-visible:`. It
-    reads "Añadir foto" without a photo and "Cambiar foto" with one.
+  - the controls (updated 2026-10-31): two pairs, each an input plus its label, in this order:
+    - `<input id="product-photo-camera" type="file" accept="image/*" capture="environment" class="peer sr-only">`
+      with `<label for="product-photo-camera">Hacer foto</label>`;
+    - `<input id="product-photo-gallery" type="file" accept="image/*" class="peer sr-only">`
+      with `<label for="product-photo-gallery">Elegir de la galería</label>`.
+    Each label is styled as the secondary button of `design.md`, with
+    `inline-flex min-h-11 items-center` and a visible outline on `peer-focus-visible:`. **Each
+    pair sits in its own wrapper element** (for example a `<div>` inside the row that wraps
+    them): Tailwind's `peer` works through the CSS sibling selector `~`, which reaches every
+    later sibling, so without a wrapper the gallery label would also light up when the camera
+    input has focus. The labels never change text.
   - "Quitar foto": a link-style button with `text-accent`, shown only while a photo is
     previewed;
   - one `text-sm text-muted` status line (`role="status"`): "Preparando foto…", "La foto nueva
@@ -202,8 +247,11 @@ of the photo rules)
     when replaced or when the form closes. On `unreadable`, the message goes to the form's alert
     area and the state stays as it was.
   - "Quitar foto" sets `remove` when the row had a photo, and `keep` when only a new, unsaved
-    photo was showing. The input's `value` is reset each time, so the same file can be picked
-    again.
+    photo was showing. Focus then moves to the camera input. Both inputs' `value` is reset
+    each time, so the same file can be picked again.
+  - Both inputs share one `change` handler and one `choosePhoto()`; whichever fired, the newest
+    choice wins (the existing `photoRun` counter). During a save both inputs are disabled, and
+    `resetPhoto()` clears both.
   - In edit mode, the preview of the current photo is
     `publicPhotoUrl(data-supabase-url, row.photo_path)`. It loads only when the form opens.
 - **Saving:** "Guardar" calls `saveProduct()`. `onStep` sets the label to "Subiendo foto…" or
@@ -215,12 +263,34 @@ of the photo rules)
   `blob:` URL the page made or a URL built from the configured Supabase URL and a path that
   matches the path rule.
 
-**Public pages:** no change. `astro:assets` downloads each photo by its URL at build. A new path
-means a new download, and it resizes to WebP within the spec 0001 budget (AC8 checks it).
+**Public pages** (updated 2026-10-31): `astro:assets` downloads each photo by its URL at build. A
+new path means a new download. Every product photo rendition becomes a square at build. Only
+these props change; `widths`, `sizes`, `inferSize`, `alt` and the classes stay as they are:
+
+| File | Call | Add |
+|---|---|---|
+| `src/components/ProductCard.astro` | `<Image widths={[200, 400]}>` | `width={400} height={400} fit="cover"` |
+| `src/pages/estilo.astro` | the card sample, `<Image widths={[200, 400]}>` | `width={400} height={400} fit="cover"` |
+| `src/pages/producto/[id].astro` | `<Image widths={[400, 800]}>` | `width={800} height={800} fit="cover"` |
+| `src/pages/producto/[id].astro` | `getImage({ …, width: 600, format: 'jpg' })` for `og:image` | `height: 600, fit: 'cover'` |
+
+- Checked in the installed Astro 7.3.5: `getSrcSet()` in `node_modules/astro/dist/assets/services/service.js`
+  gives every `widths` entry the height `width / (width / height)` and keeps `fit`, so equal
+  `width` and `height` make every srcset file square. The sharp service resizes with
+  `fit: 'cover'` and `position` unset, and sharp's own default position is `'centre'`
+  (`node_modules/sharp/lib/index.d.ts`), so the crop is centered.
+- The sharp service also passes `withoutEnlargement: true`, so a source smaller than the target
+  is not enlarged and may not come out square. Uploads are at least 1000 px on their shorter
+  side unless the original was smaller (AC3). The CSS classes `aspect-square object-cover` stay
+  as the safety net for that case.
+- Nothing in the bucket changes: the photos already uploaded, including the 3:4 one live today,
+  come out square at the next build.
 
 **Weight:** the admin keeps its limits (JS ≤ 15 KB gzipped, spec 0014). The JS measured on
 2026-10-28 is 6.3 KB gzipped, and this adds roughly 1–2 KB. The upload is 150–600 KB per photo,
-instead of 3–12 MB.
+instead of 3–12 MB. The public budget is amended in spec 0001 and in `scripts/check-weight.mjs`
+(`BUDGET.thumbnail` 30, `BUDGET.detailPhoto` 90). `firstView` stays 150: `/` shows at most 4
+thumbnails in the first view (spec 0005), 4 × 30 = 120 KB.
 
 **Security**
 - The real guard is RLS on `storage.objects` with `is_owner()`, plus the bucket's own size and
@@ -306,6 +376,43 @@ instead of 3–12 MB.
     "until feature 14" lines. `glosario.md` has 11 new entries. A script compared every quoted
     block with its source and checked every link.
 
+Added 2026-10-31 (from `/check verify`). Build T8 first: it fixes what is live today and can be
+measured with the catalog as it is. T6 then runs again over everything. (Amended the same day:
+the `learning/` folder was removed from the repo, so T8 and T9 no longer update walkthroughs or
+`glosario.md`. T7's record above stays as history.)
+- [x] **T8** (AC8, AC9) Square photos at build and the new budget:
+  - the four calls in the "Public pages" table;
+  - `scripts/check-weight.mjs`: `BUDGET.thumbnail` 30, `BUDGET.detailPhoto` 90;
+  - `WHATSAPP_NUMBER=5355555555 pnpm build`, then `pnpm check:weight` against the current
+    catalog, which holds the 3:4 arroz-blanco photo. Record its thumbnail and detail sizes here,
+    and the pixel size of one file of each kind (all square);
+  - look at `/` and one product page at 360 px: the seed photos look as before.
+  - 2026-10-31 (`/develop`): the four calls and the two limits changed. `pnpm typecheck` 0 errors,
+    build 27 pages, `pnpm check:weight` all 27 within budget. The 3:4 arroz-blanco photo:
+    thumbnail 24.1 KB (was 29.2), detail photo 69.5 KB (was 82.6), `og:image` 62.5 KB; cropping
+    alone already fits the old 25 / 80 limits. All 68 image files in `dist/_astro` are square
+    (17 photos × 200, 400 and 800 px WebP plus the 600×600 JPG). `/estilo/` reuses the card's
+    exact files. Seen at 360 px in headless Edge: `/` and `/producto/arroz-blanco/` show
+    square, centered photos, and the seed photos look as before. A first capture with three
+    360 px iframes at once showed the detail photo as broken; each file decodes alone, and a
+    single iframe shows it, so that was the capture, not the build.
+- [x] **T9** (AC2) The two photo buttons in `src/pages/admin/index.astro`, per the Design:
+  - two inputs, two labels, one wrapper per pair, the shared handler, both disabled during a
+    save and both reset;
+  - `pnpm typecheck`, build, `check:weight` (`/admin/` JS stays ≤ 15 KB gzipped);
+  - update `design.md` (Photo block);
+  - update `0017-product-photos-upload.verify.md`: AC2's new labels and the per button focus
+    check; AC8's square files and new limits.
+  - 2026-10-31 (`/develop`): two inputs (`product-photo-camera` with `capture="environment"`,
+    `product-photo-gallery`), each pair in its own `<div>`, one `change` handler per input into
+    `choosePhoto()`, both disabled during a save and reset by `resetPhoto()`; "Quitar foto" focuses
+    the camera input; the labels no longer change text. `pnpm typecheck` 0 errors, build 27 pages,
+    `pnpm check:weight` all 27 within budget (`/admin/` JS 7.5 KB gzipped). `dist/admin/index.html`
+    has both inputs, `capture` only on the camera one. `design.md` and the `.verify.md` updated; the
+    verify file's square check (`sharp` metadata over `dist/_astro`) ran: 68 files, all square.
+    Not run in a browser: the form needs a signed-in session, and the camera needs a real phone
+    (T6).
+
 ## Out of scope
 - More than one photo per product, and cropping, rotating or editing inside the admin (the
   public site crops to a square, and the preview shows that crop).
@@ -316,6 +423,12 @@ instead of 3–12 MB.
 - Offline uploads, or a queue of unsent photos.
 - Decoding HEIC on browsers that cannot (for example, Android Chrome given a `.heic` file). It
   shows the `unreadable` message.
+- Cropping to a square on the phone before the upload (added 2026-10-31): the build crops, so the
+  bucket keeps the photo as taken.
+- Saving a draft of the form while the camera app is open (added 2026-10-31). See the risk in
+  "Update 2026-10-31".
+- Changing the WebP quality of public photos: it stays at the default, 80 (owner's choice,
+  2026-10-31).
 
 ## Sources
 - `docs/scope/scope.md` → feature 14. Specs 0001 (image budget), 0013 (bucket, path rule),
@@ -349,9 +462,26 @@ instead of 3–12 MB.
   - what deleting a missing object answers (200 and 404 are both accepted);
   - that a `FormData` upload with an `image/jpeg` part passes `allowed_mime_types` (T1);
   - CORS for Storage from the site's origin (AC10);
-  - that the camera and gallery are both offered without `capture`, and Safari's HEIC → JPEG
-    hand-over (T6, real phones);
-  - that a canvas re-encode drops EXIF (AC3 checks the uploaded file).
+  - ~~that the camera and gallery are both offered without `capture`~~: refuted on Android
+    Chrome, 2026-10-31 (see "Update 2026-10-31"). Safari's HEIC → JPEG hand-over is still
+    unconfirmed (T6, real phones);
+  - that a canvas re-encode drops EXIF (AC3 checks the uploaded file). Confirmed 2026-10-31 on a
+    real Android photo: no `Exif` or `GPS` segment.
+- `researcher`, 2026-10-31, MDN only (developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/capture):
+  `capture` takes `user` or `environment`, works only on `<input type="file">`, asks the
+  browser to open the camera instead of only a file picker, and is not supported everywhere
+  (not Baseline); desktop browsers show a normal file picker. **Still unconfirmed, tested by T6
+  on real phones:** that Android Chrome with `capture="environment"` opens the camera directly;
+  what iOS Safari shows; whether a browser without support ignores the attribute silently; the
+  Android photo picker change itself, which no doc found describes.
+- Installed code read on 2026-10-31: Astro 7.3.5 `ImageFit` and `position` props
+  (`node_modules/astro/dist/assets/types.d.ts`), `getSrcSet()` (`…/services/service.js`), the
+  sharp service's `resize()` (`…/services/sharp.js`), and sharp's default `position: 'centre'`
+  (`node_modules/sharp/lib/index.d.ts`).
+- Measured 2026-10-31 with sharp 0.35.5, WebP, center crop, two real 3:4 phone photos (KB at
+  400 / 800 px square): quality 80: 22.1 / 56.7 and 25.8 / 76.7; quality 75: 17.6 / 46.2 and
+  21.8 / 62.1. The first photo started from an already compressed copy and reads about 9% low
+  (its 3:4 version measured 26.7 KB here against 29.2 KB from the real build).
 
 ---
 ## Rationale
@@ -387,3 +517,34 @@ instead of 3–12 MB.
   next publish fixes it.
 - AGENTS.md says a product's photo is `<id>.jpg`. After this spec ships it is
   `<id>-<8 hex>.jpg` for uploads. `/develop` or `/sync` updates that line, not this skill.
+
+**Update 2026-10-31** (after `/check verify`):
+- *Camera.* Two buttons (chosen, owner): "Hacer foto" with `capture="environment"` and
+  "Elegir de la galería" without it. Each says what it does, and the behaviour does not depend
+  on which picker an Android version ships. Runner-up: one "Añadir foto" button that opens a
+  small "Cámara / Galería" menu built in the page (one control, but one more tap and more
+  script, and the same two inputs underneath). Rejected: gallery only (no code, but the owner
+  must leave the admin to take each photo).
+- *Weight: where to crop.* At build, with `fit="cover"` (chosen) vs on the phone before the
+  upload (runner-up: 25% fewer bytes on the upload, but it fixes nothing already in the bucket,
+  including the 3:4 photo live today, and it would leave the public budget depending on how
+  every future photo arrives). The budget is a property of the public build, so the build is
+  where the square is made. The public pages already crop to a square with CSS, so visitors see
+  exactly what they saw before, only lighter.
+- *Weight: quality vs budget.* The recommendation was WebP quality 75 within the old budget
+  (measured 21.8 / 62.1 KB for the heavier photo, against 25 / 80). The owner chose to keep
+  quality 80 and raise the budget to 30 / 90 KB instead, keeping today's image quality. That
+  works: the heavier measured photo is 25.8 / 76.7 KB, about 15% under the new limits. The cost
+  the owner accepts: on Cuban mobile data a page with photos weighs up to about 20% more than the
+  old budget allowed, and a very detailed photo can still exceed 30 KB. `pnpm check:weight` is
+  only run locally, never on Vercel, so such a photo would ship heavier without warning.
+  Quality 75 stays the first lever if that happens.
+- *Risk (from the `researcher`, widely reported but not documented by Android):* on phones with
+  little memory, Android may close the browser tab while the camera app is open, and the page
+  reloads with the form empty. The session survives (`localStorage`), so the owner is still
+  signed in. The Foto block is first in the form, so in the usual order (photo first, then the
+  fields) only the photo step is lost. A draft saved in `sessionStorage` would avoid it; it is
+  out of scope until it happens on the owner's phone.
+- *Seen in verify, not decided here:* on the phone the owner did not notice "Producto
+  guardado." after a save, while the headless run at 360 px shows it under "Productos". The
+  owner checks it again; if it is missing, that is a bug for `/debug`.

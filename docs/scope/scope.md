@@ -296,15 +296,18 @@ rule unless /architect says so.
 ## 14 · Product photos upload
 **Status:** in-progress
 **Spec:** docs/specs/0017-product-photos-upload.md
-**Code:** `supabase/photos.sql`, `src/lib/photos.ts`, `src/lib/products.ts`, `src/lib/auth.ts`, `src/pages/admin/index.astro`, `scripts/check-weight.mjs`
+**Code:** `supabase/photos.sql`, `src/lib/photos.ts`, `src/lib/products.ts`, `src/lib/auth.ts`, `src/pages/admin/index.astro`, `scripts/check-weight.mjs`, `src/components/ProductCard.astro`, `src/pages/producto/[id].astro`, `src/pages/estilo.astro`
 **Depth:** default
 **Done when:**
 - The owner can add or replace a product's photo straight from the phone's camera or gallery.
 - A large phone photo still appears on the public site within the image budget of spec 0001.
 - A product without a photo still shows correctly on the public site.
 **Tasks:**
-- [ ] Decide it — /architect
-- [x] Build it — /develop
+- [x] Decide it — /architect
+- [x] Build it — /develop (reopened 2026-10-31 by spec 0017's update after /check verify)
+  - [x] Upload, save, remove and delete flows (T1–T5, T7; AC1, AC3–AC7, AC9, AC10)
+  - [x] Square photos at build and the new budget (T8; AC8)
+  - [x] "Hacer foto" and "Elegir de la galería" buttons (T9; AC2)
 - [ ] Verify it — /check verify
 **Notes:** Depends on 12.
 

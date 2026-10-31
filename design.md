@@ -195,10 +195,13 @@ the script fills them with `textContent` only._
   `<img alt="" class="aspect-square w-full max-w-60 rounded-card border border-border object-cover">`
   (the public site's square crop; decorative, the name field names the product) or, when there is
   no photo, `<div class="w-full max-w-60"><NoPhoto framed /></div>` → `<div class="flex flex-wrap items-center gap-3">`
-  with the file input `<input type="file" accept="image/*" class="peer sr-only">` and its label styled
-  as the Secondary button plus `cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-50`
-  ("Añadir foto" / "Cambiar foto"; the hidden input carries the focus, the label shows it), then the
-  Text button "Quitar foto" plus `disabled:opacity-50` → a Form messages notice for the photo state.
+  with two pairs, each in its own `<div>`: a file input `<input type="file" accept="image/*" class="peer sr-only">`
+  and its label styled as the Secondary button plus `cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-50`.
+  First "Hacer foto", whose input adds `capture="environment"` (opens the rear camera on a phone),
+  then "Elegir de la galería" (no `capture`). The labels never change text. The hidden input carries
+  the focus, the label shows it; the wrapper keeps `peer` (a `~` selector) from lighting up the other
+  pair's label. Then the Text button "Quitar foto" plus `disabled:opacity-50` → a Form messages
+  notice for the photo state.
 - **Headings that receive focus** · `h2` with `tabindex="-1"` (the list's "Productos" and the
   form's title), focused when the view changes so the page scrolls to it and screen readers follow.
 

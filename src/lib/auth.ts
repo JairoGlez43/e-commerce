@@ -110,8 +110,9 @@ async function send(path: string, init: RequestInit = {}, accessToken?: string):
 	const headers = new Headers(init.headers);
 	// The publishable key goes in apikey only, never in Authorization.
 	headers.set('apikey', config.key);
-	// A FormData body (a photo upload, spec 0017) gets the browser's multipart header instead.
-	if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
+	// Only a string body is JSON. A FormData body (a photo upload, spec 0017) gets the browser's
+	// multipart header, and no body gets none: Storage refuses a JSON header on an empty DELETE.
+	if (typeof init.body === 'string') headers.set('Content-Type', 'application/json');
 	if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 	try {
 		return await fetch(`${config.url}${path}`, { ...init, headers });

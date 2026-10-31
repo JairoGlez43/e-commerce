@@ -6,13 +6,14 @@ import zlib from 'node:zlib';
 
 // Budget per page, in KB (spec 0001, "Weight budget"). HTML, CSS and JS are measured gzipped;
 // fonts and images are already compressed formats, so their file size is what travels.
+// The two photo limits were raised for real phone photos (spec 0017).
 const BUDGET = {
 	htmlCss: 50,
 	js: 5,
 	fontFile: 25,
 	fontFiles: 1,
-	thumbnail: 25,
-	detailPhoto: 80,
+	thumbnail: 30,
+	detailPhoto: 90,
 	firstView: 150,
 };
 

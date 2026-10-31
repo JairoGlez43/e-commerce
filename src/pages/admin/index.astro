@@ -209,14 +209,33 @@ const { url, key } = supabaseConfig();
 						<NoPhoto framed />
 					</div>
 					<div class="flex flex-wrap items-center gap-3">
-						<input id="product-photo" data-photo-input type="file" accept="image/*" class="peer sr-only" />
-						<label
-							for="product-photo"
-							data-photo-pick
-							class="inline-flex min-h-11 w-fit cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-50"
-						>
-							Añadir foto
-						</label>
+						<!-- One wrapper per pair: `peer` reaches every later sibling, so without it the
+						     camera input's focus would also outline the gallery label. -->
+						<div>
+							<input
+								id="product-photo-camera"
+								data-photo-input
+								type="file"
+								accept="image/*"
+								capture="environment"
+								class="peer sr-only"
+							/>
+							<label
+								for="product-photo-camera"
+								class="inline-flex min-h-11 w-fit cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-50"
+							>
+								Hacer foto
+							</label>
+						</div>
+						<div>
+							<input id="product-photo-gallery" data-photo-input type="file" accept="image/*" class="peer sr-only" />
+							<label
+								for="product-photo-gallery"
+								class="inline-flex min-h-11 w-fit cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-50"
+							>
+								Elegir de la galería
+							</label>
+						</div>
 						<button
 							type="button"
 							data-photo-remove
@@ -616,8 +635,9 @@ const { url, key } = supabaseConfig();
 	const confirmNo = root.querySelector<HTMLButtonElement>('[data-confirm-no]')!;
 	const photoPreview = root.querySelector<HTMLImageElement>('[data-photo-preview]')!;
 	const photoNone = root.querySelector<HTMLElement>('[data-photo-none]')!;
-	const photoInput = root.querySelector<HTMLInputElement>('[data-photo-input]')!;
-	const photoPick = root.querySelector<HTMLElement>('[data-photo-pick]')!;
+	// The camera input comes first in the page, the gallery input second.
+	const photoInputs = [...root.querySelectorAll<HTMLInputElement>('[data-photo-input]')];
+	const photoCamera = photoInputs[0]!;
 	const photoRemove = root.querySelector<HTMLButtonElement>('[data-photo-remove]')!;
 	const photoStatus = root.querySelector<HTMLElement>('[data-photo-status]')!;
 
@@ -649,7 +669,6 @@ const { url, key } = supabaseConfig();
 		}
 		photoPreview.hidden = !src;
 		photoNone.hidden = Boolean(src);
-		photoPick.textContent = src ? 'Cambiar foto' : 'Añadir foto';
 		photoRemove.hidden = !src;
 		photoStatus.textContent = photoChange.kind === 'new' ? PHOTO_NEW : photoChange.kind === 'remove' ? PHOTO_REMOVE : '';
 	}
@@ -658,7 +677,7 @@ const { url, key } = supabaseConfig();
 		photoRun++;
 		dropPreviewUrl();
 		photoChange = { kind: 'keep' };
-		photoInput.value = '';
+		for (const input of photoInputs) input.value = '';
 		saveButton.disabled = false;
 	}
 
@@ -684,12 +703,15 @@ const { url, key } = supabaseConfig();
 		drawPhoto();
 	}
 
-	photoInput.addEventListener('change', () => {
-		const file = photoInput.files?.[0];
-		// Reset, so choosing the same file again still fires "change".
-		photoInput.value = '';
-		if (file) void choosePhoto(file);
-	});
+	// Camera or gallery, both go through choosePhoto(); the newest choice wins (photoRun).
+	for (const input of photoInputs) {
+		input.addEventListener('change', () => {
+			const file = input.files?.[0];
+			// Reset, so choosing the same file again still fires "change".
+			input.value = '';
+			if (file) void choosePhoto(file);
+		});
+	}
 
 	// A photo the product had is removed on save; a new one not saved yet is only dropped.
 	photoRemove.addEventListener('click', () => {
@@ -698,8 +720,8 @@ const { url, key } = supabaseConfig();
 		photoChange = editing?.photo_path ? { kind: 'remove' } : { kind: 'keep' };
 		saveButton.disabled = false;
 		drawPhoto();
-		// The button just hid itself; focus moves to the photo control.
-		photoInput.focus();
+		// The button just hid itself; focus moves to the first photo control.
+		photoCamera.focus();
 	});
 
 	function field(name: FieldName) {
@@ -843,7 +865,7 @@ const { url, key } = supabaseConfig();
 	// The save order and its cleanup live in saveProduct(); the button's label follows its steps.
 	// The photo controls are locked meanwhile, so the photo cannot change under the save.
 	async function save(fields: ProductFields) {
-		photoInput.disabled = true;
+		for (const input of photoInputs) input.disabled = true;
 		photoRemove.disabled = true;
 		try {
 			const takenIds = products.map((product) => product.id);
@@ -857,7 +879,7 @@ const { url, key } = supabaseConfig();
 		} catch (error) {
 			failForm(error);
 		} finally {
-			photoInput.disabled = false;
+			for (const input of photoInputs) input.disabled = false;
 			photoRemove.disabled = false;
 		}
 	}

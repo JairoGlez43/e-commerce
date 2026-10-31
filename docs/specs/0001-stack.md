@@ -56,9 +56,14 @@ and the product data must later move to an owner-editable source without rewriti
 | HTML + CSS | ≤ 50 KB |
 | Client JS | 0 by default, ≤ 5 KB hard cap |
 | Web fonts | 1 self-hosted file ≤ 25 KB (spec 0002) |
-| Catalog thumbnail | ≤ 25 KB each |
-| Product detail photo | ≤ 80 KB |
+| Catalog thumbnail | ≤ 30 KB each (was 25; spec 0017) |
+| Product detail photo | ≤ 90 KB (was 80; spec 0017) |
 | Images above the fold (first view) | ≤ 150 KB total |
+
+Amended 2026-10-31 by spec 0017: real phone photos, cropped to a square at build at the default
+WebP quality, measure up to about 26 KB and 77 KB. The owner chose to keep that quality and raise
+the two photo limits rather than compress more. Reasons and measurements: spec 0017, "Update
+2026-10-31".
 
 **Project layout** (created by `/develop scaffold` via `pnpm create astro@latest`, minimal
 template, TypeScript strict):

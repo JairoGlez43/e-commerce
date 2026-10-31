@@ -4,7 +4,8 @@
      is specific to Claude Code. /audit keeps the first line as @AGENTS.md. -->
 
 ## Claude Code notes
-- Skills live in `.claude/skills/` and run as `/name`. Subagents live in `.claude/agents/`.
+- Skills and subagents are global (`~/.claude/skills/`, `~/.claude/agents/`), not in this repo.
+  Skills run as `/name`; the subagents are `researcher` and `scout`.
 - Use plan mode before irreversible steps (migrations, deleting data, changing auth).
 - Personal preferences come from `~/.claude/CLAUDE.md` (all projects) and, if it exists,
   `CLAUDE.local.md` (this project only, gitignored). Follow them.
