@@ -1,17 +1,19 @@
 # 0017 · Product photos upload
 
-**Status:** In Progress
+**Status:** Accepted
 <!-- Proposed → In Progress → Accepted · Assumed (recorded by /develop, awaiting ratification) · Superseded by NNNN -->
 **Date:** 2026-10-29
 **Scope:** `docs/scope/scope.md` → feature 14
 **Supersedes:** — (amends spec 0015: the admin now writes `photo_path`, through the photo flow
 only, and a deleted product's photo is removed from the bucket. Amends spec 0013's path rule:
 uploaded photos are `<id>-<8 hex>.jpg`, while seed photos keep `<id>.jpg`. Amends spec 0014's
-`authFetch()`: it no longer forces a JSON `Content-Type` on a `FormData` body. Amends spec
-0001's weight budget: a catalog thumbnail may weigh up to 30 KB and a detail photo up to 90 KB.)
+`authFetch()`: it sets `Content-Type: application/json` only on a string body, so a `FormData`
+upload and a request with no body never carry it. Amends spec 0001's weight budget: a catalog
+thumbnail may weigh up to 30 KB and a detail photo up to 90 KB.)
 **Updated:** 2026-10-31, after `/check verify` found two failures: no camera on Android Chrome
-(AC2) and a phone photo over the weight budget on the public pages (AC8). See "Update
-2026-10-31" in the Rationale.
+(AC2) and a phone photo over the weight budget on the public pages (AC8). Updated again the same
+day: the `send()` rule in `src/lib/auth.ts` became "JSON only for a string body", after photo
+deletes failed (commit 0515b2c). See "Update 2026-10-31" in the Rationale.
 
 ## Summary
 The owner adds or changes a product's photo from `/admin/`. The phone shrinks the photo to a
@@ -130,7 +132,9 @@ What `/check verify` measured on 2026-10-30 and 2026-10-31:
 - **AC9:** `pnpm typecheck`, `pnpm build` and `pnpm check:weight` pass. `/admin/` JS stays
   within its 15 KB gzipped limit. No public route has a `<script>` tag or contains
   `supabase.co` or `sb_publishable_`. Sign-in, a product save without a photo and a publish
-  still work after the `authFetch()` change.
+  still work after the `authFetch()` change. In the network panel, the photo DELETE carries no
+  `Content-Type` header and the upload carries `multipart/form-data`. The product list still
+  loads and deleting a product still works (both keep the JSON header `products.ts` sets).
 - **AC10:** On the live demo, an upload and a delete from `https://tienda-demo-cuba.vercel.app/admin/`
   work (CORS for Storage).
 
@@ -168,9 +172,19 @@ create policy "owner deletes photos" on storage.objects
 - A change to `photo_path` fires the `touch_catalog()` trigger of spec 0016, so the admin shows
   "changes to publish" after a photo change, with no new code.
 
-**`src/lib/auth.ts`** (one-line change in `send()`): set `Content-Type: application/json` only
-when `init.body` is not a `FormData`. With `FormData`, the browser writes the multipart header
-and its boundary. Every other request is unchanged.
+**`src/lib/auth.ts`** (one-line change in `send()`, updated 2026-10-31): set
+`Content-Type: application/json` only when `typeof init.body === 'string'`. Every JSON body in
+the admin is already a string (`JSON.stringify(…)`, or `'{}'` in `publish.ts`), so those
+requests are unchanged. For any other body, `send()` adds no JSON header:
+- a `FormData` body (the photo upload): the browser writes the multipart header and its
+  boundary;
+- no body (the photo DELETE, the Auth and publish GETs): `send()` adds no `Content-Type`.
+  Storage refuses `Content-Type: application/json` on a DELETE with no body, so `deletePhoto()`
+  failed with the first rule ("not a `FormData`").
+`send()` never removes a header the caller set in `init.headers`. `products.ts` sets
+`Content-Type: application/json` on every request (`HEADERS`), so its list GETs and the
+product DELETE still carry it with no body. PostgREST accepts that, and nothing changes for
+them. `photos.ts` sets no headers, which is why its DELETE carries none.
 
 **`src/lib/photos.ts`** (new browser module, imported by the admin page's script; the single home
 of the photo rules)
@@ -317,6 +331,9 @@ thumbnails in the first view (spec 0005), 4 × 30 = 120 KB.
     Flag for `/architect`: the raw-body fallback above is not change-free. `authFetch()` would
     still set `Content-Type: application/json` on a `Blob` body, so that fallback would also need
     the `send()` exception widened (for example, "only when the body is a string").
+  - 2026-10-31 (`/architect`): resolved. "Only when the body is a string" is now the rule (see
+    the Design, `src/lib/auth.ts`). It was adopted because photo deletes failed, not for the
+    raw-body fallback, which T1 showed is not needed.
   - 2026-10-30: the owner ran `supabase/photos.sql` and the AC1 console snippet. Storage answers
     every refusal with HTTP 400 and the real status in the body's `statusCode` (a string), which
     `photoFailure()` already reads:
@@ -332,7 +349,7 @@ thumbnails in the first view (spec 0005), 4 × 30 = 120 KB.
       400 with the same `"404"` body.
     - Not tested here: a non-JPEG body under a `.jpg` name against `allowed_mime_types`; the app
       never sends one, since `preparePhoto()` always encodes JPEG.
-- [ ] **T2** (AC9) `src/lib/auth.ts`: the `Content-Type` change. Run `pnpm typecheck`, then
+- [x] **T2** (AC9) `src/lib/auth.ts`: the `Content-Type` change. Run `pnpm typecheck`, then
   sign in and save a product with no photo on `localhost` to show nothing broke.
   - 2026-10-29 (`/develop`): changed; typecheck 0 errors. The sign-in + save on `localhost` needs
     the owner's credentials: still open.
@@ -363,7 +380,7 @@ thumbnails in the first view (spec 0005), 4 × 30 = 120 KB.
     because it loads nothing. No public `<script>` and no Supabase values outside `dist/admin/`.
     Not rendered in a browser by `/develop`: the form needs a signed-in session or a mocked
     Supabase, which is `/check verify`'s run.
-- [ ] **T6** (AC2, AC3, AC8, AC9, AC10) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`. Then:
+- [x] **T6** (AC2, AC3, AC8, AC9, AC10) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`. Then:
   - run the flows at 360 px on `localhost` with mocked failures;
   - on real phones, pick from the camera and from the gallery (Android Chrome; an iPhone if
     one is available, which shows whether Safari hands over JPEG or HEIC);
@@ -545,6 +562,17 @@ the `learning/` folder was removed from the repo, so T8 and T9 no longer update 
   signed in. The Foto block is first in the form, so in the usual order (photo first, then the
   fields) only the photo step is lost. A draft saved in `sessionStorage` would avoid it; it is
   out of scope until it happens on the owner's phone.
+- *The `Content-Type` rule in `send()`.* The first rule, "JSON unless the body is a `FormData`",
+  still put a JSON header on requests with no body, and Storage refused the photo DELETE for it
+  (found while building, fixed in commit 0515b2c). Chosen: "JSON only for a string body", a rule
+  that says what gets the header instead of listing exceptions. Any other body type the browser
+  labels itself (a `Blob`, `URLSearchParams`), and no body gets nothing from `send()`. A header
+  the caller sets is kept: `products.ts` still sends JSON on its GETs and DELETE, which PostgREST
+  accepts. Runner up: keep the old rule and add "and a body is present" (it fixes the DELETE,
+  but every new body type would need its own exception). Not chosen: make `send()` strip a
+  caller's `Content-Type` when there is no body (nothing fails today, and it would change shipped
+  PostgREST requests for no gain). The cost: a caller that sends JSON as anything but a string,
+  and sets no header itself, loses the header; none does today.
 - *Seen in verify, not decided here:* on the phone the owner did not notice "Producto
   guardado." after a save, while the headless run at 360 px shows it under "Productos". The
   owner checks it again; if it is missing, that is a bug for `/debug`.

@@ -22,7 +22,7 @@
 | 11 | Owner login                      | done              | default | docs/specs/0014-owner-login.md |
 | 12 | Manage products                  | done              | default | docs/specs/0015-manage-products.md |
 | 13 | Publish changes                  | done              | default | docs/specs/0016-publish-changes.md |
-| 14 | Product photos upload            | in-progress       | default | docs/specs/0017-product-photos-upload.md |
+| 14 | Product photos upload            | done              | default | docs/specs/0017-product-photos-upload.md |
 | 15 | Manage categories                | needs-a-decision  | default | —    |
 
 Status values: `planned` · `needs-a-decision` · `in-progress` · `done`
@@ -294,7 +294,7 @@ rule unless /architect says so.
 **Notes:** Depends on 12.
 
 ## 14 · Product photos upload
-**Status:** in-progress
+**Status:** done
 **Spec:** docs/specs/0017-product-photos-upload.md
 **Code:** `supabase/photos.sql`, `src/lib/photos.ts`, `src/lib/products.ts`, `src/lib/auth.ts`, `src/pages/admin/index.astro`, `scripts/check-weight.mjs`, `src/components/ProductCard.astro`, `src/pages/producto/[id].astro`, `src/pages/estilo.astro`
 **Depth:** default
@@ -308,7 +308,7 @@ rule unless /architect says so.
   - [x] Upload, save, remove and delete flows (T1–T5, T7; AC1, AC3–AC7, AC9, AC10)
   - [x] Square photos at build and the new budget (T8; AC8)
   - [x] "Hacer foto" and "Elegir de la galería" buttons (T9; AC2)
-- [ ] Verify it — /check verify
+- [x] Verify it — /check verify
 **Notes:** Depends on 12.
 
 ## 15 · Manage categories

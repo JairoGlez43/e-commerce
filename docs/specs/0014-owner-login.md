@@ -151,7 +151,8 @@ time. Nothing else in that file changes.
 **`src/lib/auth.ts`** (browser module, imported only by the admin page's script)
 - `initAuth({ url, key })` stores the config read from the page's `data-*` attributes.
 - Every request: `fetch(`${url}/auth/v1/…`)` with headers `apikey: <key>` and
-  `Content-Type: application/json`. Authenticated calls add
+  `Content-Type: application/json` (amended by spec 0017: only a string body gets it; a
+  `FormData` body or no body gets none). Authenticated calls add
   `Authorization: Bearer <access_token>`. The publishable key never goes in `Authorization`.
 
 | Function | Request | Result |
