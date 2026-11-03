@@ -139,10 +139,6 @@ function rowPath(id: string): string {
 	return `/rest/v1/products?id=eq.${encodeURIComponent(id)}`;
 }
 
-export function listCategories(): Promise<CategoryRow[]> {
-	return send<CategoryRow>('/rest/v1/categories?select=id,name,sort_order&order=sort_order.asc');
-}
-
 export function listProducts(): Promise<ProductRow[]> {
 	return send<ProductRow>(`/rest/v1/products?select=${PRODUCT_COLUMNS}&order=name.asc`);
 }

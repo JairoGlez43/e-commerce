@@ -190,6 +190,24 @@ const { url, key } = supabaseConfig();
 				<p data-empty hidden class="text-muted">Todavía no hay productos.</p>
 				<div data-list class="flex flex-col gap-6"></div>
 			</section>
+
+			<!-- Categories (spec 0018): shown once the shared load succeeds; rows are cloned from the
+			     template below and filled with textContent. -->
+			<section data-categories hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<h2 data-categories-title tabindex="-1">Categorías</h2>
+					<button
+						type="button"
+						data-category-add
+						class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+					>
+						Añadir categoría
+					</button>
+				</div>
+				<p data-categories-status role="status" class="text-sm text-muted empty:hidden"></p>
+				<p data-categories-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<ul data-categories-list class="flex flex-col divide-y divide-border"></ul>
+			</section>
 		</div>
 
 		<section data-view="product" hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
@@ -352,6 +370,72 @@ const { url, key } = supabaseConfig();
 			</div>
 		</section>
 
+		<!-- Category form (spec 0018): the product form's rules, one field. -->
+		<section data-view="category" hidden class="flex flex-col gap-4 rounded-card border border-border bg-surface p-4">
+			<h2 data-category-title tabindex="-1">Añadir categoría</h2>
+			<p data-category-link class="text-sm text-muted empty:hidden"></p>
+			<form data-form="category" method="post" novalidate class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1">
+					<label for="category-name" class="font-medium">Nombre</label>
+					<input
+						id="category-name"
+						name="name"
+						type="text"
+						maxlength="30"
+						autocomplete="off"
+						required
+						class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"
+					/>
+				</div>
+				<p data-alert role="alert" class="font-medium text-accent empty:hidden"></p>
+				<button
+					type="submit"
+					data-label="Guardar"
+					class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+				>
+					Guardar
+				</button>
+			</form>
+			<button type="button" data-category-cancel class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4">
+				Cancelar
+			</button>
+			<!-- A category with products is deleted only after its products move (AC-8). -->
+			<div data-category-delete-area class="flex flex-col gap-4 border-t border-border pt-4">
+				<button
+					type="button"
+					data-category-delete
+					class="inline-flex min-h-11 w-fit items-center text-accent underline underline-offset-4"
+				>
+					Borrar categoría
+				</button>
+				<p data-category-last class="text-sm text-muted">No puedes borrar la única categoría.</p>
+				<div data-category-confirm hidden class="flex flex-col gap-3">
+					<p data-category-confirm-text class="font-medium"></p>
+					<div data-move-to-field class="flex flex-col gap-1">
+						<label for="category-move-to" class="font-medium">Mover a</label>
+						<select id="category-move-to" data-move-to class="min-h-11 w-full rounded-card border border-muted bg-surface px-4 text-ink"></select>
+					</div>
+					<div class="flex flex-wrap gap-3">
+						<button
+							type="button"
+							data-category-confirm-yes
+							data-label="Sí, borrar"
+							class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-medium text-surface hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50"
+						>
+							Sí, borrar
+						</button>
+						<button
+							type="button"
+							data-category-confirm-no
+							class="inline-flex min-h-11 w-fit items-center justify-center rounded-full border border-border bg-surface px-6 font-medium text-ink hover:border-accent disabled:opacity-50"
+						>
+							No, volver
+						</button>
+					</div>
+				</div>
+			</div>
+		</section>
+
 		<template data-template="group">
 			<div class="flex flex-col gap-2">
 				<h3 data-group-name></h3>
@@ -374,14 +458,43 @@ const { url, key } = supabaseConfig();
 				</label>
 			</li>
 		</template>
+		<!-- "Subir" and "Bajar" use px-4, not the Secondary button's px-6, so a name still fits at 360 px. -->
+		<template data-template="category">
+			<li class="flex items-center justify-between gap-3 py-2">
+				<div class="flex min-w-0 flex-col">
+					<button
+						type="button"
+						data-category-edit
+						class="inline-flex min-h-11 w-fit items-center text-left text-accent underline underline-offset-4"
+					></button>
+					<p data-category-count class="text-sm text-muted"></p>
+				</div>
+				<div class="flex shrink-0 gap-2">
+					<button
+						type="button"
+						data-move="up"
+						class="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent disabled:opacity-50"
+					>
+						<span data-move-name class="sr-only"></span>Subir
+					</button>
+					<button
+						type="button"
+						data-move="down"
+						class="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-4 font-medium text-ink hover:border-accent disabled:opacity-50"
+					>
+						<span data-move-name class="sr-only"></span>Bajar
+					</button>
+				</div>
+			</li>
+		</template>
 	</main>
 </BaseLayout>
 
 <script>
-	// The admin's views (specs 0014–0017). Every Auth rule lives in src/lib/auth.ts, every product
-	// rule in src/lib/products.ts, every photo rule in src/lib/photos.ts and every publish rule in
-	// src/lib/publish.ts; this script only reads the forms, shows one view at a time, draws the list
-	// and turns errors into Spanish messages.
+	// The admin's views (specs 0014–0018). Every Auth rule lives in src/lib/auth.ts, every product
+	// rule in src/lib/products.ts, every category rule in src/lib/categories.ts, every photo rule in
+	// src/lib/photos.ts and every publish rule in src/lib/publish.ts; this script only reads the
+	// forms, shows one view at a time, draws the lists and turns errors into Spanish messages.
 	import {
 		AuthError,
 		type AuthErrorKind,
@@ -397,6 +510,15 @@ const { url, key } = supabaseConfig();
 		signOut,
 		storedUser,
 	} from '../../lib/auth';
+	import {
+		addCategory,
+		checkCategoryName,
+		deleteCategory,
+		listCategories,
+		moveProducts,
+		renameCategory,
+		swapCategories,
+	} from '../../lib/categories';
 	import { preparePhoto, publicPhotoUrl } from '../../lib/photos';
 	import { formatPrice } from '../../lib/price';
 	import {
@@ -405,7 +527,6 @@ const { url, key } = supabaseConfig();
 		type ProductFields,
 		checkFields,
 		groupProducts,
-		listCategories,
 		listProducts,
 		removeProduct,
 		saveProduct,
@@ -425,7 +546,9 @@ const { url, key } = supabaseConfig();
 	import { RestError, type RestErrorKind } from '../../lib/rest';
 	import type { CategoryRow, ProductRow } from '../../lib/supabase';
 
-	type View = 'sign-in' | 'recover' | 'new-password' | 'signed-in' | 'product';
+	type View = 'sign-in' | 'recover' | 'new-password' | 'signed-in' | 'product' | 'category';
+	// The signed-in view's two lists, each with its own messages and status lines.
+	type Context = 'products' | 'categories';
 
 	const MESSAGES: Record<AuthErrorKind, string> = {
 		credentials: 'Email o contraseña incorrectos.',
@@ -454,6 +577,22 @@ const { url, key } = supabaseConfig();
 	const LOADING = 'Cargando productos…';
 	const SAVED = 'Producto guardado.';
 	const DELETED = 'Producto borrado.';
+	// Categories (spec 0018). The delete messages that depend on the step come with the delete.
+	const CATEGORY_MESSAGES: Record<RestErrorKind, string> = {
+		exists: 'Ya existe una categoría con ese enlace. La lista se ha actualizado.',
+		reference: 'Esta categoría ya no existe. La lista se ha actualizado.',
+		invalid: 'Algún dato no es válido. Revisa el formulario.',
+		forbidden: 'Esta cuenta no puede cambiar el catálogo.',
+		gone: 'Esta categoría ya no existe. La lista se ha actualizado.',
+		system: 'Error del sistema, no es culpa tuya. Avisa a quien mantiene la web.',
+		unknown: 'Algo salió mal. Inténtalo otra vez.',
+	};
+	const CATEGORY_RELOAD_KINDS = new Set<RestErrorKind>(['exists', 'reference', 'gone']);
+	const CATEGORY_SAVED = 'Categoría guardada.';
+	const CATEGORY_DELETED = 'Categoría borrada.';
+	// `reference` on a delete: a product was added to the category after the list loaded.
+	const CATEGORY_HAS_PRODUCTS = 'Esta categoría todavía tiene productos. La lista se ha actualizado.';
+	const CHOOSE_TARGET = 'Elige una categoría.';
 	// The photo block and the save button's steps (spec 0017).
 	const PREPARING = 'Preparando foto…';
 	const PHOTO_NEW = 'La foto nueva se subirá al guardar.';
@@ -495,7 +634,7 @@ const { url, key } = supabaseConfig();
 	// Shows one view, with an optional error message in its alert area.
 	function show(view: View, alert = '') {
 		// Leaving the signed-in views (sign-out, a refused session) stops the publish watch.
-		if (view !== 'signed-in' && view !== 'product') stopPublish();
+		if (view !== 'signed-in' && view !== 'product' && view !== 'category') stopPublish();
 		// Leaving the form drops a photo that was not saved.
 		if (view !== 'product') resetPhoto();
 		for (const element of root.querySelectorAll<HTMLElement>('[data-view]')) {
@@ -639,6 +778,25 @@ const { url, key } = supabaseConfig();
 	const photoCamera = photoInputs[0]!;
 	const photoRemove = root.querySelector<HTMLButtonElement>('[data-photo-remove]')!;
 	const photoStatus = root.querySelector<HTMLElement>('[data-photo-status]')!;
+	const categoriesSection = root.querySelector<HTMLElement>('[data-categories]')!;
+	const categoriesTitle = root.querySelector<HTMLElement>('[data-categories-title]')!;
+	const categoriesStatus = root.querySelector<HTMLElement>('[data-categories-status]')!;
+	const categoriesAlert = root.querySelector<HTMLElement>('[data-categories-alert]')!;
+	const categoriesList = root.querySelector<HTMLElement>('[data-categories-list]')!;
+	const categoryForm = form('category');
+	const categoryAlert = categoryForm.querySelector<HTMLElement>('[data-alert]')!;
+	const categorySave = categoryForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+	const categoryName = categoryForm.querySelector<HTMLInputElement>('[name="name"]')!;
+	const categoryTitle = root.querySelector<HTMLElement>('[data-category-title]')!;
+	const categoryLink = root.querySelector<HTMLElement>('[data-category-link]')!;
+	const categoryDeleteArea = root.querySelector<HTMLElement>('[data-category-delete-area]')!;
+	const categoryDelete = root.querySelector<HTMLButtonElement>('[data-category-delete]')!;
+	const lastCategoryNote = root.querySelector<HTMLElement>('[data-category-last]')!;
+	const categoryConfirm = root.querySelector<HTMLElement>('[data-category-confirm]')!;
+	const categoryConfirmYes = root.querySelector<HTMLButtonElement>('[data-category-confirm-yes]')!;
+	const categoryConfirmNo = root.querySelector<HTMLButtonElement>('[data-category-confirm-no]')!;
+	const moveToField = root.querySelector<HTMLElement>('[data-move-to-field]')!;
+	const moveTo = root.querySelector<HTMLSelectElement>('[data-move-to]')!;
 
 	// --- Photo (spec 0017) ---------------------------------------------------------------------
 
@@ -727,7 +885,7 @@ const { url, key } = supabaseConfig();
 		return productForm.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 	}
 
-	function fromTemplate(name: 'group' | 'row'): HTMLElement {
+	function fromTemplate(name: 'group' | 'row' | 'category'): HTMLElement {
 		const template = root.querySelector<HTMLTemplateElement>(`[data-template="${name}"]`)!;
 		return template.content.firstElementChild!.cloneNode(true) as HTMLElement;
 	}
@@ -736,12 +894,15 @@ const { url, key } = supabaseConfig();
 		return error instanceof AuthError && error.kind === 'signedOut';
 	}
 
-	function needsReload(error: unknown): boolean {
-		return error instanceof RestError && PRODUCT_RELOAD_KINDS.has(error.kind);
+	// The same error kind means something different for a product and for a category (spec 0018).
+	function needsReload(error: unknown, context: Context = 'products'): boolean {
+		const kinds = context === 'products' ? PRODUCT_RELOAD_KINDS : CATEGORY_RELOAD_KINDS;
+		return error instanceof RestError && kinds.has(error.kind);
 	}
 
-	function messageOf(error: unknown): string {
-		return error instanceof RestError ? PRODUCT_MESSAGES[error.kind] : MESSAGES[kindOf(error)];
+	function messageOf(error: unknown, context: Context = 'products'): string {
+		const messages = context === 'products' ? PRODUCT_MESSAGES : CATEGORY_MESSAGES;
+		return error instanceof RestError ? messages[error.kind] : MESSAGES[kindOf(error)];
 	}
 
 	// Owner text reaches the page through textContent only, never innerHTML.
@@ -779,8 +940,43 @@ const { url, key } = supabaseConfig();
 		select.value = categories.some((category) => category.id === selected) ? selected : '';
 	}
 
-	// Loads categories and products, then draws the list. `alert` says why it loaded again.
-	async function loadCatalog(alert = '') {
+	// --- Categories (spec 0018) ------------------------------------------------------------------
+
+	function productCount(categoryId: string): number {
+		return products.filter((product) => product.category_id === categoryId).length;
+	}
+
+	function countLine(count: number): string {
+		if (count === 0) return 'Vacía: no se ve en la web';
+		return count === 1 ? '1 producto' : `${count} productos`;
+	}
+
+	// PostgREST does not promise the order of returned rows, and the dashboard can make a tie in
+	// sort_order; ties go by id, so the admin's order is always the same.
+	function orderCategories() {
+		categories.sort((a, b) => a.sort_order - b.sort_order || a.id.localeCompare(b.id));
+	}
+
+	// Every category, empty ones too. The first can't go up and the last can't go down.
+	function drawCategories() {
+		const last = categories.length - 1;
+		categoriesList.replaceChildren(
+			...categories.map((category, index) => {
+				const row = fromTemplate('category');
+				row.dataset.id = category.id;
+				row.querySelector('[data-category-edit]')!.textContent = category.name;
+				row.querySelector('[data-category-count]')!.textContent = countLine(productCount(category.id));
+				for (const name of row.querySelectorAll('[data-move-name]')) name.textContent = `${category.name}: `;
+				row.querySelector<HTMLButtonElement>('[data-move="up"]')!.disabled = index === 0;
+				row.querySelector<HTMLButtonElement>('[data-move="down"]')!.disabled = index === last;
+				return row;
+			}),
+		);
+	}
+
+	// Loads categories and products, then draws both lists. `alert` and `status` say why it loaded
+	// again, in the lines of the section `where` names (spec 0018).
+	async function loadCatalog(alert = '', status = '', where: Context = 'products') {
 		const run = ++loadRun;
 		loaded = false;
 		listStatus.textContent = LOADING;
@@ -788,16 +984,25 @@ const { url, key } = supabaseConfig();
 		retryButton.hidden = true;
 		emptyNote.hidden = true;
 		list.replaceChildren();
+		// The product list's loading and error lines cover the categories too (spec 0018).
+		categoriesSection.hidden = true;
 		try {
 			const [loadedCategories, loadedProducts] = await Promise.all([listCategories(), listProducts()]);
 			if (run !== loadRun) return;
 			categories = loadedCategories;
+			orderCategories();
 			products = loadedProducts;
 			loaded = true;
-			listStatus.textContent = '';
-			listAlert.textContent = alert;
+			listStatus.textContent = where === 'products' ? status : '';
+			listAlert.textContent = where === 'products' ? alert : '';
+			categoriesStatus.textContent = where === 'categories' ? status : '';
+			categoriesAlert.textContent = where === 'categories' ? alert : '';
 			fillCategories(field('category_id').value);
 			drawList();
+			drawCategories();
+			categoriesSection.hidden = false;
+			// On a phone the section sits below every product, so its message would be off screen.
+			if (where === 'categories' && (alert || status)) categoriesTitle.focus();
 		} catch (error) {
 			if (run !== loadRun) return;
 			listStatus.textContent = '';
@@ -819,8 +1024,29 @@ const { url, key } = supabaseConfig();
 		listTitle.focus();
 		if (!loaded) return void loadCatalog();
 		drawList();
+		// A product saved, moved or deleted changes the counts.
+		drawCategories();
 		listStatus.textContent = status;
 		listAlert.textContent = '';
+		categoriesStatus.textContent = '';
+		categoriesAlert.textContent = '';
+	}
+
+	// Back from the category form to the lists, with an optional status line in the categories
+	// section (spec 0018). Until a load succeeds the section is hidden, so focus goes to the list.
+	function showCategories(status = '') {
+		show('signed-in');
+		if (!loaded) {
+			listTitle.focus();
+			return void loadCatalog();
+		}
+		drawList();
+		drawCategories();
+		categoriesTitle.focus();
+		listStatus.textContent = '';
+		listAlert.textContent = '';
+		categoriesStatus.textContent = status;
+		categoriesAlert.textContent = '';
 	}
 
 	function openForm(product: ProductRow | null) {
@@ -980,6 +1206,224 @@ const { url, key } = supabaseConfig();
 	list.addEventListener('change', (event) => {
 		const box = event.target;
 		if (box instanceof HTMLInputElement && box.matches('[data-stock]')) void switchStock(box);
+	});
+
+	// --- Category form (spec 0018) -----------------------------------------------------------
+
+	// The category open in the form; null while adding one.
+	let editingCategory: CategoryRow | null = null;
+
+	// After a write the lists update from the row PostgREST returned, in the admin's order.
+	function putCategory(row: CategoryRow) {
+		categories = [...categories.filter((category) => category.id !== row.id), row];
+		orderCategories();
+	}
+
+	function openCategoryForm(category: CategoryRow | null) {
+		editingCategory = category;
+		categoryForm.reset();
+		categoryName.setCustomValidity('');
+		categoryTitle.textContent = category ? 'Editar categoría' : 'Añadir categoría';
+		categoryLink.textContent = category ? `Enlace: /categoria/${category.id}` : '';
+		if (category) categoryName.value = category.name;
+		// The only category stays: there is always one (AC-9).
+		categoryDeleteArea.hidden = !category;
+		categoryDelete.hidden = categories.length <= 1;
+		lastCategoryNote.hidden = categories.length > 1;
+		categoryConfirm.hidden = true;
+		show('category');
+		categoryTitle.focus();
+	}
+
+	// Back to the lists, loading both again; the message shows in the categories section.
+	function reloadCategories(alert = '', status = '') {
+		show('signed-in');
+		listTitle.focus();
+		void loadCatalog(alert, status, 'categories');
+	}
+
+	// A failed write keeps the form and the name, except when the category no longer exists.
+	function failCategoryForm(error: unknown) {
+		if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+		const message = messageOf(error, 'categories');
+		if (error instanceof RestError && error.kind === 'gone') return reloadCategories(message);
+		categoryAlert.textContent = message;
+		if (needsReload(error, 'categories')) void loadCatalog();
+	}
+
+	// The new row also reaches the product form's "Categoría" list and the product groups.
+	async function saveCategory(name: string) {
+		const category = editingCategory;
+		try {
+			putCategory(category ? await renameCategory(category.id, name) : await addCategory(name, categories));
+			fillCategories(field('category_id').value);
+			markPending();
+			showCategories(CATEGORY_SAVED);
+		} catch (error) {
+			failCategoryForm(error);
+		}
+	}
+
+	// The checks run here, before any request is sent; the database checks again.
+	categoryForm.addEventListener('submit', (event) => {
+		event.preventDefault();
+		const result = checkCategoryName(categoryName.value, categories, editingCategory?.id);
+		categoryName.setCustomValidity('message' in result ? result.message : '');
+		categoryAlert.textContent = '';
+		if ('message' in result) {
+			categoryForm.reportValidity();
+			return;
+		}
+		// The same name sends nothing; other capitals alone are a change (AC-4).
+		if (editingCategory && result.name === editingCategory.name) return showCategories();
+		void whileBusy(categorySave, () => saveCategory(result.name));
+	});
+
+	categoryName.addEventListener('input', () => categoryName.setCustomValidity(''));
+	root.querySelector('[data-category-cancel]')!.addEventListener('click', () => showCategories());
+	root.querySelector('[data-category-add]')!.addEventListener('click', () => openCategoryForm(null));
+
+	// --- Category delete (spec 0018) --------------------------------------------------------
+
+	// Delete asks inside the page, like products. A category with products also asks where its
+	// products go; the list has no choice made in advance (AC-8).
+	categoryDelete.addEventListener('click', () => {
+		const category = editingCategory;
+		if (!category || categories.length <= 1) return;
+		const count = productCount(category.id);
+		const label = count === 0 ? 'Sí, borrar' : 'Mover y borrar';
+		root.querySelector('[data-category-confirm-text]')!.textContent =
+			count === 0
+				? `¿Borrar «${category.name}»? No se puede deshacer.`
+				: `«${category.name}» tiene ${countLine(count)}. Elige adónde moverlos antes de borrarla.`;
+		moveToField.hidden = count === 0;
+		moveTo.replaceChildren(
+			new Option('Elige una categoría', ''),
+			...categories.filter((item) => item.id !== category.id).map((item) => new Option(item.name, item.id)),
+		);
+		moveTo.setCustomValidity('');
+		categoryConfirmYes.dataset.label = label;
+		categoryConfirmYes.textContent = label;
+		categoryDelete.hidden = true;
+		categoryConfirm.hidden = false;
+		categoryConfirmNo.focus();
+	});
+
+	categoryConfirmNo.addEventListener('click', () => {
+		categoryConfirm.hidden = true;
+		categoryDelete.hidden = false;
+		categoryDelete.focus();
+	});
+
+	moveTo.addEventListener('input', () => moveTo.setCustomValidity(''));
+
+	// The block on screen decides: with "Mover a" showing, a target is required.
+	categoryConfirmYes.addEventListener('click', () => {
+		const category = editingCategory;
+		if (!category) return;
+		let target: CategoryRow | undefined;
+		if (!moveToField.hidden) {
+			target = categories.find((item) => item.id === moveTo.value);
+			if (!target) {
+				moveTo.setCustomValidity(CHOOSE_TARGET);
+				moveTo.reportValidity();
+				return;
+			}
+		}
+		categoryAlert.textContent = '';
+		void whileBusy(categoryConfirmYes, () => deleteFromForm(category, target));
+	});
+
+	// Two requests in order, so the page knows which one failed (spec 0018). If the delete fails
+	// after the move, the products stay moved and the category shows as empty; one more tap on
+	// "Borrar categoría" finishes it.
+	async function deleteFromForm(category: CategoryRow, target: CategoryRow | undefined) {
+		if (target) {
+			try {
+				await moveProducts(category.id, target.id);
+			} catch (error) {
+				return failDelete(error, 'move');
+			}
+			markPending();
+		}
+		try {
+			await deleteCategory(category.id);
+		} catch (error) {
+			const halfDone = target
+				? `Los productos ya están en «${target.name}», pero «${category.name}» no se borró. Inténtalo otra vez.`
+				: '';
+			return failDelete(error, 'delete', halfDone);
+		}
+		markPending();
+		if (target) return reloadCategories('', `Productos movidos a «${target.name}». Categoría borrada.`);
+		categories = categories.filter((item) => item.id !== category.id);
+		fillCategories(field('category_id').value);
+		showCategories(CATEGORY_DELETED);
+	}
+
+	// signedOut, reference and gone keep their own handling, also after a move (AC-10). Any other
+	// failure after a move is the half done case; before it, nothing changed and the form stays.
+	function failDelete(error: unknown, step: 'move' | 'delete', halfDone = '') {
+		if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+		if (error instanceof RestError && (error.kind === 'reference' || error.kind === 'gone')) {
+			const hasProducts = step === 'delete' && error.kind === 'reference';
+			return reloadCategories(hasProducts ? CATEGORY_HAS_PRODUCTS : CATEGORY_MESSAGES[error.kind]);
+		}
+		if (halfDone) return reloadCategories(halfDone);
+		categoryAlert.textContent = messageOf(error, 'categories');
+	}
+
+	// --- Category order (spec 0018) ---------------------------------------------------------
+
+	// True while a swap waits for its answer: one tap, one request.
+	let swapping = false;
+
+	// Swaps a category with its neighbor in one upsert. Every order button is locked until the
+	// answer; any failure loads both lists again, because the swap may have been saved with only
+	// its answer lost (AC-6).
+	async function moveCategory(id: string, direction: 'up' | 'down') {
+		const index = categories.findIndex((category) => category.id === id);
+		const a = categories[index];
+		const b = categories[direction === 'up' ? index - 1 : index + 1];
+		if (swapping || !a || !b) return;
+		swapping = true;
+		for (const button of categoriesList.querySelectorAll<HTMLButtonElement>('[data-move]')) button.disabled = true;
+		categoriesStatus.textContent = '';
+		categoriesAlert.textContent = '';
+		// The redraw replaces every row, so focus comes back to the moved row only if it was here.
+		const hadFocus = categoriesList.contains(document.activeElement);
+		try {
+			for (const row of await swapCategories(a, b)) putCategory(row);
+			markPending();
+			drawList();
+			drawCategories();
+			if (hadFocus) focusMove(id, direction);
+		} catch (error) {
+			if (isSignedOut(error)) return show('sign-in', MESSAGES.signedOut);
+			void loadCatalog(messageOf(error, 'categories'), '', 'categories');
+		} finally {
+			swapping = false;
+		}
+	}
+
+	// The same button again, so "Bajar" can be tapped again; the other one once the row reached
+	// the end of the list.
+	function focusMove(id: string, direction: 'up' | 'down') {
+		const row = categoriesList.querySelector<HTMLElement>(`li[data-id="${CSS.escape(id)}"]`);
+		const same = row?.querySelector<HTMLButtonElement>(`[data-move="${direction}"]`);
+		const other = row?.querySelector<HTMLButtonElement>(`[data-move="${direction === 'up' ? 'down' : 'up'}"]`);
+		(same && !same.disabled ? same : other)?.focus();
+	}
+
+	categoriesList.addEventListener('click', (event) => {
+		const target = event.target as Element;
+		const id = target.closest('li')?.dataset.id;
+		if (!id) return;
+		const move = target.closest<HTMLButtonElement>('[data-move]');
+		if (move) return void moveCategory(id, move.dataset.move === 'up' ? 'up' : 'down');
+		if (!target.closest('[data-category-edit]')) return;
+		const category = categories.find((item) => item.id === id);
+		if (category) openCategoryForm(category);
 	});
 
 	// --- Publish (spec 0016) -----------------------------------------------------------------

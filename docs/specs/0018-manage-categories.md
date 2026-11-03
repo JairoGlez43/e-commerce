@@ -7,13 +7,17 @@
 **Amends**: spec 0015 (its request helpers and error class move to a shared `src/lib/rest.ts`;
 `listCategories()` moves to `src/lib/categories.ts`; the error kind `noCategory` becomes
 `reference`). Product behavior does not change.
+**Amended**: 2026-11-04. A unique, deferrable constraint on `categories.sort_order` with its own
+message (AC-14), and AC-1 rewritten with the answers measured during T2.
 
 ## Summary
 
 You, the shop owner, can add, rename, reorder and delete product categories from `/admin/` on
 your phone. A category that still has products is deleted only after you choose where its
 products go: the page moves them first, then deletes the category. The order is changed with
-"Subir" and "Bajar" buttons, one tap saves it. The request code shared with products moves to
+"Subir" and "Bajar" buttons, one tap saves it. The database refuses two categories with the
+same place in the order, so the public order never wobbles; when another phone changed the order
+first, you see a clear message and the fresh list. The request code shared with products moves to
 one new file, `src/lib/rest.ts`, so both features use the same requests and error messages.
 
 ## Context
@@ -25,7 +29,12 @@ breaks the promise of the "Autónomo" package: the owner manages the whole catal
 
 What already exists and shapes the problem:
 - The table `categories (id, name, sort_order)` is public to read, and nobody can write to it
-  through the API: it has no write policies (spec 0013).
+  through the API: it has no write policies (spec 0013). `schema.sql` grants only `select`, but
+  the live project also grants `update` to `authenticated`: measured during T2 (2026-11-03), an owner
+  `PATCH` with no update policy answered `200 []` (RLS matched no row), and a `POST` answered
+  `403` `42501` ("new row violates row-level security policy").
+- `sort_order` has no unique rule today: two categories can share a number, and then the public
+  order of those two is not fixed.
 - `products.category_id` points to `categories.id` with `on delete restrict` (a foreign key that
   refuses to delete a category while any product still points to it). Spec 0013 left this rule
   for this feature to build on.
@@ -56,7 +65,10 @@ groups.
 
 **Acceptance criteria** (the contract, each criterion is IDed and independently checkable):
 - **AC-1**: After `supabase/categories-write.sql` runs in the SQL editor:
-  - a `POST`, `PATCH` or `DELETE` on `categories` with only the publishable key is refused;
+  - with only the publishable key, a `POST` on `categories` is refused (`401` or `403`, code
+    `42501`), and a `PATCH` or `DELETE` changes no row: it is refused, or it answers `200 []`
+    (the role may hold the table grant, and RLS then matches no row). A `GET` afterwards shows
+    every category unchanged;
   - in the SQL editor, an insert run as `authenticated` with JWT claims that have no
     `app_metadata.role` fails with `42501`. Run with the owner's claims, the same insert works
     and is then rolled back.
@@ -146,6 +158,17 @@ groups.
 - **AC-13**: `pnpm typecheck`, `pnpm build` and `pnpm check:weight` pass. `/admin/` JS stays
   within its 15 KB gzipped limit. No public route has a `<script>` tag or contains
   `supabase.co` or `sb_publishable_`.
+- **AC-14**: After `supabase/categories-write.sql` runs, `categories.sort_order` is unique through
+  the constraint `categories_sort_order_key`, `deferrable initially immediate`:
+  - in the SQL editor, an insert or update that gives a category a `sort_order` another one
+    already has fails with `23505`;
+  - "Subir" and "Bajar" still save in one request (AC-6);
+  - when a swap or an add meets a `sort_order` taken since the list loaded (`409` `23505` on
+    `categories_sort_order_key`, for example after a reorder or an add on another device), the
+    message is "El orden cambió en otro dispositivo. La lista se ha actualizado." and both lists
+    load again. After an add, the form keeps the name and a second "Guardar" saves it;
+  - an id taken by another add (`409` `23505` on the primary key) keeps "Ya existe una categoría
+    con ese enlace. La lista se ha actualizado.".
 
 ## Options considered
 
@@ -206,6 +229,36 @@ Option 2.
   and it must send every `not null` column (`name` too), so a name renamed on another device in
   the meantime is overwritten. If the row was deleted elsewhere, the upsert creates it again.
 
+### Option 5: Keeping `sort_order` distinct (amendment, 2026-11-04)
+
+(a) The admin alone keeps the values distinct (largest plus 1, swaps exchange two values); a
+tie from the dashboard or from two devices is accepted and ordered by `id`. (b) A plain
+`unique (sort_order)`. (c) `unique (sort_order) deferrable initially immediate` (chosen).
+
+**Pros (c)**:
+- The database refuses every tie, from any device or the dashboard, so the public order is
+  always fixed.
+- The swap still works: a constraint that is deferrable but not deferred is checked when the
+  statement ends, not after each row (basis: PostgreSQL, CREATE TABLE, "Non-Deferred Uniqueness
+  Constraints"). A plain unique (b) is checked after each row, so exchanging two values in one
+  statement fails.
+- It also turns a stale swap (the order changed on another device) into a clear refusal, instead
+  of a silent tie.
+
+**Cons (c)**:
+- The docs do not say how a deferrable constraint on a column that is not the conflict arbiter
+  behaves inside `INSERT … ON CONFLICT DO UPDATE` (they only forbid it as an arbiter; ours is
+  the primary key). T3 must prove the swap works.
+- Reordering by hand in the dashboard now needs one statement per swap (two separate updates
+  fail on the first).
+- A second kind of `409` `23505` reaches the page, and it must be told apart from a taken id.
+
+**Telling the two `23505` apart**: PostgREST answers both with the same status and code (basis:
+PostgREST, errors, `23505` → `409`); only the constraint name in the body's `message` differs.
+Chosen: `RestError` carries that name, and `categories.ts` alone knows which name means "order
+taken". Runner up: a new `RestErrorKind` (`rest.ts` would know a table, and the product message
+map would need an entry it never uses).
+
 ## Decision
 
 **Chosen option**: Option 1 for deleting, the upsert of Option 4 for reordering, both through
@@ -230,6 +283,12 @@ Decisions taken in the conversation (engineer's choices):
   from `products.ts`).
 - **Half done delete:** a clear message and a reload, no hidden retry. After a move and delete,
   categories and products load again.
+- **Order uniqueness (amendment, 2026-11-04):** `unique (sort_order) deferrable initially
+  immediate`, named `categories_sort_order_key`, added by `categories-write.sql` (Option 5). Its
+  `23505` gets its own message: "El orden cambió en otro dispositivo. La lista se ha
+  actualizado."
+- **AC-1 (amendment, 2026-11-04):** a `PATCH` or `DELETE` without a policy may answer `200 []`
+  instead of a refusal, as measured during T2; AC-1 checks that no row changed.
 
 Decisions taken while writing (recommended, with the runner up):
 - **The error class becomes `RestError`, and the kind `noCategory` becomes `reference`.** A
@@ -245,6 +304,10 @@ Decisions taken while writing (recommended, with the runner up):
 - **Moving and deleting are two exported functions,** `moveProducts()` and `deleteCategory()`,
   called in order by the page. So the page knows which step failed (AC-10). Runner up: one
   `removeCategory()` that throws a special error for the half done case (less readable).
+- **An order taken is told apart by the constraint name (amendment):** `RestError` gains an
+  optional `constraint`, read from the body's `message` on a `23505`; `isOrderTaken()` in
+  `categories.ts` compares it with `categories_sort_order_key`. The kind stays `exists`, so the
+  reload rules do not change, only the message. Runner up: a new `RestErrorKind` `order`.
 - **The categories section has no loading or error state of its own:** it shows once the shared
   load succeeds; the product list's states cover it. Runner up: a second status line and
   "Reintentar" (duplicated UI for the same request).
@@ -266,6 +329,13 @@ plus `textContent` for rows, and the in page confirmation. Moving the request co
 `rest.ts` costs a careful refactor of `products.ts` now (AC-11 checks it), but gives both
 features one place for requests and error mapping, so a third admin feature does not copy it.
 
+The amendment closes the gap the upsert left open. The admin keeps `sort_order` distinct only
+while every write starts from fresh data; a swap from a stale list, or a tie typed in the
+dashboard, made an unstable public order, which is the very problem the upsert was chosen to
+avoid. A deferrable unique constraint makes the database the guard, as RLS already is for
+permissions, and keeps the one statement swap working. Telling the two `23505` apart by the
+constraint name keeps `rest.ts` free of table knowledge and the reload rules unchanged.
+
 The public site needs no change: it already rebuilds from the tables, drops empty categories,
 and the trigger already marks a category write as unpublished.
 
@@ -275,13 +345,21 @@ and the trigger already marks a category write as unpublished.
 
 | Table | Key | Fields | Relationship | Change |
 |---|---|---|---|---|
-| `categories` | `id` text, slug, fixed | `name` text not null, 1 to 30 · `sort_order` integer not null, ≥ 0 | 1 category : N products | New owner insert, update and delete policies |
+| `categories` | `id` text, slug, fixed | `name` text not null, 1 to 30 · `sort_order` integer not null, ≥ 0, unique (deferrable) | 1 category : N products | New owner insert, update and delete policies; new constraint `categories_sort_order_key` |
 | `products` | `id` | `category_id` → `categories.id`, `on delete restrict` | N : 1 | None. The move uses the existing owner update policy |
 
-No new table, column or index. New file `supabase/categories-write.sql`, run once after
+No new table or column; the constraint adds one unique index. New file
+`supabase/categories-write.sql`, run once after
 `photos.sql` (order for every new shop: `schema.sql` → `seed.sql` → `auth.sql` →
 `products-write.sql` → `publish.sql` → `photos.sql` → `categories-write.sql`):
 ```sql
+-- No two categories share a place in the order (spec 0018, AC-14). Deferrable but not deferred:
+-- checked when the statement ends, so the admin's one statement swap passes. Before running it,
+-- this must return no rows (a tie makes the alter fail):
+--   select sort_order, count(*) from public.categories group by sort_order having count(*) > 1;
+alter table public.categories
+  add constraint categories_sort_order_key unique (sort_order) deferrable initially immediate;
+
 -- The owner's writes on categories (spec 0018). Reads stay public (schema.sql).
 -- Only the owner may write: the grant opens the door to signed in users, and each policy lets
 -- through only a JWT whose app_metadata.role is "owner" (public.is_owner(), auth.sql).
@@ -301,6 +379,12 @@ create policy "owner deletes categories" on public.categories
 --   insert into public.categories (id, name, sort_order) values ('prueba', 'Prueba', 99);  -- expect 42501
 -- rollback;
 -- Repeat with '{"app_metadata":{"role":"owner"}}': the insert works, then rollback.
+
+-- AC-14 check (nothing is kept):
+-- begin;
+--   insert into public.categories (id, name, sort_order)
+--     select 'prueba', 'Prueba', min(sort_order) from public.categories;  -- expect 23505
+-- rollback;
 ```
 
 **State transitions**: none. A category exists or not; "empty" is derived from the products.
@@ -315,6 +399,10 @@ for every write and "public" for reads):
   `409 23503` → `reference`, `403 42501` → `forbidden`, `400` with code class `22`/`23` →
   `invalid`, any other 4xx → `system`, anything else → `unknown`. `system` and `unknown` log
   method, path, status and code with `console.error`, prefix `[rest]`.
+- Amendment: `RestError` also has `constraint?: string`, set only for `409` `23505`: the name
+  inside `unique constraint "<name>"` in the body's `message` (the error body carries `code`,
+  `message`, `details`, `hint`; T3 records a real one). No name found → `undefined`. Kinds and
+  products are unchanged.
 - `send<Row>(path, init?, expected = 200): Promise<Row[]>`: default headers
   `Content-Type: application/json` and `Prefer: return=representation`; `init.headers` is
   merged over them. A status other than `expected` throws `failure()`.
@@ -328,12 +416,13 @@ for every write and "public" for reads):
 | Function | Request | Key inputs | Result | Key errors |
 |---|---|---|---|---|
 | `listCategories()` | `GET /rest/v1/categories?select=id,name,sort_order&order=sort_order.asc` | none | `CategoryRow[]` | `system`, `unknown`, `AuthError` |
-| `addCategory(name, categories)` | `POST /rest/v1/categories`, body `{ id, name, sort_order }`, expects 201 | checked name, loaded list | the created row | `exists` (`409 23505`) |
+| `addCategory(name, categories)` | `POST /rest/v1/categories`, body `{ id, name, sort_order }`, expects 201 | checked name, loaded list | the created row | `exists` (`409 23505`: id taken, or order taken per `isOrderTaken()`) |
 | `renameCategory(id, name)` | `PATCH /rest/v1/categories?id=eq.<id>`, body `{ name }`, `onlyRow` | id, checked name | the updated row | `gone` (`200 []`) |
-| `swapCategories(a, b)` | `POST /rest/v1/categories`, header `Prefer: resolution=merge-duplicates,return=representation`, body `[{ id: a.id, name: a.name, sort_order: b.sort_order }, { id: b.id, name: b.name, sort_order: a.sort_order }]`, expects the status T3 records | two neighbor rows | the two rows | `invalid`, `system` |
+| `swapCategories(a, b)` | `POST /rest/v1/categories`, header `Prefer: resolution=merge-duplicates,return=representation`, body `[{ id: a.id, name: a.name, sort_order: b.sort_order }, { id: b.id, name: b.name, sort_order: a.sort_order }]`, expects the status T3 records | two neighbor rows | the two rows | `invalid`, `system`, `exists` (order taken, stale list) |
 | `moveProducts(fromId, toId)` | `PATCH /rest/v1/products?category_id=eq.<fromId>&select=id`, body `{ category_id: toId }` (`select=id` keeps the answer small on slow data) | two ids | the moved ids (any count, `[]` allowed) | `reference` (`409 23503`, target gone) |
 | `deleteCategory(id)` | `DELETE /rest/v1/categories?id=eq.<id>`, `onlyRow` | id | nothing | `reference` (`409 23503`, still has products), `gone` |
 | `checkCategoryName(raw, categories, ownId?)` | none (pure) | typed name, loaded list, the edited row's id | `{ name }` or `{ message }` | none |
+| `isOrderTaken(error)` | none (pure) | any caught error | `true` for a `RestError` `exists` whose `constraint` is `categories_sort_order_key` | none |
 
 Ids in filters go through `encodeURIComponent`. `AuthError` (`offline`, `rate`, `signedOut`)
 passes through unchanged, as in spec 0015.
@@ -356,6 +445,7 @@ errors to its alert line:
 
 | Kind | Message | Then |
 |---|---|---|
+| `exists` with `isOrderTaken()` (amendment; `messageOf()` checks it first in the categories context) | El orden cambió en otro dispositivo. La lista se ha actualizado. | reload both lists |
 | `exists` | Ya existe una categoría con ese enlace. La lista se ha actualizado. | reload both lists |
 | `reference` on `deleteCategory` | Esta categoría todavía tiene productos. La lista se ha actualizado. | reload both lists |
 | `reference` on `moveProducts`, `gone` | Esta categoría ya no existe. La lista se ha actualizado. | reload both lists |
@@ -407,6 +497,7 @@ it now also imports `src/lib/categories.ts`):
 | Row | "Subir" / "Bajar" disabled | the row's position in the loaded list (first / last) |
 | Swap | the two new `sort_order` values | the two rows' current values, exchanged |
 | Swap | `name` of both rows | the loaded rows (required by the upsert) |
+| Swap, add | "El orden cambió…" instead of the `exists` message | `isOrderTaken()` on the caught error: the constraint name in the `409` body's `message` |
 | Delete | which confirm block shows (AC-7, AC-8, AC-9) | the product count, and the number of loaded categories |
 | Move | "Mover a" options | the loaded categories, minus the one being deleted |
 | Move | `toId`, "<chosen name>" | the "Mover a" choice and its loaded row |
@@ -420,10 +511,10 @@ it now also imports `src/lib/categories.ts`):
 - There is always at least one category: the form never deletes the only one (AC-9), and the
   database refuses to delete one that has products.
 - Category names are unique ignoring case and accents, enforced by the form only.
-- `sort_order` values stay distinct when every write goes through this admin (a new row takes
-  the largest plus 1, a swap exchanges two values in one statement). The seed uses 1 to 6. A tie
-  made in the dashboard is accepted: the admin orders ties by `id`, and the public order of
-  tied categories is then not fixed.
+- `sort_order` values are always distinct: `categories_sort_order_key` refuses a tie from any
+  source, the admin or the dashboard (amendment). A new row takes the largest loaded value plus
+  1, a swap exchanges two values in one statement. The seed uses 1 to 6. The admin still sorts
+  by `sort_order` then `id`, because PostgREST does not promise the order of returned rows.
 - Multi row writes do not trip `pg_safeupdate`: `touch_catalog()` is a statement level trigger
   whose update has `where id = true` (spec 0016), and every PATCH and DELETE here has a filter.
 
@@ -449,9 +540,13 @@ it now also imports `src/lib/categories.ts`):
   deletes it with the AC-7 confirmation, verifies **AC-10**, **AC-7**
 - Failure case: with the network throttled, tap "Bajar" twice quickly: only one request is
   sent, verifies **AC-6**
-- Auth/permission: a `POST`, `PATCH` and `DELETE` on `categories` with the publishable key only
-  are refused, and an insert with a JWT without the owner role fails with `42501`, verifies
-  **AC-1**
+- Auth/permission: with the publishable key only, a `POST` on `categories` is refused, a `PATCH`
+  and a `DELETE` change no row (refused or `200 []`), and an insert with a JWT without the owner
+  role fails with `42501`, verifies **AC-1**
+- Failure case (amendment): two tabs load the list; tab A taps "Bajar" on the first category;
+  tab B, still stale, taps "Bajar" on the second. Tab B's upsert meets a taken `sort_order`, shows
+  "El orden cambió en otro dispositivo. La lista se ha actualizado." and reloads with tab A's
+  order, verifies **AC-14**, **AC-6**
 - Regression: the spec 0015 product flows and its mocked error cases behave the same, verifies
   **AC-11**
 
@@ -469,22 +564,32 @@ code moves first, because the screen's module is built on it.
   `messageOf()` and the `gone` check in the product save handler; search for `ProductError`),
   renaming the maps to `PRODUCT_MESSAGES` / `PRODUCT_RELOAD_KINDS`. Check the product flows
   and the spec 0015 AC11 mocked cases, plus `pnpm typecheck` and `pnpm build`.
-- [ ] **T2** (AC-2, AC-3, AC-4, AC-5, AC-7, AC-8, AC-9) Create `src/lib/categories.ts`
+- [x] **T2** (AC-2, AC-3, AC-4, AC-5, AC-7, AC-8, AC-9) Create `src/lib/categories.ts`
   (`listCategories()` moved from `products.ts`, `checkCategoryName()`, the request functions)
   and build the categories section, its row template, the category form view and the confirm
   blocks in `src/pages/admin/index.astro`, on the real loaded data. Writes are wired but will
   be refused until T3, which shows the `forbidden` message. `swapCategories()` expects `201`
   as a placeholder until T3 measures the real status.
-- [ ] **T3** (AC-1) Write `supabase/categories-write.sql`. Guide the owner to run it, then run
-  the AC-1 checks: the commented SQL test, and a `curl` POST, PATCH and DELETE with the
-  publishable key only. In one throwaway run with the owner's session, record here the real
-  answers to: the swap upsert (status and body), a `PATCH` on `products` with `select=id` that
-  moves 0 rows (status and body), and a `DELETE` of a category with products (status and code).
-  Replace the placeholder expected status of `swapCategories()` with the recorded one. After
-  one swap, check that the admin shows "Hay cambios sin publicar" (trigger fired).
-- [ ] **T4** (AC-3, AC-4, AC-6, AC-7, AC-8, AC-10) Run every flow against the real database at
-  360 px: add, rename, swap, delete empty, move and delete. Run the AC-10 failures against a
-  mocked Supabase (offline, half done, stale count, gone, `signedOut`).
+- [ ] **T3** (AC-1, AC-14) Write `supabase/categories-write.sql` (the constraint, then the
+  policies). Have the owner run the tie check query, then the file. Run the AC-1 checks (the
+  commented SQL test; a `curl` POST, PATCH and DELETE with the publishable key only, then a
+  GET) and the AC-14 SQL check. In one throwaway run with the owner's session, record here the
+  real answers to: the swap upsert (status and body; it must pass the deferrable constraint), a
+  `PATCH` on `products` with `select=id` that moves 0 rows (status and body), a `DELETE` of a
+  category with products (status and code), and a stale swap that meets a taken `sort_order`
+  (status and the full body). Replace the placeholder expected status of `swapCategories()`
+  with the recorded one. After one swap, check that the admin shows "Hay cambios sin publicar"
+  (trigger fired). If the swap fails on the constraint, or the stale swap's body does not name
+  `categories_sort_order_key`, stop and return to `/architect`.
+- [ ] **T3b** (AC-14, AC-11) Add `constraint` to `RestError` in `src/lib/rest.ts`,
+  `isOrderTaken()` to `src/lib/categories.ts`, and the "El orden cambió…" message to the admin
+  page's `messageOf()` in the categories context. Check the spec 0015 product flows still map
+  as before, plus `pnpm typecheck` and `pnpm build`.
+- [ ] **T4** (AC-3, AC-4, AC-6, AC-7, AC-8, AC-10, AC-14) Run every flow against the real
+  database at 360 px: add, rename, swap, delete empty, move and delete. Run the AC-10 failures
+  against a mocked Supabase (offline, half done, stale count, gone, `signedOut`). Run the AC-14
+  two tab cases against the real database: a stale swap, and a stale add (tab A adds one
+  category, tab B adds another with the old list).
 - [ ] **T5** (AC-12, AC-13) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`; check no public
   route gained a script. Publish from the demo's admin and check the public site against
   AC-12, then restore the seed order and names.
@@ -496,6 +601,8 @@ code moves first, because the screen's module is built on it.
 - The owner manages the whole catalog without the developer, which completes the admin of
   the "Autónomo" package.
 - Products and categories share one request and error module; a later admin feature reuses it.
+- The public order is always fixed: the database refuses a tie in `sort_order`, and a stale
+  swap or add on a second device ends in a clear message instead of a silent tie (amendment).
 - The public site needs no change: categories already flow through the build.
 
 **Negative / tradeoffs**:
@@ -504,6 +611,10 @@ code moves first, because the screen's module is built on it.
 - The swap upsert sends `name`, so a rename made on another device between the load and the tap
   is overwritten, and a category deleted elsewhere is created again. Accepted with one owner.
 - Duplicate names are refused only by the form; a name typed in the dashboard can still repeat.
+- Telling an order clash from an id clash depends on the constraint name inside the error's
+  `message` text. If that wording ever changes, an order clash falls back to the id message:
+  the lists still reload, only the words are wrong.
+- Reordering by hand in the dashboard needs one statement per swap; two separate updates fail.
 - If an "Añadir" is saved but its answer is lost, a retry gets "Ya existe una categoría con ese
   enlace" although the row is the owner's own. Accepted on purpose: the list reloads and shows
   it.
@@ -512,7 +623,9 @@ code moves first, because the screen's module is built on it.
 - T1 touches working product code; AC-11 must pass before anything else is built on it.
 
 **Neutral**:
-- One more SQL file to run in every new shop (feature 18's checklist gains a step).
+- One more SQL file to run in every new shop (feature 18's checklist gains a step). On a live
+  shop it fails if two categories already share a `sort_order`; the check query in the file
+  finds them first.
 - An empty category exists in the admin but not on the public site, which the row explains.
 
 ## Out of scope
@@ -531,6 +644,10 @@ code moves first, because the screen's module is built on it.
   "`listCategories` in `products.ts`" wording where it appears (spec 0015 Design keeps its
   history).
 - [ ] Feature 18 (new shop setup) should include `categories-write.sql` in its steps.
+- [ ] `/sync` after the build: `AGENTS.md` should record `categories_sort_order_key` (reorders in
+  the dashboard need one statement), `RestError.constraint` with `isOrderTaken()`, and that the
+  live project grants `update` to `authenticated` beyond `schema.sql`, so a write with no
+  policy answers `200 []` rather than a refusal (measured in T2).
 
 ## References
 
@@ -552,6 +669,8 @@ code moves first, because the screen's module is built on it.
 - Row level security as the only real guard; the client repeats rules only for messages.
 - Upsert (`INSERT … ON CONFLICT DO UPDATE`) for a multi row change in one statement.
 - Slugs fixed at creation so shared links survive renames.
+- A unique constraint that is deferrable but not deferred, so a statement that exchanges values
+  is checked as a whole (amendment).
 
 **Links** (web verified by the `researcher` subagent, 2026-10-31):
 - PostgREST, Tables and views (bulk insert, upsert with `resolution=merge-duplicates`, PATCH
@@ -561,10 +680,17 @@ code moves first, because the screen's module is built on it.
   https://docs.postgrest.org/en/stable/references/api/preferences.html
 - PostgreSQL, CREATE POLICY (an upsert checks the insert policy, the select policy, and on
   conflict the update policy): https://www.postgresql.org/docs/current/sql-createpolicy.html
-- PostgreSQL, INSERT (`ON CONFLICT DO UPDATE`): https://www.postgresql.org/docs/current/sql-insert.html
+- PostgreSQL, INSERT (`ON CONFLICT DO UPDATE`; deferrable constraints cannot be conflict
+  arbiters): https://www.postgresql.org/docs/current/sql-insert.html
+- PostgreSQL, CREATE TABLE (`DEFERRABLE`, `INITIALLY IMMEDIATE`, "Non-Deferred Uniqueness
+  Constraints"), verified 2026-11-04: https://www.postgresql.org/docs/current/sql-createtable.html
+- PostgREST, Errors (body fields `code`, `message`, `details`, `hint`; `23505` → `409`), verified
+  2026-11-04: https://docs.postgrest.org/en/stable/references/errors.html
 
 **Not confirmed by the docs, measured by T3:** the upsert's status code (201 is only the
 documented example for a plain POST), that the whole upsert array is one all or nothing
 statement, whether `not null` is checked on a conflicting row (so `name` is always sent), and
 the status and body of a PATCH that matches no rows (spec 0015 measured `200 []` on a single
-row filter).
+row filter). Added by the amendment: that the deferrable `sort_order` constraint lets the swap
+upsert pass (the docs are silent on a deferrable constraint that is not the conflict arbiter),
+and that a `23505` body names the constraint in `message` (the docs show no `23505` example).
