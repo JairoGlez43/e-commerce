@@ -9,6 +9,8 @@ import type { CategoryRow } from './supabase';
 
 // The limit mirrors supabase/schema.sql.
 const MAX_NAME = 30;
+// The unique constraint on sort_order, from supabase/categories-write.sql.
+const ORDER_KEY = 'categories_sort_order_key';
 
 // --- Rules ------------------------------------------------------------------------------
 
@@ -37,6 +39,12 @@ export function checkCategoryName(
 		return { message: 'Ya hay una categoría con ese nombre.' };
 	}
 	return { name };
+}
+
+// A taken id and a taken place in the order both answer 409 23505 (kind `exists`); only the
+// constraint name tells them apart. True when another device changed the order first (AC-14).
+export function isOrderTaken(error: unknown): boolean {
+	return error instanceof RestError && error.kind === 'exists' && error.constraint === ORDER_KEY;
 }
 
 // --- Requests ---------------------------------------------------------------------------
@@ -73,7 +81,8 @@ export async function renameCategory(id: string, name: string): Promise<Category
 
 // Exchanges the sort_order of two rows in one upsert: one statement, so both change or neither
 // does. `name` goes too, because the insert half of an upsert needs every not null column.
-// TODO(spec 0018 T3): 201 is a placeholder until T3 measures the real status.
+// Measured in T3 (2026-11-04): it answers 200 with both rows, and passes the deferrable
+// categories_sort_order_key. A stale swap that meets a taken sort_order answers 409 23505.
 export function swapCategories(a: CategoryRow, b: CategoryRow): Promise<CategoryRow[]> {
 	return send<CategoryRow>(
 		'/rest/v1/categories',
@@ -85,7 +94,6 @@ export function swapCategories(a: CategoryRow, b: CategoryRow): Promise<Category
 				{ id: b.id, name: b.name, sort_order: a.sort_order },
 			]),
 		},
-		201,
 	);
 }
 

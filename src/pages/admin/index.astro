@@ -514,6 +514,7 @@ const { url, key } = supabaseConfig();
 		addCategory,
 		checkCategoryName,
 		deleteCategory,
+		isOrderTaken,
 		listCategories,
 		moveProducts,
 		renameCategory,
@@ -592,6 +593,8 @@ const { url, key } = supabaseConfig();
 	const CATEGORY_DELETED = 'Categoría borrada.';
 	// `reference` on a delete: a product was added to the category after the list loaded.
 	const CATEGORY_HAS_PRODUCTS = 'Esta categoría todavía tiene productos. La lista se ha actualizado.';
+	// `exists` on categories_sort_order_key: a swap or an add met a place taken since the list loaded.
+	const ORDER_TAKEN = 'El orden cambió en otro dispositivo. La lista se ha actualizado.';
 	const CHOOSE_TARGET = 'Elige una categoría.';
 	// The photo block and the save button's steps (spec 0017).
 	const PREPARING = 'Preparando foto…';
@@ -901,6 +904,7 @@ const { url, key } = supabaseConfig();
 	}
 
 	function messageOf(error: unknown, context: Context = 'products'): string {
+		if (context === 'categories' && isOrderTaken(error)) return ORDER_TAKEN;
 		const messages = context === 'products' ? PRODUCT_MESSAGES : CATEGORY_MESSAGES;
 		return error instanceof RestError ? messages[error.kind] : MESSAGES[kindOf(error)];
 	}

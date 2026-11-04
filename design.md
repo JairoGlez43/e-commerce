@@ -212,6 +212,27 @@ _Admin publish (spec 0016)._
   → the error `<p role="alert" class="font-medium text-accent empty:hidden">` → the Primary button
   (form) "Publicar cambios", full width of the card.
 
+_Admin categories (spec 0018)._
+- **Categorías card** · `src/pages/admin/index.astro` · an Admin card after "Productos", hidden
+  until the shared load succeeds. Header `<div class="flex flex-wrap items-center justify-between gap-2">`
+  → `h2` "Categorías" (focusable, see Headings that receive focus) and the Primary button (form)
+  "Añadir categoría" → a Form messages notice and alert → `<ul class="flex flex-col divide-y divide-border">`.
+  It has no loading or error line of its own: the product list's cover it.
+- **Category row** · `<template data-template="category">` · the Product row's `<li>` and name
+  column, with the count line ("1 producto", "<N> productos" or "Vacía: no se ve en la web") in
+  `<p class="text-sm text-muted">` → `<div class="flex shrink-0 gap-2">` with "Subir" and "Bajar":
+  the Secondary button with `px-4` instead of `px-6` (so a name still fits at 360 px), each with a
+  `<span class="sr-only"><name>: </span>` before its label. The first "Subir" and the last "Bajar"
+  are disabled; all of them while a swap waits for its answer.
+- **Category form** · `data-view="category"` · an Admin card: `h2` "Añadir categoría" / "Editar
+  categoría" → in edit mode the line "Enlace: /categoria/<id>" `<p class="text-sm text-muted empty:hidden">`
+  → the form (Text field "Nombre", `maxlength=30`; alert; Primary button (form) "Guardar") → the
+  Text button "Cancelar" → the Danger text button area with "Borrar categoría", or the note
+  `<p class="text-sm text-muted">No puedes borrar la única categoría.</p>` when only one exists.
+- **Category confirm block** · the Confirm block, plus a "Mover a" Select (label above, first
+  option "Elige una categoría") between the question and the buttons when the category has
+  products; the Primary button then reads "Mover y borrar".
+
 ## Contrast added by spec 0011
 The base table is in `docs/specs/0002-design-base.md`. New pairs (WCAG ratios, 2026-10-16):
 | Text | Background | Ratio |
@@ -230,6 +251,9 @@ Graphics: WhatsApp green glyph on `ink` 7.92, white glyph on `accent` 6.04.
 - Admin list: "Cargando productos…" (status), the error (alert) plus a "Reintentar" Secondary
   button, "Todavía no hay productos." (only if the table was emptied in the dashboard), and after a
   write "Producto guardado." / "Producto borrado." (status).
+- Categorías card (spec 0018): "Categoría guardada.", "Categoría borrada." or "Productos movidos a
+  «<name>». Categoría borrada." (status); write errors in its alert, the form's errors in the
+  form's alert. While a request runs, the pressed button is disabled and reads its label plus "…" ("Guardar…").
 - Photo block (spec 0017): "Preparando foto…" while the chosen photo shrinks ("Guardar" disabled),
   then "La foto nueva se subirá al guardar." or "La foto se quitará al guardar."; an unreadable file
   shows "No se pudo abrir esta foto. Prueba con otra." in the form's alert. While saving, the button

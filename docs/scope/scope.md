@@ -318,7 +318,7 @@ rule unless /architect says so.
 ## 15 · Manage categories
 **Status:** in-progress
 **Spec:** [0018](../specs/0018-manage-categories.md)
-**Code:** src/lib/rest.ts, src/lib/categories.ts, src/lib/products.ts, src/pages/admin/index.astro
+**Code:** src/lib/rest.ts, src/lib/categories.ts, src/lib/products.ts, src/pages/admin/index.astro, supabase/categories-write.sql
 **Depth:** default
 **Done when:**
 - The owner can add, rename and delete categories.
@@ -327,11 +327,11 @@ rule unless /architect says so.
 - The public site's category menu follows the owner's categories after publishing.
 **Tasks:**
 - [x] Decide it — /architect
-- [ ] Build it — /develop manage categories
+- [x] Build it — /develop manage categories
   - [x] Shared request module `src/lib/rest.ts`, products unchanged (T1; AC-11)
   - [x] Categories section, form and rules on the real data (T2; AC-2–AC-5, AC-7–AC-9)
-  - [ ] Owner write policies, unique order and measured answers (T3, T3b; AC-1, AC-14)
-  - [ ] Every flow and failure, public site after publish, checks (T4–T6; AC-6, AC-10, AC-12, AC-13, AC-14)
+  - [x] Owner write policies, unique order and measured answers (T3, T3b; AC-1, AC-14)
+  - [x] Every flow and failure, public site after publish, checks (T4–T6; AC-6, AC-10, AC-12, AC-13, AC-14)
 - [ ] Verify it — /check verify
 **Notes:** Depends on 12.
 

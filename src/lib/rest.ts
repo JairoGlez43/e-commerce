@@ -6,9 +6,13 @@ import { authFetch } from './auth';
 export type RestErrorKind = 'exists' | 'reference' | 'invalid' | 'forbidden' | 'gone' | 'system' | 'unknown';
 
 // Every admin request throws only this or an AuthError from authFetch(), passed through
-// unchanged. The page turns `kind` into a Spanish message for its own context.
+// unchanged. The page turns `kind` into a Spanish message for its own context. `constraint` is
+// set only on a 409 23505: the unique constraint that refused the row (spec 0018, AC-14).
 export class RestError extends Error {
-	constructor(readonly kind: RestErrorKind) {
+	constructor(
+		readonly kind: RestErrorKind,
+		readonly constraint?: string,
+	) {
 		super(`Rest: ${kind}`);
 		this.name = 'RestError';
 	}
@@ -19,20 +23,29 @@ const HEADERS = { 'Content-Type': 'application/json', Prefer: 'return=representa
 // Plain records only, so a caller's headers can be spread over the defaults.
 type SendInit = Omit<RequestInit, 'headers'> & { headers?: Record<string, string> };
 
-// Reads the JSON body's code only when the answer says it is JSON.
-async function errorCode(response: Response): Promise<string | undefined> {
-	if (!response.headers.get('Content-Type')?.includes('application/json')) return undefined;
+// Reads the JSON body's code and message only when the answer says it is JSON.
+async function errorBody(response: Response): Promise<{ code?: string; message?: string }> {
+	if (!response.headers.get('Content-Type')?.includes('application/json')) return {};
 	try {
-		const body = (await response.json()) as { code?: unknown };
-		return typeof body.code === 'string' ? body.code : undefined;
+		const body = (await response.json()) as { code?: unknown; message?: unknown };
+		return {
+			code: typeof body.code === 'string' ? body.code : undefined,
+			message: typeof body.message === 'string' ? body.message : undefined,
+		};
 	} catch {
-		return undefined;
+		return {};
 	}
 }
 
+// Postgres names the constraint in the message, measured in spec 0018 T3:
+// 'duplicate key value violates unique constraint "categories_sort_order_key"'.
+function constraintOf(message: string | undefined): string | undefined {
+	return message?.match(/unique constraint "([^"]+)"/)?.[1];
+}
+
 async function failure(method: string, path: string, response: Response): Promise<RestError> {
-	const code = await errorCode(response);
-	if (response.status === 409 && code === '23505') return new RestError('exists');
+	const { code, message } = await errorBody(response);
+	if (response.status === 409 && code === '23505') return new RestError('exists', constraintOf(message));
 	// A foreign key refused it: a missing category for a product, products left for a category.
 	if (response.status === 409 && code === '23503') return new RestError('reference');
 	// A real refusal by RLS. authFetch() already refreshed and retried an expired token (401).

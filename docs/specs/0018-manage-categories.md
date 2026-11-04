@@ -570,7 +570,7 @@ code moves first, because the screen's module is built on it.
   blocks in `src/pages/admin/index.astro`, on the real loaded data. Writes are wired but will
   be refused until T3, which shows the `forbidden` message. `swapCategories()` expects `201`
   as a placeholder until T3 measures the real status.
-- [ ] **T3** (AC-1, AC-14) Write `supabase/categories-write.sql` (the constraint, then the
+- [x] **T3** (AC-1, AC-14) Write `supabase/categories-write.sql` (the constraint, then the
   policies). Have the owner run the tie check query, then the file. Run the AC-1 checks (the
   commented SQL test; a `curl` POST, PATCH and DELETE with the publishable key only, then a
   GET) and the AC-14 SQL check. In one throwaway run with the owner's session, record here the
@@ -581,19 +581,19 @@ code moves first, because the screen's module is built on it.
   with the recorded one. After one swap, check that the admin shows "Hay cambios sin publicar"
   (trigger fired). If the swap fails on the constraint, or the stale swap's body does not name
   `categories_sort_order_key`, stop and return to `/architect`.
-- [ ] **T3b** (AC-14, AC-11) Add `constraint` to `RestError` in `src/lib/rest.ts`,
+- [x] **T3b** (AC-14, AC-11) Add `constraint` to `RestError` in `src/lib/rest.ts`,
   `isOrderTaken()` to `src/lib/categories.ts`, and the "El orden cambió…" message to the admin
   page's `messageOf()` in the categories context. Check the spec 0015 product flows still map
   as before, plus `pnpm typecheck` and `pnpm build`.
-- [ ] **T4** (AC-3, AC-4, AC-6, AC-7, AC-8, AC-10, AC-14) Run every flow against the real
+- [x] **T4** (AC-3, AC-4, AC-6, AC-7, AC-8, AC-10, AC-14) Run every flow against the real
   database at 360 px: add, rename, swap, delete empty, move and delete. Run the AC-10 failures
   against a mocked Supabase (offline, half done, stale count, gone, `signedOut`). Run the AC-14
   two tab cases against the real database: a stale swap, and a stale add (tab A adds one
   category, tab B adds another with the old list).
-- [ ] **T5** (AC-12, AC-13) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`; check no public
+- [x] **T5** (AC-12, AC-13) `pnpm typecheck`, `pnpm build`, `pnpm check:weight`; check no public
   route gained a script. Publish from the demo's admin and check the public site against
   AC-12, then restore the seed order and names.
-- [ ] **T6** (AC-2) Add the categories section, row and form classes to `design.md`.
+- [x] **T6** (AC-2) Add the categories section, row and form classes to `design.md`.
 
 ## Consequences
 
