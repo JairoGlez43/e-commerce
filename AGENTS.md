@@ -323,6 +323,9 @@ _Added by /sync from /debug findings: symptom → cause → rule._
   publish state on the live site (spec 0017 T2).
 
 ## Git
-integration: off   <!-- on = /develop branches and commits as milestones land -->
+integration: on   <!-- on = /develop branches and commits as milestones land -->
+branch prefix: feat/
+commit: per-milestone
+merge: by hand, locally, into main, then push (Vercel deploys every push to main)
 
 <!-- PROJECT:END -->

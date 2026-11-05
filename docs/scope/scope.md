@@ -23,7 +23,7 @@
 | 12 | Manage products                  | done              | default | docs/specs/0015-manage-products.md |
 | 13 | Publish changes                  | done              | default | docs/specs/0016-publish-changes.md |
 | 14 | Product photos upload            | done              | default | docs/specs/0017-product-photos-upload.md |
-| 15 | Manage categories                | in-progress       | default | docs/specs/0018-manage-categories.md |
+| 15 | Manage categories                | done              | default | docs/specs/0018-manage-categories.md |
 | 18 | New shop setup                   | needs-a-decision  | default | —    |
 
 Status values: `planned` · `needs-a-decision` · `in-progress` · `done`
@@ -316,7 +316,7 @@ rule unless /architect says so.
 **Notes:** Depends on 12.
 
 ## 15 · Manage categories
-**Status:** in-progress
+**Status:** done
 **Spec:** [0018](../specs/0018-manage-categories.md)
 **Code:** src/lib/rest.ts, src/lib/categories.ts, src/lib/products.ts, src/pages/admin/index.astro, supabase/categories-write.sql
 **Depth:** default
@@ -332,7 +332,7 @@ rule unless /architect says so.
   - [x] Categories section, form and rules on the real data (T2; AC-2–AC-5, AC-7–AC-9)
   - [x] Owner write policies, unique order and measured answers (T3, T3b; AC-1, AC-14)
   - [x] Every flow and failure, public site after publish, checks (T4–T6; AC-6, AC-10, AC-12, AC-13, AC-14)
-- [ ] Verify it — /check verify
+- [x] Verify it — /check verify
 **Notes:** Depends on 12.
 
 ## 18 · New shop setup

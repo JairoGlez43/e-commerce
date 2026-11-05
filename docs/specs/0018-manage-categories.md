@@ -1,7 +1,7 @@
 # 0018 · Manage categories
 
 **Date**: 2026-10-31
-**Status**: In Progress
+**Status**: Accepted
 <!-- Proposed → In Progress → Accepted · Assumed (recorded by /develop, awaiting ratification) · Superseded by NNNN -->
 **Scope**: `docs/scope/scope.md` → feature 15
 **Amends**: spec 0015 (its request helpers and error class move to a shared `src/lib/rest.ts`;
